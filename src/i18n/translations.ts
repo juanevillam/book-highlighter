@@ -33,12 +33,11 @@ export const translations = {
         library: {
           title: 'Scan Sticky-Note Highlights',
           subtitle:
-            'Flip through a physical book and capture chapters and marked passages automatically.',
+            'Flip through a physical book to capture every highlight.',
         },
         read: {
           title: 'Read It Like a Book',
-          subtitle:
-            'Turn the pages offline from the big idea down to every highlight.',
+          subtitle: 'Turn the pages from big idea to highlight.',
         },
         highlights: {
           title: 'Keep What Mattered',
@@ -482,12 +481,11 @@ export const translations = {
         library: {
           title: 'Escanea resaltados físicos',
           subtitle:
-            'Pasa las páginas de tu libro físico y captura capítulos y notas adhesivas automáticamente.',
+            'Pasa las páginas de tu libro físico y captura cada nota.',
         },
         read: {
           title: 'Léelo como un libro',
-          subtitle:
-            'Pasa las páginas sin conexión desde la gran idea hasta cada resaltado.',
+          subtitle: 'Lee de la gran idea a cada resaltado.',
         },
         highlights: {
           title: 'Guarda lo que importó',
@@ -939,11 +937,11 @@ export const translations = {
       features: {
         library: {
           title: '扫描实体书便签高亮',
-          subtitle: '翻阅实体书，自动识别章节与便签标记的段落。',
+          subtitle: '翻阅实体书，自动捕捉章节与高亮段落。',
         },
         read: {
           title: '像读书一样阅读',
-          subtitle: '离线翻页阅读，从核心思想一路读到每一条高亮。',
+          subtitle: '从核心思想一路翻到每一条高亮。',
         },
         highlights: {
           title: '留住重要的内容',
