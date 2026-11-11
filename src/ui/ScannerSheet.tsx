@@ -27,7 +27,6 @@ import {
   submitScanFrame,
   type DetectedPageResult,
   type ScanSessionSnapshot,
-  type SpreadMode,
 } from '../scannerClient';
 import { useBodiesStore } from '../store/bodies';
 import { selectShelf, useBooksStore } from '../store/books';
@@ -41,8 +40,6 @@ import {
 } from './glyphs';
 import { SidePanel } from './SidePanel';
 import { showToast } from './Toast';
-
-const SPREAD_MODES: readonly SpreadMode[] = ['auto', 'single', 'double'];
 
 const makeId = () =>
   typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
@@ -125,7 +122,6 @@ export function ScannerSheet({
   const primeBody = useBodiesStore(state => state.prime);
 
   const [phase, setPhase] = useState<'scan' | 'review'>('scan');
-  const [spreadMode, setSpreadMode] = useState<SpreadMode>('auto');
   const [backendOnline, setBackendOnline] = useState<boolean | null>(null);
   const [cameraReady, setCameraReady] = useState(false);
   const [cameraError, setCameraError] = useState(false);
@@ -268,7 +264,7 @@ export function ScannerSheet({
         const res = await submitScanFrame({
           sessionId,
           frame: blob,
-          spreadMode,
+          spreadMode: 'auto',
           force,
         });
         setSnapshot(res.snapshot);
@@ -287,7 +283,7 @@ export function ScannerSheet({
         setCapturing(false);
       }
     },
-    [spreadMode],
+    [],
   );
 
   // Sample `160x120` @ 12 fps in RAM to detect page turns + stillness + focus.
@@ -346,18 +342,6 @@ export function ScannerSheet({
 
     ctx.clearRect(0, 0, w, h);
 
-    if (spreadMode === 'double') {
-      ctx.save();
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.28)';
-      ctx.lineWidth = 1.5 * dpr;
-      ctx.setLineDash([6 * dpr, 6 * dpr]);
-      ctx.beginPath();
-      ctx.moveTo(w * 0.5, 16 * dpr);
-      ctx.lineTo(w * 0.5, h - 16 * dpr);
-      ctx.stroke();
-      ctx.restore();
-    }
-
     for (const page of detectedPages) {
       const sideOffset = page.side === 'right' ? 0.5 : 0;
       const sideScale = page.side === 'single' ? 1 : 0.5;
@@ -403,7 +387,7 @@ export function ScannerSheet({
         ctx.restore();
       }
     }
-  }, [detectedPages, spreadMode]);
+  }, [detectedPages]);
 
   const handleManualCapture = async () => {
     const video = videoRef.current;
@@ -567,141 +551,100 @@ export function ScannerSheet({
       onClose={onClose}
     >
       {phase === 'scan' ? (
-        <>
-          <div className="card">
-            <div className="cell">
-              <div className="segmented">
-                {SPREAD_MODES.map(mode => (
-                  <button
-                    key={mode}
-                    type="button"
-                    className={spreadMode === mode ? 'is-active' : undefined}
-                    onClick={() => setSpreadMode(mode)}
-                  >
-                    {t(`scanner.spread.${mode}`)}
-                  </button>
-                ))}
-              </div>
-            </div>
+        <div className="scanner-viewport">
+          <video
+            ref={videoRef}
+            playsInline
+            muted
+            autoPlay
+            className={cameraReady ? 'scanner-video is-ready' : 'scanner-video'}
+            onClick={() => void handleManualCapture()}
+          />
+          <canvas ref={hudCanvasRef} className="scanner-hud" />
+
+          <div className="scanner-corners" aria-hidden="true">
+            <i />
+            <i />
+            <i />
+            <i />
           </div>
 
-          <div className="scanner-viewport">
-            <video
-              ref={videoRef}
-              playsInline
-              muted
-              autoPlay
-              className={cameraReady ? 'scanner-video is-ready' : 'scanner-video'}
-            />
-            <canvas ref={hudCanvasRef} className="scanner-hud" />
+          {!cameraReady && (
+            <div className="scanner-camera-fallback">
+              <span className="side-empty-mark">
+                <CameraGlyph />
+              </span>
+              <p>
+                {cameraError
+                  ? t('scanner.statusCameraOff')
+                  : t('scanner.statusCapturing')}
+              </p>
+            </div>
+          )}
 
-            <div className="scanner-corners" aria-hidden="true">
-              <i />
-              <i />
-              <i />
-              <i />
+          <div className="scanner-hud-top">
+            <div className="scanner-hud-row">
+              {backendOnline === false ? (
+                <button
+                  type="button"
+                  className="scanner-status-pill is-alert"
+                  onClick={() => void initScannerSession()}
+                  title={scannerBaseUrl}
+                >
+                  <span>{t('scanner.actions.retrySession')}</span>
+                </button>
+              ) : (
+                <div
+                  className={
+                    snapshot?.openRange.active
+                      ? 'scanner-status-pill is-range'
+                      : 'scanner-status-pill'
+                  }
+                >
+                  {capturing && <span className="scanner-pulse" />}
+                  <span>
+                    {capturing
+                      ? t('scanner.statusCapturing')
+                      : snapshot?.openRange.active
+                        ? t('scanner.statusRange', {
+                            startPage: snapshot.openRange.startPage ?? '?',
+                          })
+                        : t('scanner.statusIdle')}
+                  </span>
+                </div>
+              )}
+
+              <div className="scanner-counter-pill" aria-live="polite">
+                <span>
+                  {snapshot?.pagesScanned ?? 0}p · {totalHighlights}{' '}
+                  {t('scanner.counters.highlights').toLowerCase()}
+                </span>
+              </div>
             </div>
 
-            {!cameraReady && (
-              <div className="scanner-camera-fallback">
-                <span className="side-empty-mark">
-                  <CameraGlyph />
-                </span>
-                <p>
-                  {cameraError
-                    ? t('scanner.statusCameraOff')
-                    : t('scanner.statusCapturing')}
-                </p>
+            {snapshot?.currentChapter && (
+              <div className="scanner-chapter-pill">
+                <span>{snapshot.currentChapter}</span>
               </div>
             )}
 
-            <div
-              className={
-                snapshot?.openRange.active
-                  ? 'scanner-status-pill is-range'
-                  : 'scanner-status-pill'
-              }
-            >
-              {capturing && <span className="scanner-pulse" />}
-              <span>
-                {capturing
-                  ? t('scanner.statusCapturing')
-                  : snapshot?.openRange.active
-                    ? t('scanner.statusRange', {
-                        startPage: snapshot.openRange.startPage ?? '?',
-                      })
-                    : t('scanner.statusIdle')}
-              </span>
-            </div>
-          </div>
-
-          {backendOnline === false && (
-            <div className="card scanner-alert">
-              <div className="cell scanner-alert-body">
-                <p>
-                  {t('scanner.statusBackendOffline', { url: scannerBaseUrl })}
-                </p>
-                <button
-                  type="button"
-                  className="pill"
-                  onClick={() => void initScannerSession()}
-                >
-                  {t('scanner.actions.retrySession')}
-                </button>
+            {snapshot && snapshot.warnings.length > 0 && (
+              <div className="scanner-warning-pill" role="status">
+                <span>{snapshot.warnings[snapshot.warnings.length - 1]}</span>
               </div>
-            </div>
-          )}
-
-          {snapshot && snapshot.warnings.length > 0 && (
-            <div className="card scanner-warning">
-              {snapshot.warnings.slice(-2).map((warn, idx) => (
-                <div key={idx} className="cell">
-                  <span>{warn}</span>
-                </div>
-              ))}
-            </div>
-          )}
-
-          <div className="card">
-            <div className="cell">
-              <span className="cell-name">{t('scanner.counters.scanned')}</span>
-              <span className="cell-value">{snapshot?.pagesScanned ?? 0}</span>
-            </div>
-            <div className="cell">
-              <span className="cell-name">{t('scanner.counters.skipped')}</span>
-              <span className="cell-value">{snapshot?.pagesSkipped ?? 0}</span>
-            </div>
-            <div className="cell">
-              <span className="cell-name">
-                {t('scanner.counters.highlights')}
-              </span>
-              <span className="cell-value">{totalHighlights}</span>
-            </div>
-            <div className="cell">
-              <span className="cell-name">{t('scanner.counters.chapter')}</span>
-              <span className="cell-value">
-                {snapshot?.currentChapter || t('scanner.counters.none')}
-              </span>
-            </div>
+            )}
           </div>
 
-          <div className="scanner-actions">
+          <div className="scanner-hud-bottom">
             <button
               type="button"
-              className="pill"
-              disabled={!cameraReady || !backendOnline || capturing}
-              onClick={() => void handleManualCapture()}
-            >
-              {t('scanner.actions.captureNow')}
-            </button>
-
-            <button
-              type="button"
-              className="pill"
+              className="scanner-hud-photo-btn"
               disabled={capturing}
+              title={t('scanner.actions.pickPhotos')}
+              aria-label={t('scanner.actions.pickPhotos')}
               onClick={() => photoInputRef.current?.click()}
             >
-              {t('scanner.actions.pickPhotos')}
+              <PlusGlyph />
             </button>
 
             <button
@@ -710,6 +653,7 @@ export function ScannerSheet({
               onClick={() => void handleFinishScan()}
             >
               {t('scanner.actions.finish')}
+              {totalHighlights > 0 ? ` (${totalHighlights})` : ''}
             </button>
 
             <input
@@ -724,7 +668,7 @@ export function ScannerSheet({
               }}
             />
           </div>
-        </>
+        </div>
       ) : (
         <>
           {shelf.length > 0 && (

@@ -29,11 +29,11 @@ export type CameraGateConfig = {
 };
 
 export const DEFAULT_GATE_CONFIG: CameraGateConfig = {
-  motionHighThreshold: 11.5,
-  motionLowThreshold: 4.2,
-  minSharpness: 32,
-  settleDurationMs: 280,
-  cooldownMs: 900,
+  motionHighThreshold: 8.5,
+  motionLowThreshold: 6.2,
+  minSharpness: 12,
+  settleDurationMs: 260,
+  cooldownMs: 750,
   captureInitialPage: true,
 };
 
@@ -119,9 +119,13 @@ export const computeSharpnessScore = (
   return Math.max(0, sumSq / count - mean * mean);
 };
 
+const monotonicNow = () =>
+  typeof performance !== 'undefined' ? performance.now() : Date.now();
+
 export class CameraGateStateMachine {
   private readonly config: CameraGateConfig;
   private prevGray: Uint8Array | null = null;
+  private lastCapturedGray: Uint8Array | null = null;
   private phase: GatePhase;
   private stillSinceMs: number | null = null;
   private cooldownUntilMs = 0;
@@ -136,7 +140,7 @@ export class CameraGateStateMachine {
     return this.phase;
   }
 
-  setBusy(busy: boolean, nowMs: number = Date.now()) {
+  setBusy(busy: boolean, nowMs: number = monotonicNow()) {
     this.busy = busy;
     if (!busy && this.phase === 'cooldown') {
       this.cooldownUntilMs = Math.max(
@@ -147,7 +151,7 @@ export class CameraGateStateMachine {
   }
 
   /** Reset after manual capture so the gate waits for the next page turn. */
-  notifyManualCapture(nowMs: number = Date.now()) {
+  notifyManualCapture(nowMs: number = monotonicNow()) {
     this.phase = 'cooldown';
     this.stillSinceMs = null;
     this.cooldownUntilMs = nowMs + this.config.cooldownMs;
@@ -157,10 +161,11 @@ export class CameraGateStateMachine {
     gray: Uint8Array,
     width: number,
     height: number,
-    nowMs: number,
+    nowMs: number = monotonicNow(),
   ): GateStepResult {
     const motionScore = computeMotionScore(gray, this.prevGray);
     const sharpnessScore = computeSharpnessScore(gray, width, height);
+    const diffFromLastCapture = computeMotionScore(gray, this.lastCapturedGray);
     const hadPrev = this.prevGray !== null;
     this.prevGray = gray;
 
@@ -190,6 +195,13 @@ export class CameraGateStateMachine {
       if (motionScore >= this.config.motionHighThreshold) {
         this.phase = 'turning';
         this.stillSinceMs = null;
+      } else if (
+        this.lastCapturedGray &&
+        diffFromLastCapture >= 8.5 &&
+        motionScore <= this.config.motionLowThreshold
+      ) {
+        this.phase = 'settling';
+        this.stillSinceMs = nowMs;
       }
       return { motionScore, sharpnessScore, phase: this.phase, shouldCapture: false };
     }
@@ -227,6 +239,7 @@ export class CameraGateStateMachine {
       this.phase = 'cooldown';
       this.stillSinceMs = null;
       this.cooldownUntilMs = nowMs + this.config.cooldownMs;
+      this.lastCapturedGray = gray;
       return {
         motionScore,
         sharpnessScore,

@@ -40,6 +40,7 @@ const writeSort = (sort: LibrarySort) => {
 type LibrarySortState = {
   sort: LibrarySort;
   selectKey: (key: LibrarySortKey) => void;
+  setAscending: (ascending: boolean) => void;
   toggleDirection: () => void;
 };
 
@@ -51,6 +52,12 @@ export const useLibrarySortStore = create<LibrarySortState>()((set, get) => ({
       current.key === key
         ? { key, ascending: !current.ascending }
         : { key, ascending: DEFAULT_ASCENDING[key] };
+    writeSort(next);
+    set({ sort: next });
+  },
+  setAscending: ascending => {
+    const current = get().sort;
+    const next: LibrarySort = { key: current.key, ascending };
     writeSort(next);
     set({ sort: next });
   },

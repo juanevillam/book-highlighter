@@ -20,7 +20,7 @@ import { BookFormPanel } from '../ui/BookForm';
 import { BookStage } from '../ui/BookStage';
 import { ChaptersPanel } from '../ui/ChaptersForm';
 import { ExportPanel } from '../ui/ExportForm';
-import { CameraGlyph, GearGlyph } from '../ui/glyphs';
+import { GearGlyph } from '../ui/glyphs';
 import { LibraryGrid } from '../ui/LibraryGrid';
 import { Reader } from '../ui/Reader';
 import { ScannerSheet } from '../ui/ScannerSheet';
@@ -419,17 +419,7 @@ export function Home({ user }: { user: User }) {
     <div className={className}>
       <main className="library">
         <header className={titled ? 'bar is-edge is-titled' : 'bar'}>
-          <button
-            type="button"
-            className="round bar-lead"
-            title={t('scanner.title')}
-            onClick={() =>
-              stageThen(() => openOnly({ kind: 'scanner', targetBook: null }))
-            }
-          >
-            <CameraGlyph />
-            <span className="sr">{t('scanner.title')}</span>
-          </button>
+          <span className="bar-lead" aria-hidden="true" />
 
           <span className="bar-title" aria-hidden={!titled}>
             {APP_NAME}

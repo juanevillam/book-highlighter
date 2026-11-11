@@ -40,7 +40,7 @@ export function LibraryGrid({
 }) {
   const sort = useLibrarySortStore(state => state.sort);
   const selectKey = useLibrarySortStore(state => state.selectKey);
-  const toggleDirection = useLibrarySortStore(state => state.toggleDirection);
+  const setAscending = useLibrarySortStore(state => state.setAscending);
 
   const [newMenuOpen, setNewMenuOpen] = useState(false);
   const [sortMenuOpen, setSortMenuOpen] = useState(false);
@@ -70,27 +70,26 @@ export function LibraryGrid({
     );
   }
 
+  const isAlphaKey = sort.key === 'title' || sort.key === 'author';
+  const ascOptionLabel = t(
+    isAlphaKey ? 'home.sort.aToZ' : 'home.sort.oldestFirst',
+  );
+  const descOptionLabel = t(
+    isAlphaKey ? 'home.sort.zToA' : 'home.sort.newestFirst',
+  );
+
   return (
     <>
       <div className="library-toolbar">
-        <div className="sort-cluster">
-          <button
-            type="button"
-            className="pill sort-pill"
-            onClick={() => setSortMenuOpen(true)}
-          >
-            <span>{t(`home.sort.keys.${sort.key}`)}</span>
-          </button>
-          <button
-            type="button"
-            className="round sort-dir"
-            title={directionLabel(sort.key, sort.ascending)}
-            aria-label={directionLabel(sort.key, sort.ascending)}
-            onClick={toggleDirection}
-          >
-            <SortDirectionGlyph ascending={sort.ascending} />
-          </button>
-        </div>
+        <button
+          type="button"
+          className="pill sort-pill"
+          aria-label={`${t('home.sort.label')}: ${t(`home.sort.keys.${sort.key}`)} (${directionLabel(sort.key, sort.ascending)})`}
+          onClick={() => setSortMenuOpen(true)}
+        >
+          <span>{t(`home.sort.keys.${sort.key}`)}</span>
+          <SortDirectionGlyph ascending={sort.ascending} />
+        </button>
       </div>
 
       <ul className="grid">
@@ -221,13 +220,23 @@ export function LibraryGrid({
       <ActionSheet
         open={sortMenuOpen}
         cancel={t('common.cancel')}
-        actions={LIBRARY_SORT_KEYS.map(key => ({
-          label:
-            key === sort.key
-              ? `✓ ${t(`home.sort.keys.${key}`)}`
-              : t(`home.sort.keys.${key}`),
-          onSelect: () => selectKey(key),
-        }))}
+        actions={[
+          ...LIBRARY_SORT_KEYS.map(key => ({
+            label:
+              key === sort.key
+                ? `✓ ${t(`home.sort.keys.${key}`)}`
+                : t(`home.sort.keys.${key}`),
+            onSelect: () => selectKey(key),
+          })),
+          {
+            label: sort.ascending ? `✓ ${ascOptionLabel}` : ascOptionLabel,
+            onSelect: () => setAscending(true),
+          },
+          {
+            label: !sort.ascending ? `✓ ${descOptionLabel}` : descOptionLabel,
+            onSelect: () => setAscending(false),
+          },
+        ]}
         onClose={() => setSortMenuOpen(false)}
       />
     </>
