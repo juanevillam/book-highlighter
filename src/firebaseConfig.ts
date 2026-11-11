@@ -47,10 +47,37 @@ export const mediaWorkerUrl = (
   'https://book-highlighter-media-worker.juanesvillamendoza.workers.dev'
 ).replace(/\/+$/, '');
 
+const SCANNER_OVERRIDE_KEY = 'bookhighlighter.scannerOverride';
+
+const resolveRuntimeScannerOverride = (): string => {
+  if (typeof window === 'undefined') return '';
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const param = params.get('scanner')?.trim();
+    if (param === 'reset' || param === 'default') {
+      sessionStorage.removeItem(SCANNER_OVERRIDE_KEY);
+      return '';
+    }
+    if (param && /^https?:\/\//i.test(param)) {
+      sessionStorage.setItem(SCANNER_OVERRIDE_KEY, param);
+      params.delete('scanner');
+      const nextQuery = params.toString();
+      const nextUrl = `${window.location.pathname}${nextQuery ? `?${nextQuery}` : ''}${window.location.hash}`;
+      window.history.replaceState({}, '', nextUrl);
+      return param;
+    }
+    return sessionStorage.getItem(SCANNER_OVERRIDE_KEY)?.trim() ?? '';
+  } catch {
+    return '';
+  }
+};
+
 const defaultScannerUrl = env.DEV
-  ? 'http://localhost:8787'
+  ? '/__scanner'
   : 'https://juanevillam-book-highlighter-scanner.hf.space';
 
 export const scannerBaseUrl = (
-  (env.VITE_SCANNER_URL ?? '').trim() || defaultScannerUrl
+  resolveRuntimeScannerOverride() ||
+  (env.VITE_SCANNER_URL ?? '').trim() ||
+  defaultScannerUrl
 ).replace(/\/+$/, '');

@@ -15,6 +15,16 @@ const appVersion = (
 export default defineConfig({
   plugins: [react()],
   define: { __APP_VERSION__: JSON.stringify(appVersion) },
+  server: {
+    host: true,
+    proxy: {
+      '/__scanner': {
+        target: 'http://127.0.0.1:8787',
+        changeOrigin: true,
+        rewrite: path => path.replace(/^\/__scanner/, ''),
+      },
+    },
+  },
   resolve: {
     dedupe: ['react', 'react-dom', 'zustand'],
     alias: {
