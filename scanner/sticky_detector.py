@@ -215,6 +215,41 @@ def split_spread(
     ]
 
 
+def is_book_page(page_bgr: np.ndarray) -> bool:
+    """Verify the image is a real flat book page (bright neutral paper + horizontal printed text rows).
+
+    Rejects webcam faces, hands, room walls, desks, or closed book covers.
+    """
+    h, w = page_bgr.shape[:2]
+    if h < 40 or w < 40:
+        return False
+
+    y0, y1 = int(0.10 * h), max(int(0.10 * h) + 1, int(0.90 * h))
+    x0, x1 = int(0.10 * w), max(int(0.10 * w) + 1, int(0.90 * w))
+    roi = page_bgr[y0:y1, x0:x1]
+    if roi.size == 0:
+        return False
+
+    hsv = cv2.cvtColor(roi, cv2.COLOR_BGR2HSV)
+    gray = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
+    s_ch = hsv[:, :, 1]
+    v_ch = hsv[:, :, 2]
+
+    # 1. Neutral bright paper dominance: at least 48% of the page interior must be
+    # bright (V >= 140) and low-saturation neutral white/cream paper (S <= 58).
+    neutral_paper = (v_ch >= 140) & (s_ch <= 58)
+    if float(np.mean(neutral_paper)) < 0.48:
+        return False
+
+    # 2. Printed text character transitions across horizontal rows:
+    # A real book page has sharp horizontal ink-to-paper transitions along text lines.
+    horiz_diff = np.abs(np.diff(gray.astype(np.int16), axis=1)) >= 22
+    row_transitions = np.sum(horiz_diff, axis=1)
+    row_bright = np.mean(gray >= 135, axis=1) >= 0.45
+    active_text_rows = int(np.sum((row_transitions >= 8) & row_bright))
+    return active_text_rows >= 4
+
+
 def _build_sticky_mask(page_bgr: np.ndarray) -> np.ndarray:
     """Segment translucent neon and pastel sticky strips against white/cream paper."""
     hsv = cv2.cvtColor(page_bgr, cv2.COLOR_BGR2HSV)
@@ -226,18 +261,27 @@ def _build_sticky_mask(page_bgr: np.ndarray) -> np.ndarray:
     a_ch = lab[:, :, 1].astype(np.float32)
     b_ch = lab[:, :, 2].astype(np.float32)
 
-    # Estimate paper background chromaticity from bright pixels (excluding dark ink).
-    bright = l_ch >= np.percentile(l_ch, 40)
-    a_bg = float(np.median(a_ch[bright])) if np.any(bright) else 128.0
-    b_bg = float(np.median(b_ch[bright])) if np.any(bright) else 128.0
-    s_bg = float(np.median(s_ch[bright])) if np.any(bright) else 10.0
+    # Estimate paper background chromaticity from bright neutral paper pixels.
+    bright = (l_ch >= np.percentile(l_ch, 45)) & (s_ch <= 60.0)
+    if not np.any(bright):
+        return np.zeros(page_bgr.shape[:2], dtype=np.uint8)
+
+    a_bg = float(np.median(a_ch[bright]))
+    b_bg = float(np.median(b_ch[bright]))
+    s_bg = float(np.median(s_ch[bright]))
 
     chroma_dist = np.hypot(a_ch - a_bg, b_ch - b_bg)
 
-    # Pastel & neon stickies stand out strongly in LAB chroma shift relative to paper
-    # AND/OR HSV saturation delta, while staying reasonably bright (not dark ink/shadow).
-    mask_bool = (v_ch >= 85.0) & (l_ch >= 75.0) & (
-        (chroma_dist >= 13.5) | ((s_ch - s_bg) >= 36.0) & (chroma_dist >= 9.5)
+    # Pastel & neon stickies must be genuinely colored (HSV S >= 38) and bright (V >= 110, L >= 100),
+    # never dark hair, eyebrows, shadows, or low-light skin tones.
+    mask_bool = (
+        (v_ch >= 110.0)
+        & (l_ch >= 100.0)
+        & (s_ch >= 38.0)
+        & (
+            (chroma_dist >= 14.0)
+            | (((s_ch - s_bg) >= 36.0) & (chroma_dist >= 10.0))
+        )
     )
     mask = (mask_bool.astype(np.uint8)) * 255
 
@@ -266,7 +310,7 @@ def _build_sticky_mask(page_bgr: np.ndarray) -> np.ndarray:
 
 
 def _has_front_page_text_band(page_gray: np.ndarray, by: int, bh: int) -> bool:
-    """Verify the candidate marker sits on an active front page with bright paper + printed text."""
+    """Verify the candidate marker sits on an active front page with bright paper + printed letters."""
     h, w = page_gray.shape[:2]
     y0 = max(0, by - int(0.10 * h))
     y1 = min(h, by + bh + int(0.10 * h))
@@ -277,11 +321,17 @@ def _has_front_page_text_band(page_gray: np.ndarray, by: int, bh: int) -> bool:
         return False
 
     paper_bg = float(np.percentile(band, 82))
-    if paper_bg < 110.0:
+    if paper_bg < 130.0:
         return False
 
     ink_ratio = float(np.mean(band < (paper_bg - 28.0)))
-    return ink_ratio >= 0.005
+    if ink_ratio < 0.005:
+        return False
+
+    # Require multiple sharp horizontal character transitions (letters), rejecting smooth blobs like eyebrows.
+    horiz_diff = np.abs(np.diff(band.astype(np.int16), axis=1)) >= 22
+    max_row_transitions = int(np.max(np.sum(horiz_diff, axis=1), initial=0))
+    return max_row_transitions >= 6
 
 
 def _extract_strip_geometry(
@@ -451,7 +501,7 @@ def _try_decompose_merged_L(
 def detect_stickies(page_bgr: np.ndarray) -> list[DetectedMarker]:
     """Detect physical sticky markers (`L` single-paragraph vs `bar` range) on a single page."""
     h, w = page_bgr.shape[:2]
-    if h < 40 or w < 40:
+    if h < 40 or w < 40 or not is_book_page(page_bgr):
         return []
 
     page_gray = cv2.cvtColor(page_bgr, cv2.COLOR_BGR2GRAY)

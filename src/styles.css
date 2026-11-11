@@ -1965,6 +1965,23 @@ button {
   font-variant-numeric: tabular-nums;
 }
 
+.scanner-camera-select {
+  max-width: 100%;
+  padding: 0.375rem 0.75rem;
+  border: 1px solid rgb(255 255 255 / 0.16);
+  border-radius: 999px;
+  outline: none;
+  background: rgb(13 13 13 / 0.82);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  color: #f5f5f5;
+  font: inherit;
+  font-size: 0.78125rem;
+  font-weight: 500;
+  pointer-events: auto;
+  cursor: pointer;
+}
+
 .scanner-chapter-pill {
   align-self: flex-start;
   max-width: 100%;

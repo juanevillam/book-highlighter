@@ -122,13 +122,14 @@ export const computeSharpnessScore = (
 };
 
 /**
- * Verify that the central framing zone contains a flat, bright paper page with
- * printed text contrast (excluding dark rooms, closed book covers, or uniform blank walls).
+ * Verify that the central framing zone contains a flat, bright neutral paper page with
+ * multiple horizontal rows of printed character transitions (rejecting faces, hands, walls, and desks).
  */
 export const computePagePresence = (
   gray: Uint8Array,
   width: number,
   height: number,
+  rgba?: ArrayLike<number>,
 ): boolean => {
   if (width < 8 || height < 8 || gray.length < width * height) return false;
 
@@ -136,22 +137,51 @@ export const computePagePresence = (
   const x1 = Math.min(width - 2, Math.ceil(width * 0.86));
   const y0 = Math.max(1, Math.floor(height * 0.14));
   const y1 = Math.min(height - 2, Math.ceil(height * 0.86));
+  const rowWidth = Math.max(1, x1 - x0 + 1);
+  const totalRows = Math.max(1, y1 - y0 + 1);
 
   let brightCount = 0;
+  let neutralBrightCount = 0;
   let darkInkCount = 0;
+  let textLikeRows = 0;
   let total = 0;
   let minVal = 255;
   let maxVal = 0;
+  const hasRgba = Boolean(rgba && rgba.length >= width * height * 4);
+  const minTransitionsPerRow = Math.max(4, Math.floor(rowWidth * 0.12));
 
   for (let y = y0; y <= y1; y += 1) {
     const row = y * width;
+    let rowBright = 0;
+    let rowTransitions = 0;
     for (let x = x0; x <= x1; x += 1) {
-      const v = gray[row + x];
+      const idx = row + x;
+      const v = gray[idx];
       if (v < minVal) minVal = v;
       if (v > maxVal) maxVal = v;
-      if (v >= 115) brightCount += 1;
-      if (v <= 90) darkInkCount += 1;
+      if (v >= 125) {
+        brightCount += 1;
+        rowBright += 1;
+        if (hasRgba && rgba) {
+          const base = idx * 4;
+          const r = rgba[base] ?? 0;
+          const g = rgba[base + 1] ?? 0;
+          const b = rgba[base + 2] ?? 0;
+          const spread = Math.max(r, g, b) - Math.min(r, g, b);
+          if (spread <= 40) {
+            neutralBrightCount += 1;
+          }
+        }
+      }
+      if (v <= 95) darkInkCount += 1;
+      if (x > x0 && Math.abs(v - gray[idx - 1]) >= 22) {
+        rowTransitions += 1;
+      }
       total += 1;
+    }
+
+    if (rowBright / rowWidth >= 0.42 && rowTransitions >= minTransitionsPerRow) {
+      textLikeRows += 1;
     }
   }
 
@@ -159,8 +189,19 @@ export const computePagePresence = (
   const brightRatio = brightCount / total;
   const inkRatio = darkInkCount / total;
   const contrast = maxVal - minVal;
+  const textRowRatio = textLikeRows / totalRows;
 
-  return brightRatio >= 0.32 && inkRatio >= 0.015 && contrast >= 40;
+  if (hasRgba) {
+    const neutralPaperRatio = neutralBrightCount / total;
+    if (neutralPaperRatio < 0.46) return false;
+  }
+
+  return (
+    brightRatio >= 0.46 &&
+    inkRatio >= 0.015 &&
+    contrast >= 45 &&
+    textRowRatio >= 0.16
+  );
 };
 
 const monotonicNow = () =>
@@ -211,11 +252,12 @@ export class CameraGateStateMachine {
     width: number,
     height: number,
     nowMs: number = monotonicNow(),
+    rgba?: ArrayLike<number>,
   ): GateStepResult {
     const motionScore = computeMotionScore(gray, this.prevGray);
     const sharpnessScore = computeSharpnessScore(gray, width, height);
     const pagePresent =
-      computePagePresence(gray, width, height) &&
+      computePagePresence(gray, width, height, rgba) &&
       sharpnessScore >= this.config.minSharpness * 0.75;
     const diffFromLastCapture = computeMotionScore(gray, this.lastCapturedGray);
     const hadPrev = this.prevGray !== null;

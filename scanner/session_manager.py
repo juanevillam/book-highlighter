@@ -28,6 +28,7 @@ from sticky_detector import (
     compute_frame_signature,
     decode_frame_bytes,
     detect_stickies,
+    is_book_page,
     is_duplicate_frame,
     is_frame_blurry,
     split_spread,
@@ -332,6 +333,17 @@ class SessionManager:
                     snapshot=sess.to_snapshot(),
                 )
 
+        split_pages = split_spread(bgr, spread_mode=spread_mode)
+        if not any(is_book_page(page_bgr) for _, page_bgr in split_pages):
+            with self._lock:
+                sess.touch()
+                return FrameScanResult(
+                    accepted=False,
+                    reason="no-page",
+                    detectedPages=[],
+                    snapshot=sess.to_snapshot(),
+                )
+
         sig = compute_frame_signature(bgr)
         with self._lock:
             if not force and is_duplicate_frame(sig, sess.last_frame_sig):
@@ -344,7 +356,6 @@ class SessionManager:
                 )
             sess.last_frame_sig = sig
 
-        split_pages = split_spread(bgr, spread_mode=spread_mode)
         detected_pages: list[DetectedPageResult] = []
 
         for side, page_bgr in split_pages:

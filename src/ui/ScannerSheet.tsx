@@ -129,6 +129,9 @@ export function ScannerSheet({
   const [backendOnline, setBackendOnline] = useState<boolean | null>(null);
   const [cameraReady, setCameraReady] = useState(false);
   const [cameraError, setCameraError] = useState(false);
+  const [videoDevices, setVideoDevices] = useState<MediaDeviceInfo[]>([]);
+  const [selectedDeviceId, setSelectedDeviceId] = useState<string>('');
+  const [userPickedCamera, setUserPickedCamera] = useState(false);
   const [capturing, setCapturing] = useState(false);
   const [pagePresent, setPagePresent] = useState(false);
   const [settleProgress, setSettleProgress] = useState(0);
@@ -230,7 +233,7 @@ export function ScannerSheet({
     };
   }, [open, initScannerSession]);
 
-  // Open rear camera stream ONLY while in live scan phase (never records or stores video).
+  // Open rear / Continuity Camera stream ONLY while in live scan phase (never records or stores video).
   useEffect(() => {
     if (!open || phase !== 'scan') return;
     if (
@@ -245,13 +248,52 @@ export function ScannerSheet({
     let mediaStream: MediaStream | null = null;
     setCameraError(false);
 
-    navigator.mediaDevices
-      .getUserMedia({
-        video: {
+    const isContinuityOrPhoneCamera = (label: string) =>
+      /\b(iphone|ipad|continuity|cámara de|camera of|back|rear|trasera)\b/i.test(
+        label,
+      ) && !/\b(facetime|built-in|integrada|front|frontal)\b/i.test(label);
+
+    const refreshDevices = async (activeStream?: MediaStream | null) => {
+      if (!navigator.mediaDevices?.enumerateDevices) return;
+      try {
+        const all = await navigator.mediaDevices.enumerateDevices();
+        if (cancelled) return;
+        const cams = all.filter(d => d.kind === 'videoinput');
+        setVideoDevices(cams);
+
+        const currentTrackId =
+          activeStream?.getVideoTracks()[0]?.getSettings().deviceId ?? '';
+
+        if (!userPickedCamera) {
+          const preferred = cams.find(d => isContinuityOrPhoneCamera(d.label));
+          if (preferred && preferred.deviceId !== currentTrackId) {
+            setSelectedDeviceId(preferred.deviceId);
+            return;
+          }
+        }
+        if (!selectedDeviceId && currentTrackId) {
+          setSelectedDeviceId(currentTrackId);
+        }
+      } catch {
+        // Ignore device enumeration errors
+      }
+    };
+
+    const videoConstraints: MediaTrackConstraints = selectedDeviceId
+      ? {
+          deviceId: { exact: selectedDeviceId },
+          width: { ideal: 1920 },
+          height: { ideal: 1080 },
+        }
+      : {
           facingMode: { ideal: 'environment' },
           width: { ideal: 1920 },
           height: { ideal: 1080 },
-        },
+        };
+
+    navigator.mediaDevices
+      .getUserMedia({
+        video: videoConstraints,
         audio: false,
       })
       .then(stream => {
@@ -266,6 +308,7 @@ export function ScannerSheet({
           void video.play().catch(() => {});
         }
         setCameraReady(true);
+        void refreshDevices(stream);
       })
       .catch(err => {
         console.warn('Camera unavailable:', err);
@@ -275,8 +318,20 @@ export function ScannerSheet({
         }
       });
 
+    const handleDeviceChange = () => {
+      void refreshDevices(mediaStream);
+    };
+    navigator.mediaDevices.addEventListener?.(
+      'devicechange',
+      handleDeviceChange,
+    );
+
     return () => {
       cancelled = true;
+      navigator.mediaDevices.removeEventListener?.(
+        'devicechange',
+        handleDeviceChange,
+      );
       setCameraReady(false);
       setPagePresent(false);
       setSettleProgress(0);
@@ -287,7 +342,7 @@ export function ScannerSheet({
         videoRef.current.srcObject = null;
       }
     };
-  }, [open, phase]);
+  }, [open, phase, selectedDeviceId, userPickedCamera]);
 
   const sendFrameBlob = useCallback(
     async (blob: Blob, force: boolean) => {
@@ -356,6 +411,7 @@ export function ScannerSheet({
         SAMPLE_WIDTH,
         SAMPLE_HEIGHT,
         performance.now(),
+        rgba,
       );
 
       setPagePresent(step.pagePresent);
@@ -496,7 +552,7 @@ export function ScannerSheet({
 
   const handleManualCapture = async () => {
     const video = videoRef.current;
-    if (!video || capturing) return;
+    if (!video || capturing || !pagePresent) return;
     gateRef.current.notifyManualCapture();
     const captured = await captureVideoJpegBlob(video);
     if (captured) {
@@ -775,6 +831,26 @@ export function ScannerSheet({
                   </span>
                 </div>
               </div>
+
+              {videoDevices.length > 0 && (
+                <div className="scanner-hud-row">
+                  <select
+                    className="scanner-camera-select"
+                    aria-label={t('scanner.title')}
+                    value={selectedDeviceId}
+                    onChange={e => {
+                      setUserPickedCamera(true);
+                      setSelectedDeviceId(e.target.value);
+                    }}
+                  >
+                    {videoDevices.map((dev, idx) => (
+                      <option key={dev.deviceId || idx} value={dev.deviceId}>
+                        {dev.label || `Camera ${idx + 1}`}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
 
               {snapshot?.currentChapter && (
                 <div className="scanner-chapter-pill">
