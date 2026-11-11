@@ -1,0 +1,30 @@
+rules_version = '2';
+
+// Personal-only rules: Book Highlighter has no social surface, so everything
+// under a user is readable and writable by that user alone. Library metadata
+// lives at users/{uid}/books and each book's long text at users/{uid}/bodies
+// under the same id.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isUser(uid) {
+      return request.auth != null && request.auth.uid == uid;
+    }
+
+    match /users/{uid} {
+      allow read, write: if isUser(uid);
+
+      match /books/{bookId} {
+        allow read, write: if isUser(uid);
+      }
+
+      match /bodies/{bookId} {
+        allow read, write: if isUser(uid);
+      }
+
+      match /trophies/{trophyId} {
+        allow read, write: if isUser(uid);
+      }
+    }
+  }
+}
