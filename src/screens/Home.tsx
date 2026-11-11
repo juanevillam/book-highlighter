@@ -457,9 +457,6 @@ export function Home({ user }: { user: User }) {
           onScanNewBook={() =>
             stageThen(() => openOnly({ kind: 'scanner', targetBook: null }))
           }
-          onWriteNewBook={() =>
-            stageThen(() => openOnly({ kind: 'bookForm', book: null }))
-          }
         />
       </main>
 

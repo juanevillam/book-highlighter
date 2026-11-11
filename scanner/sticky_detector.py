@@ -244,6 +244,13 @@ def _build_sticky_mask(page_bgr: np.ndarray) -> np.ndarray:
     # Close small dark-letter holes inside translucent sticky strips sitting over text,
     # then open tiny 2px dust specks.
     h, w = mask.shape[:2]
+    y_pad = max(2, int(0.022 * h))
+    x_pad = max(2, int(0.022 * w))
+    mask[:y_pad, :] = 0
+    mask[h - y_pad :, :] = 0
+    mask[:, :x_pad] = 0
+    mask[:, w - x_pad :] = 0
+
     close_sz = max(5, min(11, int(round(min(h, w) * 0.009)) | 1))
     mask = cv2.morphologyEx(
         mask,
@@ -256,6 +263,25 @@ def _build_sticky_mask(page_bgr: np.ndarray) -> np.ndarray:
         cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3)),
     )
     return mask
+
+
+def _has_front_page_text_band(page_gray: np.ndarray, by: int, bh: int) -> bool:
+    """Verify the candidate marker sits on an active front page with bright paper + printed text."""
+    h, w = page_gray.shape[:2]
+    y0 = max(0, by - int(0.10 * h))
+    y1 = min(h, by + bh + int(0.10 * h))
+    x0 = int(0.10 * w)
+    x1 = max(x0 + 1, int(0.90 * w))
+    band = page_gray[y0:y1, x0:x1]
+    if band.size < 64:
+        return False
+
+    paper_bg = float(np.percentile(band, 82))
+    if paper_bg < 110.0:
+        return False
+
+    ink_ratio = float(np.mean(band < (paper_bg - 28.0)))
+    return ink_ratio >= 0.005
 
 
 def _extract_strip_geometry(
@@ -272,11 +298,6 @@ def _extract_strip_geometry(
     rot_len = max(rw, rh)
     rot_thick = min(rw, rh)
     if rot_len < min_len or rot_thick > max_thick or rot_thick < 3.0:
-        return None
-    if (rot_len / rot_thick) < 2.05:
-        return None
-    rot_fill = area / (rw * rh)
-    if rot_fill < 0.54:
         return None
 
     box = cv2.boxPoints(rect)  # 4x2 float32
@@ -296,6 +317,16 @@ def _extract_strip_geometry(
         mid_a, mid_b = mid_b, mid_a
 
     angle_deg = abs(math.degrees(math.atan2(dy, dx)))
+    is_horiz = angle_deg <= 30.0
+    min_aspect = 1.45 if is_horiz else 1.95
+    min_fill = 0.42 if is_horiz else 0.52
+
+    if (rot_len / rot_thick) < min_aspect:
+        return None
+    rot_fill = area / (rw * rh)
+    if rot_fill < min_fill:
+        return None
+
     return _StripCandidate(
         cx=float(rcx),
         cy=float(rcy),
@@ -318,6 +349,9 @@ def _try_decompose_merged_L(
     """If comp_mask is a merged L-shape (┌ └ ┐ ┘), return horizontal arm center Y in page px."""
     ch, cw = comp_mask.shape[:2]
     if ch < min_len * 0.85 or cw < min_len * 0.85:
+        return None
+    # A real 2D L-marker must have substantial vertical extent relative to its width.
+    if float(ch) < 0.55 * float(cw):
         return None
 
     area = float(np.count_nonzero(comp_mask))
@@ -420,10 +454,11 @@ def detect_stickies(page_bgr: np.ndarray) -> list[DetectedMarker]:
     if h < 40 or w < 40:
         return []
 
+    page_gray = cv2.cvtColor(page_bgr, cv2.COLOR_BGR2GRAY)
     short_side = float(min(h, w))
-    min_len = max(16.0, 0.032 * short_side)
+    min_len = max(12.0, 0.018 * short_side)
     max_thick = max(14.0, 0.105 * short_side)
-    min_area = max(48.0, 0.00012 * h * w)
+    min_area = max(32.0, 0.00007 * h * w)
 
     mask = _build_sticky_mask(page_bgr)
     num_labels, labels, stats, _ = cv2.connectedComponentsWithStats(mask, connectivity=8)
@@ -444,6 +479,14 @@ def detect_stickies(page_bgr: np.ndarray) -> list[DetectedMarker]:
         if bw > 0.92 * w or bh > 0.92 * h:
             continue
 
+        cx = bx + 0.5 * bw
+        cy = by + 0.5 * bh
+        # Reject sticky tabs peeking out from outer page-stack margins (half-closed book / edge stack).
+        if cx < 0.035 * w or cx > 0.965 * w or cy < 0.035 * h or cy > 0.965 * h:
+            continue
+        if not _has_front_page_text_band(page_gray, by=by, bh=bh):
+            continue
+
         comp_mask = ((labels[by : by + bh, bx : bx + bw] == label_idx).astype(np.uint8)) * 255
         cnts, _ = cv2.findContours(comp_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         if not cnts:
@@ -459,6 +502,28 @@ def detect_stickies(page_bgr: np.ndarray) -> list[DetectedMarker]:
                 horiz_strips.append(strip)
             elif strip.angle_deg >= 58.0:
                 vert_strips.append(strip)
+            continue
+
+        # If dark text ink notched a horizontal sticky strip so minAreaRect fill dropped slightly,
+        # recover it as a horizontal bar rather than misclassifying or dropping it.
+        if (
+            bw >= min_len
+            and bh <= max_thick
+            and float(bw) >= 1.45 * max(1.0, float(bh))
+            and (area / max(1.0, float(bw * bh))) >= 0.30
+        ):
+            horiz_strips.append(
+                _StripCandidate(
+                    cx=float(cx),
+                    cy=float(cy),
+                    length=float(bw),
+                    thickness=float(bh),
+                    angle_deg=0.0,
+                    p1=(float(bx), float(cy)),
+                    p2=(float(bx + bw), float(cy)),
+                    bbox=(bx, by, bw, bh),
+                )
+            )
             continue
 
         horiz_y = _try_decompose_merged_L(

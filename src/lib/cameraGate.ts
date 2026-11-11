@@ -32,14 +32,16 @@ export const DEFAULT_GATE_CONFIG: CameraGateConfig = {
   motionHighThreshold: 8.5,
   motionLowThreshold: 6.2,
   minSharpness: 12,
-  settleDurationMs: 260,
-  cooldownMs: 750,
+  settleDurationMs: 520,
+  cooldownMs: 650,
   captureInitialPage: true,
 };
 
 export type FrameMetrics = {
   motionScore: number;
   sharpnessScore: number;
+  pagePresent: boolean;
+  settleProgress: number;
 };
 
 export type GateStepResult = FrameMetrics & {
@@ -119,6 +121,48 @@ export const computeSharpnessScore = (
   return Math.max(0, sumSq / count - mean * mean);
 };
 
+/**
+ * Verify that the central framing zone contains a flat, bright paper page with
+ * printed text contrast (excluding dark rooms, closed book covers, or uniform blank walls).
+ */
+export const computePagePresence = (
+  gray: Uint8Array,
+  width: number,
+  height: number,
+): boolean => {
+  if (width < 8 || height < 8 || gray.length < width * height) return false;
+
+  const x0 = Math.max(1, Math.floor(width * 0.14));
+  const x1 = Math.min(width - 2, Math.ceil(width * 0.86));
+  const y0 = Math.max(1, Math.floor(height * 0.14));
+  const y1 = Math.min(height - 2, Math.ceil(height * 0.86));
+
+  let brightCount = 0;
+  let darkInkCount = 0;
+  let total = 0;
+  let minVal = 255;
+  let maxVal = 0;
+
+  for (let y = y0; y <= y1; y += 1) {
+    const row = y * width;
+    for (let x = x0; x <= x1; x += 1) {
+      const v = gray[row + x];
+      if (v < minVal) minVal = v;
+      if (v > maxVal) maxVal = v;
+      if (v >= 115) brightCount += 1;
+      if (v <= 90) darkInkCount += 1;
+      total += 1;
+    }
+  }
+
+  if (total === 0) return false;
+  const brightRatio = brightCount / total;
+  const inkRatio = darkInkCount / total;
+  const contrast = maxVal - minVal;
+
+  return brightRatio >= 0.32 && inkRatio >= 0.015 && contrast >= 40;
+};
+
 const monotonicNow = () =>
   typeof performance !== 'undefined' ? performance.now() : Date.now();
 
@@ -150,6 +194,11 @@ export class CameraGateStateMachine {
     }
   }
 
+  /** Re-arm immediately when a frame had no highlights so continuous scanning keeps searching. */
+  rearmForContinuousScan(nowMs: number = monotonicNow()) {
+    this.cooldownUntilMs = Math.min(this.cooldownUntilMs, nowMs + 220);
+  }
+
   /** Reset after manual capture so the gate waits for the next page turn. */
   notifyManualCapture(nowMs: number = monotonicNow()) {
     this.phase = 'cooldown';
@@ -165,12 +214,22 @@ export class CameraGateStateMachine {
   ): GateStepResult {
     const motionScore = computeMotionScore(gray, this.prevGray);
     const sharpnessScore = computeSharpnessScore(gray, width, height);
+    const pagePresent =
+      computePagePresence(gray, width, height) &&
+      sharpnessScore >= this.config.minSharpness * 0.75;
     const diffFromLastCapture = computeMotionScore(gray, this.lastCapturedGray);
     const hadPrev = this.prevGray !== null;
     this.prevGray = gray;
 
     if (this.busy) {
-      return { motionScore, sharpnessScore, phase: this.phase, shouldCapture: false };
+      return {
+        motionScore,
+        sharpnessScore,
+        pagePresent,
+        settleProgress: 1,
+        phase: this.phase,
+        shouldCapture: false,
+      };
     }
 
     if (this.phase === 'cooldown') {
@@ -181,14 +240,28 @@ export class CameraGateStateMachine {
         this.phase = 'turning';
         this.stillSinceMs = null;
       }
-      return { motionScore, sharpnessScore, phase: this.phase, shouldCapture: false };
+      return {
+        motionScore,
+        sharpnessScore,
+        pagePresent,
+        settleProgress: 0,
+        phase: this.phase,
+        shouldCapture: false,
+      };
     }
 
     if (!hadPrev) {
-      if (this.phase === 'settling') {
+      if (this.phase === 'settling' && pagePresent) {
         this.stillSinceMs = nowMs;
       }
-      return { motionScore, sharpnessScore, phase: this.phase, shouldCapture: false };
+      return {
+        motionScore,
+        sharpnessScore,
+        pagePresent,
+        settleProgress: pagePresent ? 0.08 : 0,
+        phase: this.phase,
+        shouldCapture: false,
+      };
     }
 
     if (this.phase === 'awaiting-turn') {
@@ -196,42 +269,75 @@ export class CameraGateStateMachine {
         this.phase = 'turning';
         this.stillSinceMs = null;
       } else if (
-        this.lastCapturedGray &&
-        diffFromLastCapture >= 8.5 &&
+        pagePresent &&
+        (!this.lastCapturedGray || diffFromLastCapture >= 5.2) &&
         motionScore <= this.config.motionLowThreshold
       ) {
         this.phase = 'settling';
         this.stillSinceMs = nowMs;
       }
-      return { motionScore, sharpnessScore, phase: this.phase, shouldCapture: false };
+      return {
+        motionScore,
+        sharpnessScore,
+        pagePresent,
+        settleProgress: 0,
+        phase: this.phase,
+        shouldCapture: false,
+      };
     }
 
     if (this.phase === 'turning') {
-      if (motionScore <= this.config.motionLowThreshold) {
+      if (motionScore <= this.config.motionLowThreshold && pagePresent) {
         this.phase = 'settling';
         this.stillSinceMs = nowMs;
       }
-      return { motionScore, sharpnessScore, phase: this.phase, shouldCapture: false };
+      return {
+        motionScore,
+        sharpnessScore,
+        pagePresent,
+        settleProgress: 0,
+        phase: this.phase,
+        shouldCapture: false,
+      };
     }
 
     // phase === 'settling'
     if (motionScore >= this.config.motionHighThreshold) {
       this.phase = 'turning';
       this.stillSinceMs = null;
-      return { motionScore, sharpnessScore, phase: this.phase, shouldCapture: false };
+      return {
+        motionScore,
+        sharpnessScore,
+        pagePresent,
+        settleProgress: 0,
+        phase: this.phase,
+        shouldCapture: false,
+      };
     }
 
-    if (motionScore > this.config.motionLowThreshold) {
-      // Slight hand drift: reset stillness timer while remaining in settling.
-      this.stillSinceMs = nowMs;
-      return { motionScore, sharpnessScore, phase: this.phase, shouldCapture: false };
+    if (!pagePresent || motionScore > this.config.motionLowThreshold) {
+      // Slight hand drift or no page framed: reset stillness timer while remaining in settling.
+      this.stillSinceMs = pagePresent ? nowMs : null;
+      return {
+        motionScore,
+        sharpnessScore,
+        pagePresent,
+        settleProgress: 0,
+        phase: this.phase,
+        shouldCapture: false,
+      };
     }
 
     if (this.stillSinceMs === null) {
       this.stillSinceMs = nowMs;
     }
 
-    const heldMs = nowMs - this.stillSinceMs;
+    const heldMs = Math.max(0, nowMs - this.stillSinceMs);
+    const settleProgress = Math.min(
+      1,
+      Math.max(0.08, heldMs / Math.max(1, this.config.settleDurationMs)),
+    );
+
     if (
       heldMs >= this.config.settleDurationMs &&
       sharpnessScore >= this.config.minSharpness
@@ -243,12 +349,21 @@ export class CameraGateStateMachine {
       return {
         motionScore,
         sharpnessScore,
+        pagePresent: true,
+        settleProgress: 1,
         phase: this.phase,
         shouldCapture: true,
       };
     }
 
-    return { motionScore, sharpnessScore, phase: this.phase, shouldCapture: false };
+    return {
+      motionScore,
+      sharpnessScore,
+      pagePresent,
+      settleProgress,
+      phase: this.phase,
+      shouldCapture: false,
+    };
   }
 }
 

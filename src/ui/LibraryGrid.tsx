@@ -27,7 +27,6 @@ export function LibraryGrid({
   onSelectBook,
   onSelectSeries,
   onScanNewBook,
-  onWriteNewBook,
 }: {
   entries: ShelfEntry[];
   hasSettled: boolean;
@@ -36,13 +35,11 @@ export function LibraryGrid({
   onSelectBook: (book: Book) => void;
   onSelectSeries: (name: string) => void;
   onScanNewBook: () => void;
-  onWriteNewBook: () => void;
 }) {
   const sort = useLibrarySortStore(state => state.sort);
   const selectKey = useLibrarySortStore(state => state.selectKey);
   const setAscending = useLibrarySortStore(state => state.setAscending);
 
-  const [newMenuOpen, setNewMenuOpen] = useState(false);
   const [sortMenuOpen, setSortMenuOpen] = useState(false);
 
   if (error) {
@@ -97,7 +94,7 @@ export function LibraryGrid({
           <button
             type="button"
             className="tile is-add"
-            onClick={() => setNewMenuOpen(true)}
+            onClick={onScanNewBook}
           >
             <span className="tile-art is-book">
               <span className="artwork is-empty">
@@ -200,22 +197,6 @@ export function LibraryGrid({
           );
         })}
       </ul>
-
-      <ActionSheet
-        open={newMenuOpen}
-        cancel={t('common.cancel')}
-        actions={[
-          {
-            label: t('home.newChoice.scan'),
-            onSelect: onScanNewBook,
-          },
-          {
-            label: t('home.newChoice.manual'),
-            onSelect: onWriteNewBook,
-          },
-        ]}
-        onClose={() => setNewMenuOpen(false)}
-      />
 
       <ActionSheet
         open={sortMenuOpen}

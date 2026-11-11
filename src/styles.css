@@ -681,17 +681,30 @@ button {
   min-height: 3.5rem;
   padding: 0 1rem;
   border: 0;
+  outline: none;
   background: none;
-  color: var(--accent);
+  color: var(--ink);
   font-size: 1.125rem;
+  transition: background var(--dur-micro) var(--ease);
 }
 
 .action-group button + button {
   box-shadow: inset 0 1px 0 var(--separator);
 }
 
-.action-group button:active {
+@media (hover: hover) {
+  .action-group button:hover {
+    background: rgb(var(--fg) / 0.05);
+  }
+}
+
+.action-group button:focus-visible {
+  outline: none;
   background: rgb(var(--fg) / 0.08);
+}
+
+.action-group button:active {
+  background: rgb(var(--fg) / 0.11);
 }
 
 .action-group .is-destructive {
@@ -699,6 +712,7 @@ button {
 }
 
 .action-group .is-cancel {
+  color: var(--destructive);
   font-weight: 600;
 }
 
@@ -1804,36 +1818,71 @@ button {
   pointer-events: none;
 }
 
+.scanner-frame-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.scanner-frame-track {
+  fill: none;
+  stroke: rgb(255 255 255 / 0.14);
+  stroke-width: 1.5;
+  vector-effect: non-scaling-stroke;
+}
+
+.scanner-frame-fill {
+  fill: none;
+  stroke: #30d158;
+  stroke-width: 2.75;
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+  filter: drop-shadow(0 0 6px rgb(48 209 88 / 0.55));
+  transition: stroke-dashoffset 90ms linear;
+}
+
+.scanner-corners.is-locked .scanner-frame-fill {
+  fill: rgb(48 209 88 / 0.08);
+}
+
 .scanner-corners i {
   position: absolute;
   width: 1.375rem;
   height: 1.375rem;
   border-color: rgb(255 255 255 / 0.55);
   border-style: solid;
+  transition: border-color 180ms var(--ease);
 }
 
-.scanner-corners i:nth-child(1) {
+.scanner-corners.is-page i,
+.scanner-corners.is-locked i {
+  border-color: #30d158;
+}
+
+.scanner-corners i:nth-of-type(1) {
   top: 0;
   left: 0;
-  border-width: 2px 0 0 2px;
+  border-width: 2.5px 0 0 2.5px;
   border-top-left-radius: 0.5rem;
 }
-.scanner-corners i:nth-child(2) {
+.scanner-corners i:nth-of-type(2) {
   top: 0;
   right: 0;
-  border-width: 2px 2px 0 0;
+  border-width: 2.5px 2.5px 0 0;
   border-top-right-radius: 0.5rem;
 }
-.scanner-corners i:nth-child(3) {
+.scanner-corners i:nth-of-type(3) {
   bottom: 0;
   left: 0;
-  border-width: 0 0 2px 2px;
+  border-width: 0 0 2.5px 2.5px;
   border-bottom-left-radius: 0.5rem;
 }
-.scanner-corners i:nth-child(4) {
+.scanner-corners i:nth-of-type(4) {
   bottom: 0;
   right: 0;
-  border-width: 0 2px 2px 0;
+  border-width: 0 2.5px 2.5px 0;
   border-bottom-right-radius: 0.5rem;
 }
 
@@ -1944,26 +1993,6 @@ button {
   display: flex;
   align-items: center;
   gap: 0.625rem;
-}
-
-.scanner-hud-photo-btn {
-  display: grid;
-  place-items: center;
-  flex: none;
-  width: 2.625rem;
-  height: 2.625rem;
-  padding: 0.625rem;
-  border: 1px solid rgb(255 255 255 / 0.18);
-  border-radius: 50%;
-  background: rgb(13 13 13 / 0.78);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  color: #f5f5f5;
-}
-
-.scanner-hud-photo-btn svg {
-  width: 100%;
-  height: 100%;
 }
 
 .scanner-hud-bottom .scanner-finish-btn {

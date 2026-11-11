@@ -790,9 +790,10 @@ def _group_lines_into_paragraphs(
             and gap >= intra_gap * 0.75
         )
         is_prev_short_tail = (
-            (right_margin - prev.x2) >= 2.6 * med_h
+            (right_margin - prev.x2) >= 3.4 * med_h
             and (right_margin - left_margin) >= 6.0 * med_h
-            and gap >= max(intra_gap * 1.22, intra_gap + 0.14 * med_h)
+            and bool(_SENTENCE_END_RE.search(prev.text))
+            and gap >= max(intra_gap * 1.38, intra_gap + 0.20 * med_h)
         )
 
         if is_gap_break or is_indented_new_para or is_prev_short_tail:
@@ -846,7 +847,7 @@ def _slice_y_range(
         chosen_lines = [
             ln.text
             for ln in para.lines
-            if (y_start - 0.68 * ln.h) <= ln.yc <= (y_end + 0.68 * ln.h)
+            if (y_start - 1.15 * ln.h) <= ln.yc <= (y_end + 1.15 * ln.h)
         ]
         if chosen_lines:
             joined = join_lines_into_paragraph(chosen_lines)

@@ -514,7 +514,7 @@ export function BookFormPanel({
   );
 }
 
-function GenresPickerSheet({
+export function GenresPickerSheet({
   index,
   selected,
   onChange,
@@ -584,7 +584,7 @@ function GenresPickerSheet({
   );
 }
 
-function YearPickerSheet({
+export function YearPickerSheet({
   index,
   value,
   onChange,
