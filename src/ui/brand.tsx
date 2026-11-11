@@ -120,11 +120,15 @@ export const BrandTile = ({ size }: { size: number }) => {
         fill="url(#bh-tile-shine)"
         transform={`translate(${pad}, ${pad})`}
       />
-      <g transform={`translate(${offset}, ${offset}) scale(${scale})`}>
+      <g
+        transform={`translate(${offset}, ${offset}) scale(${scale})`}
+        fill="none"
+      >
         {BOOK_PATHS.map(d => (
           <path
             key={d}
             d={d}
+            fill="none"
             stroke={INK}
             strokeWidth={3.25}
             strokeLinecap="round"
