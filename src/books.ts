@@ -12,6 +12,7 @@ import {
   type Timestamp,
 } from 'firebase/firestore';
 
+import { track } from './analytics';
 import {
   BODIES_SUBCOLLECTION,
   BOOKS_SUBCOLLECTION,
@@ -219,6 +220,7 @@ export const createBook = async ({
   });
   batch.set(bodyDoc(ref.id), body);
   await batch.commit();
+  track({ name: 'add_book' });
 
   return ref.id;
 };

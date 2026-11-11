@@ -1,5 +1,6 @@
 import { useState } from 'react';
 
+import { track } from '../analytics';
 import { useScheme } from '../appearance';
 import { type Book } from '../books';
 import { t } from '../i18n';
@@ -83,6 +84,7 @@ export function ExportPanel({
 
       const shared = await shareOrDownloadPdfs(files);
       if (shared) {
+        track({ name: 'export_pdf' });
         showToast(t('snackbar.export-done'));
         onClose();
       }

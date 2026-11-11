@@ -1,5 +1,6 @@
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense, useEffect } from 'react';
 
+import { trackScreen } from './analytics';
 import { useTheme } from './appearance';
 import { useLocale } from './i18n';
 import { Welcome } from './screens/Welcome';
@@ -13,6 +14,11 @@ export function App() {
   useLocale();
   useTheme();
   const session = useSession();
+
+  useEffect(() => {
+    if (session.state === 'signed-out') trackScreen('/welcome');
+    else if (session.state === 'signed-in') trackScreen('/home');
+  }, [session.state]);
 
   if (session.state === 'loading') return null;
 

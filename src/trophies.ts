@@ -9,6 +9,7 @@ import {
   type Timestamp,
 } from 'firebase/firestore';
 
+import { track } from './analytics';
 import {
   FINISHED_BOOK_COUNT,
   HIGHLIGHT_COUNT,
@@ -58,6 +59,7 @@ const adapterFor = (uid: string): TrophyPersistenceAdapter => ({
       { achievedAt: serverTimestamp() },
       { merge: true },
     );
+    track({ name: 'trophy_unlocked', trophyId });
   },
 });
 

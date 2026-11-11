@@ -33,11 +33,14 @@ export const firebaseConfig = {
 export const isFirebaseConfigured = Boolean(firebaseConfig.apiKey);
 
 /**
- * Optional reCAPTCHA Enterprise site key for Firebase App Check.
- * When empty (before App Check is enabled on the Firebase project),
- * `initializeAppCheck` is skipped gracefully so sign-in & Firestore work immediately.
+ * App Check's reCAPTCHA Enterprise key "Book Highlighter Web" (Google Cloud →
+ * Security → Fraud Defense), bound to bookhighlighter.juanevillam.com. Public
+ * like the config. Development on localhost uses an App Check DEBUG token
+ * instead (`VITE_APPCHECK_DEBUG_TOKEN`), registered in the Firebase console.
  */
-export const recaptchaSiteKey = (env.VITE_RECAPTCHA_SITE_KEY ?? '').trim();
+export const recaptchaSiteKey =
+  (env.VITE_RECAPTCHA_SITE_KEY ?? '').trim() ||
+  '6LcVVBouAAAAACWn0zRlgFfi2byfdllpbOVqPtpn';
 
 export const mediaWorkerUrl = (
   (env.VITE_MEDIA_WORKER_URL ?? '').trim() ||
