@@ -4,6 +4,10 @@ Scan physical sticky-note highlights straight from a real book and read them off
 
 Live at **[bookhighlighter.juanevillam.com](https://bookhighlighter.juanevillam.com)** — installable **PWA** (`100%` web).
 
+- **Web:** [bookhighlighter.juanevillam.com](https://bookhighlighter.juanevillam.com)
+- **Support:** [juanevillam.com/book-highlighter/support](https://juanevillam.com/book-highlighter/support)
+- **Privacy policy:** [juanevillam.com/book-highlighter/privacy-policy](https://juanevillam.com/book-highlighter/privacy-policy)
+
 ## Highlights
 
 - **Physical Sticky-Line Camera Scanner (`scanner/`)**: Flip through an entire physical book in front of your camera. A two-stage OpenCV + Vision/OCR pipeline detects translucent sticky strips on left or right margins in any color:
@@ -43,3 +47,8 @@ npm test
 npm run build
 scanner/.venv/bin/pytest
 ```
+
+## License
+
+All rights reserved — see [`LICENSE`](LICENSE). The source is public to read;
+it is not licensed for reuse or redistribution.
