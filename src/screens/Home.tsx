@@ -84,8 +84,7 @@ type Layer = {
   tools: boolean;
 };
 
-const isToolEntry = (entry: Entry) =>
-  entry.kind === 'chapters' || entry.kind === 'scanner';
+const isToolEntry = (_entry: Entry) => false;
 
 let nextLayerId = 0;
 

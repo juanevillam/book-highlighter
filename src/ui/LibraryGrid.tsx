@@ -90,7 +90,14 @@ export function LibraryGrid({
       </div>
 
       <ul className="grid">
-        <li style={{ '--i': 0 } as React.CSSProperties}>
+        <li
+          style={
+            {
+              '--i': 0,
+              viewTransitionName: 'tile-add',
+            } as React.CSSProperties
+          }
+        >
           <button
             type="button"
             className="tile is-add"
@@ -113,7 +120,12 @@ export function LibraryGrid({
             return (
               <li
                 key={book.id}
-                style={{ '--i': idx + 1 } as React.CSSProperties}
+                style={
+                  {
+                    '--i': idx + 1,
+                    viewTransitionName: `tile-${book.id}`,
+                  } as React.CSSProperties
+                }
               >
                 <button
                   type="button"
@@ -144,7 +156,12 @@ export function LibraryGrid({
           return (
             <li
               key={`series:${name}`}
-              style={{ '--i': idx + 1 } as React.CSSProperties}
+              style={
+                {
+                  '--i': idx + 1,
+                  viewTransitionName: `tile-series-${idx}`,
+                } as React.CSSProperties
+              }
             >
               <button
                 type="button"
