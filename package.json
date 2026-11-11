@@ -4,7 +4,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "bash scripts/dev.sh",
+    "dev:web": "vite",
+    "dev:scanner": "cd scanner && .venv/bin/uvicorn server:app --host 0.0.0.0 --port 8787 --reload",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",

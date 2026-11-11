@@ -1,3 +1,13 @@
+---
+title: Book Highlighter Scanner
+emoji: 📖
+colorFrom: gray
+colorTo: gray
+sdk: docker
+app_port: 7860
+pinned: false
+---
+
 # Book Highlighter — Scanner Microservice
 
 Zero-storage, in-RAM Python FastAPI microservice that turns a live phone or laptop camera walk through a physical book into structured chapter-grouped highlights using physical sticky-strip grammar.

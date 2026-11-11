@@ -47,6 +47,10 @@ export const mediaWorkerUrl = (
   'https://book-highlighter-media-worker.juanesvillamendoza.workers.dev'
 ).replace(/\/+$/, '');
 
+const defaultScannerUrl = env.DEV
+  ? 'http://localhost:8787'
+  : 'https://juanevillam-book-highlighter-scanner.hf.space';
+
 export const scannerBaseUrl = (
-  (env.VITE_SCANNER_URL ?? '').trim() || 'http://localhost:8787'
+  (env.VITE_SCANNER_URL ?? '').trim() || defaultScannerUrl
 ).replace(/\/+$/, '');

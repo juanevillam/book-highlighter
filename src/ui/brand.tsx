@@ -1,3 +1,12 @@
+/**
+ * Book Highlighter's mark and its icon tile, as the welcome screen draws them.
+ *
+ * The mark is `apps/booker/src/components/ui/BrandMark.tsx`'s open book on the
+ * 48-unit grid (`scripts/gen-brand-art.py` `MARKS["booker"]`): two pages
+ * dipping into the spine, upright outer edges, nothing written on them.
+ * The tile is `sound-shaper/web/src/ui/brand.tsx`'s `BrandTile`, dark: the iOS
+ * superellipse (n = 4.5), its measured shine and a blurred contact shadow.
+ */
 const BOOK_PATHS = [
   'M24 14 Q16 9.5 9 11 V34 Q16 32 24 37.5 Z',
   'M24 14 Q32 9.5 39 11 V34 Q32 32 24 37.5 Z',
@@ -29,25 +38,6 @@ export const BrandMark = ({
         strokeLinejoin="round"
       />
     ))}
-    <line
-      x1={28.3}
-      y1={20.6}
-      x2={35}
-      y2={19.6}
-      stroke={color}
-      strokeWidth={3.6}
-      strokeLinecap="round"
-    />
-    <line
-      x1={28.3}
-      y1={26.6}
-      x2={33.8}
-      y2={25.9}
-      stroke={color}
-      strokeWidth={2.5}
-      strokeLinecap="round"
-      opacity={0.58}
-    />
   </svg>
 );
 
@@ -90,7 +80,7 @@ export const BrandTile = ({ size }: { size: number }) => {
   const pad = Math.round(size * SHADOW_PAD);
   const canvas = size + pad * 2;
   const path = squirclePath(size);
-  const glyph = size * 0.88;
+  const glyph = size * 0.94;
   const scale = glyph / 48;
   const offset = pad + (size - glyph) / 2;
 
@@ -141,25 +131,6 @@ export const BrandTile = ({ size }: { size: number }) => {
             strokeLinejoin="round"
           />
         ))}
-        <line
-          x1={28.3}
-          y1={20.6}
-          x2={35}
-          y2={19.6}
-          stroke={INK}
-          strokeWidth={3.6}
-          strokeLinecap="round"
-        />
-        <line
-          x1={28.3}
-          y1={26.6}
-          x2={33.8}
-          y2={25.9}
-          stroke={INK}
-          strokeWidth={2.5}
-          strokeLinecap="round"
-          opacity={0.58}
-        />
       </g>
     </svg>
   );
