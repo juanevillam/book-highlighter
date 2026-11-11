@@ -1,0 +1,20 @@
+# Secret scanning for this repo — usable on the whole history with
+# `gitleaks git --log-opts="--all" .`.
+#
+# Extends gitleaks' default rules. The allowlist below names values that are
+# PUBLIC BY DESIGN:
+# - `src/firebaseConfig.ts` and `.env.example`: Firebase Web client config
+#   (`AIza…`, restricted by HTTP referrers and 25 Firebase APIs in Google Cloud)
+#   and the public reCAPTCHA Enterprise SITE key.
+# - Lockfile checksums, which trip the generic-api-key entropy rule.
+
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Public-by-design Firebase client config and lockfile hashes"
+paths = [
+  '''^src/firebaseConfig\.ts$''',
+  '''^\.env\.example$''',
+  '''(^|/)package-lock\.json$''',
+]
