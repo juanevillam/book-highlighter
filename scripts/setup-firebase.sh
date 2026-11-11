@@ -7,7 +7,7 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
-PROJECT_ID="${FIREBASE_PROJECT_ID:-book-highlighter}"
+PROJECT_ID="${FIREBASE_PROJECT_ID:-book-highlighter-juanevillam}"
 
 echo "→ Checking Firebase CLI authentication..."
 if ! npx firebase-tools login:list 2>/dev/null | grep -q '@'; then
