@@ -7,9 +7,3 @@ coverage/
 .DS_Store
 *.log
 
-# Python scanner local state
-scanner/.venv/
-scanner/__pycache__/
-scanner/**/__pycache__/
-scanner/.pytest_cache/
-scanner/*.egg-info/

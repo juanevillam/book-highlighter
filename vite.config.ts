@@ -18,13 +18,6 @@ export default defineConfig({
   server: {
     host: true,
     allowedHosts: true,
-    proxy: {
-      '/__scanner': {
-        target: 'http://127.0.0.1:8787',
-        changeOrigin: true,
-        rewrite: path => path.replace(/^\/__scanner/, ''),
-      },
-    },
   },
   resolve: {
     dedupe: ['react', 'react-dom', 'zustand'],

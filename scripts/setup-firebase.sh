@@ -44,7 +44,6 @@ const lines = [
   `VITE_FIREBASE_MESSAGING_SENDER_ID=${cfg.messagingSenderId || ""}`,
   `VITE_FIREBASE_APP_ID=${cfg.appId || ""}`,
   `VITE_MEDIA_WORKER_URL=https://book-highlighter-media-worker.juanesvillamendoza.workers.dev`,
-  `VITE_SCANNER_URL=http://localhost:8787`,
   ""
 ];
 fs.writeFileSync(".env.local", lines.join("\n"), "utf8");
