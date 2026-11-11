@@ -2,33 +2,23 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import {
   createBook,
-  EMPTY_BODY,
   type Book,
   type BookBody,
   type Chapter,
 } from '../books';
-import { scannerBaseUrl } from '../firebaseConfig';
 import { t } from '../i18n';
 import { formatYear, parsePageRef } from '../lib/bookFields';
-import {
-  CameraGateStateMachine,
-  captureVideoJpegBlob,
-  rgbaToGrayscale,
-  SAMPLE_FPS,
-  SAMPLE_HEIGHT,
-  SAMPLE_WIDTH,
-} from '../lib/cameraGate';
 import { genreLabel } from '../lib/genres';
-import { uploadFailureKey, uploadImage } from '../media';
 import {
-  checkScannerHealth,
-  createScanSession,
-  deleteScanSession,
-  finishScanSession,
-  submitScanFrame,
-  type DetectedPageResult,
-  type ScanSessionSnapshot,
-} from '../scannerClient';
+  assembleBook,
+  type Mark,
+} from '../lib/photoImport/assemble';
+import {
+  runPhotoImport,
+  type PhotoImportItem,
+  type PhotoImportProgress,
+} from '../lib/photoImport/client';
+import { uploadFailureKey, uploadImage } from '../media';
 import { useBodiesStore } from '../store/bodies';
 import { selectShelf, useBooksStore } from '../store/books';
 
@@ -50,17 +40,14 @@ const makeId = () =>
     ? crypto.randomUUID()
     : `scan-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
-const snapshotToChapters = (snapshot: ScanSessionSnapshot | null): Chapter[] =>
-  (snapshot?.chapters ?? []).map(ch => ({
-    id: ch.id || makeId(),
-    name: ch.name,
-    pages: ch.pages,
-    highlights: ch.highlights.map(hl => ({
-      id: hl.id || makeId(),
-      page: hl.page,
-      text: hl.text,
-    })),
-  }));
+const compareMark = (a: Mark, b: Mark) =>
+  a.photo !== b.photo ? a.photo - b.photo : a.line - b.line;
+
+const isMarkInside = (
+  m: Mark,
+  range: { start: Mark; end: Mark },
+): boolean =>
+  compareMark(m, range.start) >= 0 && compareMark(m, range.end) <= 0;
 
 const mergeChaptersIntoBody = (
   existing: BookBody,
@@ -125,18 +112,20 @@ export function ScannerSheet({
   const saveBody = useBodiesStore(state => state.save);
   const primeBody = useBodiesStore(state => state.prime);
 
-  const [phase, setPhase] = useState<'scan' | 'review'>('scan');
-  const [backendOnline, setBackendOnline] = useState<boolean | null>(null);
-  const [cameraReady, setCameraReady] = useState(false);
-  const [cameraError, setCameraError] = useState(false);
-  const [videoDevices, setVideoDevices] = useState<MediaDeviceInfo[]>([]);
-  const [selectedDeviceId, setSelectedDeviceId] = useState<string>('');
-  const [userPickedCamera, setUserPickedCamera] = useState(false);
-  const [capturing, setCapturing] = useState(false);
-  const [pagePresent, setPagePresent] = useState(false);
-  const [settleProgress, setSettleProgress] = useState(0);
-  const [snapshot, setSnapshot] = useState<ScanSessionSnapshot | null>(null);
-  const [detectedPages, setDetectedPages] = useState<DetectedPageResult[]>([]);
+  const [phase, setPhase] = useState<'pick' | 'review'>('pick');
+  const [items, setItems] = useState<PhotoImportItem[]>([]);
+  const [progress, setProgress] = useState<PhotoImportProgress | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [dragOver, setDragOver] = useState(false);
+
+  // Per-photo inspector state
+  const [activePhoto, setActivePhoto] = useState(0);
+  const [marks, setMarks] = useState<{ start: Mark; end: Mark }[]>([]);
+  const [pageNumbers, setPageNumbers] = useState<(number | null)[]>([]);
+  const [lineSheet, setLineSheet] = useState<{
+    photo: number;
+    line: number;
+  } | null>(null);
 
   // Review state
   const [destination, setDestination] = useState<'new' | 'existing'>(
@@ -164,13 +153,12 @@ export function ScannerSheet({
   const [draftChapters, setDraftChapters] = useState<Chapter[]>([]);
   const [saving, setSaving] = useState(false);
 
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const hudCanvasRef = useRef<HTMLCanvasElement>(null);
+  const photosInputRef = useRef<HTMLInputElement>(null);
   const coverInputRef = useRef<HTMLInputElement>(null);
   const newSeriesDialogRef = useRef<HTMLDialogElement>(null);
-  const sessionIdRef = useRef<string | null>(null);
-  const gateRef = useRef<CameraGateStateMachine>(new CameraGateStateMachine());
-  const prevWarningCountRef = useRef(0);
+  const abortRef = useRef<AbortController | null>(null);
+  const itemsRef = useRef<PhotoImportItem[]>([]);
+  itemsRef.current = items;
 
   useEffect(() => {
     if (targetBook) {
@@ -183,6 +171,13 @@ export function ScannerSheet({
       }
     }
   }, [targetBook, shelf, selectedBookId]);
+
+  useEffect(() => {
+    return () => {
+      abortRef.current?.abort();
+      for (const it of itemsRef.current) URL.revokeObjectURL(it.previewUrl);
+    };
+  }, []);
 
   useEffect(() => {
     return () => {
@@ -209,378 +204,173 @@ export function ScannerSheet({
     return [...set].sort((a, b) => a.localeCompare(b));
   }, [shelf, newSeries]);
 
-  const initScannerSession = useCallback(async () => {
-    setBackendOnline(null);
-    try {
-      await checkScannerHealth();
-      const created = await createScanSession(targetBook?.name);
-      sessionIdRef.current = created.sessionId;
-      setSnapshot(created);
-      setBackendOnline(true);
-    } catch (error) {
-      console.warn('Scanner backend unreachable:', error);
-      setBackendOnline(false);
-    }
-  }, [targetBook?.name]);
-
-  useEffect(() => {
-    if (!open) return;
-    void initScannerSession();
-    return () => {
-      const sid = sessionIdRef.current;
-      sessionIdRef.current = null;
-      if (sid) void deleteScanSession(sid);
-    };
-  }, [open, initScannerSession]);
-
-  // Open rear / Continuity Camera stream ONLY while in live scan phase (never records or stores video).
-  useEffect(() => {
-    if (!open || phase !== 'scan') return;
-    if (
-      typeof navigator === 'undefined' ||
-      !navigator.mediaDevices?.getUserMedia
-    ) {
-      setCameraError(true);
-      return;
-    }
-
-    let cancelled = false;
-    let mediaStream: MediaStream | null = null;
-    setCameraError(false);
-
-    const isContinuityOrPhoneCamera = (label: string) =>
-      /\b(iphone|ipad|continuity|cámara de|camera of|back|rear|trasera)\b/i.test(
-        label,
-      ) && !/\b(facetime|built-in|integrada|front|frontal)\b/i.test(label);
-
-    const refreshDevices = async (activeStream?: MediaStream | null) => {
-      if (!navigator.mediaDevices?.enumerateDevices) return;
-      try {
-        const all = await navigator.mediaDevices.enumerateDevices();
-        if (cancelled) return;
-        const cams = all.filter(d => d.kind === 'videoinput');
-        setVideoDevices(cams);
-
-        const currentTrackId =
-          activeStream?.getVideoTracks()[0]?.getSettings().deviceId ?? '';
-
-        if (!userPickedCamera) {
-          const preferred = cams.find(d => isContinuityOrPhoneCamera(d.label));
-          if (preferred && preferred.deviceId !== currentTrackId) {
-            setSelectedDeviceId(preferred.deviceId);
-            return;
-          }
-        }
-        if (!selectedDeviceId && currentTrackId) {
-          setSelectedDeviceId(currentTrackId);
-        }
-      } catch {
-        // Ignore device enumeration errors
-      }
-    };
-
-    const videoConstraints: MediaTrackConstraints = selectedDeviceId
-      ? {
-          deviceId: { exact: selectedDeviceId },
-          width: { ideal: 1920 },
-          height: { ideal: 1080 },
-        }
-      : {
-          facingMode: { ideal: 'environment' },
-          width: { ideal: 1920 },
-          height: { ideal: 1080 },
-        };
-
-    navigator.mediaDevices
-      .getUserMedia({
-        video: videoConstraints,
-        audio: false,
-      })
-      .then(stream => {
-        if (cancelled) {
-          stream.getTracks().forEach(track => track.stop());
-          return;
-        }
-        mediaStream = stream;
-        const video = videoRef.current;
-        if (video) {
-          video.srcObject = stream;
-          void video.play().catch(() => {});
-        }
-        setCameraReady(true);
-        void refreshDevices(stream);
-      })
-      .catch(err => {
-        console.warn('Camera unavailable:', err);
-        if (!cancelled) {
-          setCameraReady(false);
-          setCameraError(true);
-        }
-      });
-
-    const handleDeviceChange = () => {
-      void refreshDevices(mediaStream);
-    };
-    navigator.mediaDevices.addEventListener?.(
-      'devicechange',
-      handleDeviceChange,
-    );
-
-    return () => {
-      cancelled = true;
-      navigator.mediaDevices.removeEventListener?.(
-        'devicechange',
-        handleDeviceChange,
+  const applyAssembled = useCallback(
+    (
+      nextItems: PhotoImportItem[],
+      overrideMarks?: { start: Mark; end: Mark }[],
+      populateMeta = false,
+    ) => {
+      const pages = nextItems.map(it => it.page);
+      const draft = assembleBook(
+        pages,
+        overrideMarks ? { marks: overrideMarks } : undefined,
       );
-      setCameraReady(false);
-      setPagePresent(false);
-      setSettleProgress(0);
-      if (mediaStream) {
-        mediaStream.getTracks().forEach(track => track.stop());
-      }
-      if (videoRef.current) {
-        videoRef.current.srcObject = null;
-      }
-    };
-  }, [open, phase, selectedDeviceId, userPickedCamera]);
-
-  const sendFrameBlob = useCallback(
-    async (blob: Blob, force: boolean) => {
-      const sessionId = sessionIdRef.current;
-      if (!sessionId) return;
-
-      gateRef.current.setBusy(true);
-      setCapturing(true);
-      setSettleProgress(1);
-      try {
-        const res = await submitScanFrame({
-          sessionId,
-          frame: blob,
-          spreadMode: 'auto',
-          force,
-        });
-        setSnapshot(res.snapshot);
-        if (res.accepted) {
-          const hasMarkers = res.detectedPages.some(
-            p => p.markers.length > 0 || p.extractedCount > 0,
-          );
-          setDetectedPages(res.detectedPages);
-          if (!hasMarkers) {
-            gateRef.current.rearmForContinuousScan();
-          }
-        } else {
-          gateRef.current.rearmForContinuousScan();
+      setMarks(draft.marks);
+      setPageNumbers(draft.pageNumbers);
+      setDraftChapters(
+        draft.chapters.map(ch => ({
+          id: ch.id,
+          name: ch.name || t('chapters.untitled'),
+          pages: ch.pages,
+          highlights: ch.highlights.map(hl => ({
+            id: hl.id,
+            page: hl.page || null,
+            text: hl.text,
+          })),
+        })),
+      );
+      if (populateMeta) {
+        if (draft.title) setNewTitle(prev => prev || draft.title);
+        if (draft.author) setNewAuthor(prev => prev || draft.author);
+        if (draft.coverPhoto !== null && nextItems[draft.coverPhoto]) {
+          const cf = nextItems[draft.coverPhoto].file;
+          setCoverFile(prev => {
+            if (prev) return prev;
+            return { file: cf, previewUrl: URL.createObjectURL(cf) };
+          });
         }
-        if (res.snapshot.warnings.length > prevWarningCountRef.current) {
-          prevWarningCountRef.current = res.snapshot.warnings.length;
-          navigator.vibrate?.(120);
-        }
-      } catch (error) {
-        console.warn('submitScanFrame', error);
-        setBackendOnline(false);
-      } finally {
-        gateRef.current.setBusy(false);
-        setCapturing(false);
-        setSettleProgress(0);
+        const firstMarkPhoto = draft.marks[0]?.start.photo ?? 0;
+        setActivePhoto(firstMarkPhoto);
       }
     },
     [],
   );
 
-  // Sample `160x120` @ 12 fps in RAM to detect page presence + stillness + focus.
-  useEffect(() => {
-    if (!open || phase !== 'scan' || !cameraReady || !backendOnline) return;
-
-    const sampleCanvas = document.createElement('canvas');
-    sampleCanvas.width = SAMPLE_WIDTH;
-    sampleCanvas.height = SAMPLE_HEIGHT;
-    const ctx = sampleCanvas.getContext('2d', { willReadFrequently: true });
-    if (!ctx) return;
-
-    gateRef.current = new CameraGateStateMachine();
-
-    const interval = window.setInterval(() => {
-      const video = videoRef.current;
-      if (!video || video.readyState < 2 || !sessionIdRef.current) return;
-
-      ctx.drawImage(video, 0, 0, SAMPLE_WIDTH, SAMPLE_HEIGHT);
-      const rgba = ctx.getImageData(0, 0, SAMPLE_WIDTH, SAMPLE_HEIGHT).data;
-      const gray = rgbaToGrayscale(rgba, SAMPLE_WIDTH * SAMPLE_HEIGHT);
-      const step = gateRef.current.stepGrayscale(
-        gray,
-        SAMPLE_WIDTH,
-        SAMPLE_HEIGHT,
-        performance.now(),
-        rgba,
+  const handleFilesSelected = useCallback(
+    async (fileList: FileList | File[]) => {
+      const raw = Array.from(fileList).filter(f =>
+        /\.(jpe?g|png|webp|heic|heif|avif)$/i.test(f.name) ||
+        f.type.startsWith('image/'),
       );
+      if (raw.length === 0 || busy) return;
 
-      setPagePresent(step.pagePresent);
-      setSettleProgress(step.settleProgress);
+      abortRef.current?.abort();
+      const ctrl = new AbortController();
+      abortRef.current = ctrl;
+      setBusy(true);
 
-      if (step.phase === 'turning') {
-        setDetectedPages(prev => (prev.length > 0 ? [] : prev));
-      }
-
-      if (step.shouldCapture) {
-        void captureVideoJpegBlob(video).then(captured => {
-          if (captured) {
-            void sendFrameBlob(captured.blob, false);
-          }
-        });
-      }
-    }, Math.round(1000 / SAMPLE_FPS));
-
-    return () => window.clearInterval(interval);
-  }, [open, phase, cameraReady, backendOnline, sendFrameBlob]);
-
-  // Draw live sticky-marker HUD overlay + full-width horizontal scan lines.
-  useEffect(() => {
-    const canvas = hudCanvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    const rect = canvas.getBoundingClientRect();
-    const dpr = window.devicePixelRatio || 1;
-    const w = Math.max(1, Math.round(rect.width * dpr));
-    const h = Math.max(1, Math.round(rect.height * dpr));
-    if (canvas.width !== w || canvas.height !== h) {
-      canvas.width = w;
-      canvas.height = h;
-    }
-
-    ctx.clearRect(0, 0, w, h);
-
-    for (const page of detectedPages) {
-      const sideOffset = page.side === 'right' ? 0.5 : 0;
-      const sideScale = page.side === 'single' ? 1 : 0.5;
-      const pageLeft = (sideOffset + 0.06 * sideScale) * w;
-      const pageRight = (sideOffset + 0.94 * sideScale) * w;
-
-      const sortedBars = page.markers
-        .filter(m => m.kind === 'bar')
-        .sort((a, b) => a.yNorm - b.yNorm);
-
-      // Draw shaded highlight capture region between horizontal lines (or down to page bottom).
-      if (sortedBars.length >= 2) {
-        for (let i = 0; i + 1 < sortedBars.length; i += 2) {
-          const y0 = sortedBars[i].yNorm * h;
-          const y1 = sortedBars[i + 1].yNorm * h;
-          ctx.save();
-          ctx.fillStyle = 'rgba(48, 209, 88, 0.14)';
-          ctx.fillRect(pageLeft, y0, pageRight - pageLeft, Math.max(4, y1 - y0));
-          ctx.restore();
-        }
-      } else if (sortedBars.length === 1) {
-        const yBar = sortedBars[0].yNorm * h;
-        ctx.save();
-        ctx.fillStyle = 'rgba(48, 209, 88, 0.13)';
-        if (page.action === 'range-close') {
-          const topY = 0.08 * h;
-          ctx.fillRect(
-            pageLeft,
-            topY,
-            pageRight - pageLeft,
-            Math.max(4, yBar - topY),
-          );
-        } else {
-          const botY = 0.92 * h;
-          ctx.fillRect(
-            pageLeft,
-            yBar,
-            pageRight - pageLeft,
-            Math.max(4, botY - yBar),
-          );
-        }
-        ctx.restore();
-      }
-
-      for (const marker of page.markers) {
-        const [bx, by, bw, bh] = marker.bbox;
-        const x = (sideOffset + bx * sideScale) * w;
-        const y = by * h;
-        const lineY = marker.yNorm * h;
-        const mw = Math.max(18 * dpr, bw * sideScale * w);
-        const mh = Math.max(14 * dpr, bh * h);
-
-        const isSingle = marker.kind === 'L';
-        const stroke = isSingle ? '#30d158' : '#ffd60a';
-        const fill = isSingle
-          ? 'rgba(48, 209, 88, 0.24)'
-          : 'rgba(255, 214, 10, 0.24)';
-
-        ctx.save();
-        // Full-width horizontal scan line across the page at the sticky marker's Y position
-        ctx.strokeStyle = stroke;
-        ctx.lineWidth = 2.2 * dpr;
-        ctx.setLineDash([6 * dpr, 4 * dpr]);
-        ctx.beginPath();
-        ctx.moveTo(pageLeft, lineY);
-        ctx.lineTo(pageRight, lineY);
-        ctx.stroke();
-        ctx.setLineDash([]);
-
-        // Sticky marker bounding pill
-        ctx.fillStyle = fill;
-        ctx.strokeStyle = stroke;
-        ctx.lineWidth = 2.2 * dpr;
-        ctx.beginPath();
-        ctx.roundRect(x, y, mw, mh, 5 * dpr);
-        ctx.fill();
-        ctx.stroke();
-
-        const tag = isSingle
-          ? `L · ${t('scanner.markerSingle')}`
-          : `— · ${t('scanner.markerRange')}`;
-        ctx.font = `600 ${Math.round(11 * dpr)}px system-ui, -apple-system, sans-serif`;
-        const textW = ctx.measureText(tag).width + 12 * dpr;
-        const pillH = 20 * dpr;
-        const pillX = Math.min(w - textW - 8 * dpr, Math.max(8 * dpr, x));
-        const pillY = Math.max(8 * dpr, y - pillH - 4 * dpr);
-
-        ctx.fillStyle = 'rgba(13, 13, 13, 0.85)';
-        ctx.beginPath();
-        ctx.roundRect(pillX, pillY, textW, pillH, 999);
-        ctx.fill();
-
-        ctx.fillStyle = stroke;
-        ctx.fillText(tag, pillX + 6 * dpr, pillY + 14 * dpr);
-        ctx.restore();
-      }
-    }
-  }, [detectedPages]);
-
-  const handleManualCapture = async () => {
-    const video = videoRef.current;
-    if (!video || capturing || !pagePresent) return;
-    gateRef.current.notifyManualCapture();
-    const captured = await captureVideoJpegBlob(video);
-    if (captured) {
-      await sendFrameBlob(captured.blob, true);
-    }
-  };
-
-  const handleFinishScan = async () => {
-    let finalSnap = snapshot;
-    if (sessionIdRef.current && backendOnline) {
       try {
-        finalSnap = await finishScanSession(sessionIdRef.current);
-        setSnapshot(finalSnap);
+        const imported = await runPhotoImport(
+          raw,
+          state => setProgress(state),
+          ctrl.signal,
+        );
+        const combined = [...itemsRef.current, ...imported];
+        setItems(combined);
+        applyAssembled(combined, undefined, true);
+        setPhase('review');
       } catch (error) {
-        console.warn('finishScanSession', error);
+        if ((error as Error)?.name !== 'AbortError') {
+          console.warn('runPhotoImport failed:', error);
+          showToast(t('snackbar.scan-failed'));
+        }
+      } finally {
+        setBusy(false);
+        setProgress(null);
       }
-    }
-    setDraftChapters(snapshotToChapters(finalSnap));
-    setPhase('review');
-  };
+    },
+    [applyAssembled, busy],
+  );
+
+  const handleSetMarkBoundary = useCallback(
+    (kind: 'start' | 'end' | 'new' | 'remove', target: Mark) => {
+      let next = marks.map(m => ({
+        start: { ...m.start },
+        end: { ...m.end },
+      }));
+
+      const coveringIdx = next.findIndex(m => isMarkInside(target, m));
+
+      if (kind === 'remove') {
+        if (coveringIdx >= 0) {
+          next.splice(coveringIdx, 1);
+        } else {
+          const samePhotoIdx = next.findIndex(
+            m =>
+              m.start.photo === target.photo || m.end.photo === target.photo,
+          );
+          if (samePhotoIdx >= 0) next.splice(samePhotoIdx, 1);
+        }
+      } else if (kind === 'new') {
+        next.push({ start: { ...target }, end: { ...target } });
+      } else if (kind === 'start') {
+        if (coveringIdx >= 0) {
+          next[coveringIdx].start = { ...target };
+          if (compareMark(next[coveringIdx].start, next[coveringIdx].end) > 0) {
+            next[coveringIdx].end = { ...target };
+          }
+        } else {
+          // Find closest mark on or after this photo, or last mark
+          const afterIdx = next.findIndex(m => compareMark(m.end, target) >= 0);
+          if (afterIdx >= 0) {
+            next[afterIdx].start = { ...target };
+          } else {
+            const pageLines = items[target.photo]?.page.lines.length ?? 1;
+            next.push({
+              start: { ...target },
+              end: { photo: target.photo, line: Math.max(target.line, pageLines - 1) },
+            });
+          }
+        }
+      } else if (kind === 'end') {
+        if (coveringIdx >= 0) {
+          next[coveringIdx].end = { ...target };
+          if (compareMark(next[coveringIdx].end, next[coveringIdx].start) < 0) {
+            next[coveringIdx].start = { ...target };
+          }
+        } else {
+          // Find closest mark starting on or before this target
+          let beforeIdx = -1;
+          for (let i = next.length - 1; i >= 0; i--) {
+            if (compareMark(next[i].start, target) <= 0) {
+              beforeIdx = i;
+              break;
+            }
+          }
+          if (beforeIdx >= 0) {
+            next[beforeIdx].end = { ...target };
+          } else {
+            next.push({
+              start: { photo: target.photo, line: 0 },
+              end: { ...target },
+            });
+          }
+        }
+      }
+
+      next = next.sort((a, b) => compareMark(a.start, b.start));
+      applyAssembled(items, next, false);
+    },
+    [applyAssembled, items, marks],
+  );
+
+  const handleUsePhotoAsCover = useCallback(
+    (photoIdx: number) => {
+      const it = items[photoIdx];
+      if (!it) return;
+      const previewUrl = URL.createObjectURL(it.file);
+      setCoverFile(prev => {
+        if (prev) URL.revokeObjectURL(prev.previewUrl);
+        return { file: it.file, previewUrl };
+      });
+    },
+    [items],
+  );
 
   const totalHighlights = useMemo(
     () =>
-      (phase === 'review' ? draftChapters : snapshot?.chapters ?? []).reduce(
-        (sum, ch) => sum + ch.highlights.length,
-        0,
-      ),
-    [draftChapters, phase, snapshot],
+      draftChapters.reduce((sum, ch) => sum + ch.highlights.length, 0),
+    [draftChapters],
   );
 
   const canSaveReview =
@@ -638,20 +428,12 @@ export function ScannerSheet({
           body,
         });
         primeBody(bookId, body);
-        if (sessionIdRef.current) {
-          void deleteScanSession(sessionIdRef.current);
-          sessionIdRef.current = null;
-        }
         showToast(t('snackbar.book-created'));
         onSaved(bookId);
       } else {
         const existingBody = await ensureBody(selectedBookId);
         const merged = mergeChaptersIntoBody(existingBody, cleanedChapters);
         await saveBody(selectedBookId, merged);
-        if (sessionIdRef.current) {
-          void deleteScanSession(sessionIdRef.current);
-          sessionIdRef.current = null;
-        }
         showToast(t('snackbar.book-updated'));
         onSaved(selectedBookId);
       }
@@ -674,28 +456,59 @@ export function ScannerSheet({
       : t('bookEdit.year.none');
 
   const childDepth = genresOpen || yearOpen ? 1 : 0;
-  const effectiveProgress = capturing ? 1 : settleProgress;
-  const cornersClass = [
-    'scanner-corners',
-    pagePresent || effectiveProgress > 0 ? 'is-page' : '',
-    capturing || effectiveProgress >= 0.98 ? 'is-locked' : '',
-  ]
-    .filter(Boolean)
-    .join(' ');
+  const activeItem = items[activePhoto] ?? null;
+
+  const progressRatio = useMemo(() => {
+    if (!progress) return 0;
+    if (progress.phase === 'models') return progress.modelProgress * 0.18;
+    if (progress.total === 0) return 1;
+    return 0.18 + (progress.done / progress.total) * 0.82;
+  }, [progress]);
+
+  const photoBadgeLabel = (idx: number): string => {
+    const it = items[idx];
+    if (!it) return String(idx + 1);
+    if (it.page.kind === 'cover') return t('scanner.kindCover');
+    if (it.page.kind === 'index') return t('scanner.kindIndex');
+    const num = pageNumbers[idx];
+    return num !== null && num !== undefined
+      ? t('scanner.pageBadge', { page: num })
+      : `${idx + 1}`;
+  };
+
+  const photoHasHighlight = useCallback(
+    (idx: number) =>
+      marks.some(m => idx >= m.start.photo && idx <= m.end.photo),
+    [marks],
+  );
 
   return (
     <>
+      <input
+        ref={photosInputRef}
+        type="file"
+        accept="image/*"
+        multiple
+        hidden
+        onChange={e => {
+          if (e.target.files && e.target.files.length > 0) {
+            void handleFilesSelected(e.target.files);
+          }
+          e.target.value = '';
+        }}
+      />
+
       <SidePanel
         open={open}
         depth={depth + childDepth}
         index={index}
-        title={t(phase === 'scan' ? 'scanner.title' : 'scanner.reviewTitle')}
+        title={t(phase === 'pick' ? 'scanner.title' : 'scanner.reviewTitle')}
         action={
           phase === 'review' ? (
             <button
               type="button"
               className="round"
-              onClick={() => setPhase('scan')}
+              onClick={() => setPhase('pick')}
             >
               <ChevronLeftGlyph />
               <span className="sr">{t('scanner.actions.backToCamera')}</span>
@@ -723,163 +536,291 @@ export function ScannerSheet({
         }
         onClose={onClose}
       >
-        {phase === 'scan' ? (
-          <div className="scanner-viewport">
-            <video
-              ref={videoRef}
-              playsInline
-              muted
-              autoPlay
-              className={
-                cameraReady ? 'scanner-video is-ready' : 'scanner-video'
+        {phase === 'pick' ? (
+          <div
+            className={
+              dragOver
+                ? 'scanner-dropzone is-dragover'
+                : 'scanner-dropzone'
+            }
+            onDragOver={e => {
+              e.preventDefault();
+              setDragOver(true);
+            }}
+            onDragLeave={() => setDragOver(false)}
+            onDrop={e => {
+              e.preventDefault();
+              setDragOver(false);
+              if (e.dataTransfer.files?.length) {
+                void handleFilesSelected(e.dataTransfer.files);
               }
-              onClick={() => void handleManualCapture()}
-            />
-            <canvas ref={hudCanvasRef} className="scanner-hud" />
+            }}
+          >
+            <div className="scanner-drop-card">
+              <span className="side-empty-mark">
+                <CameraGlyph />
+              </span>
+              <h2>{t('scanner.dropTitle')}</h2>
+              <p>{t('scanner.dropSubtitle')}</p>
 
-            <div className={cornersClass} aria-hidden="true">
-              <svg
-                className="scanner-frame-svg"
-                viewBox="0 0 100 100"
-                preserveAspectRatio="none"
-              >
-                <rect
-                  className="scanner-frame-track"
-                  x="1"
-                  y="1"
-                  width="98"
-                  height="98"
-                  rx="4"
-                  ry="4"
-                  pathLength={100}
-                />
-                <rect
-                  className="scanner-frame-fill"
-                  x="1"
-                  y="1"
-                  width="98"
-                  height="98"
-                  rx="4"
-                  ry="4"
-                  pathLength={100}
-                  style={{
-                    strokeDasharray: 100,
-                    strokeDashoffset: Math.max(
-                      0,
-                      100 - Math.round(effectiveProgress * 100),
-                    ),
-                  }}
-                />
-              </svg>
-              <i />
-              <i />
-              <i />
-              <i />
-            </div>
-
-            {!cameraReady && (
-              <div className="scanner-camera-fallback">
-                <span className="side-empty-mark">
-                  <CameraGlyph />
-                </span>
-                <p>
-                  {cameraError
-                    ? t('scanner.statusCameraOff')
-                    : t('scanner.statusCapturing')}
-                </p>
-              </div>
-            )}
-
-            <div className="scanner-hud-top">
-              <div className="scanner-hud-row">
-                {backendOnline === false ? (
+              {busy && progress ? (
+                <div className="scanner-progress-box" role="status">
+                  <div className="scanner-progress-track">
+                    <div
+                      className="scanner-progress-fill"
+                      style={{
+                        width: `${Math.max(4, Math.round(progressRatio * 100))}%`,
+                      }}
+                    />
+                  </div>
+                  <span className="scanner-progress-label">
+                    {progress.phase === 'models'
+                      ? t('scanner.loadingModels', {
+                          percent: Math.round(progress.modelProgress * 100),
+                        })
+                      : t('scanner.readingPhotos', {
+                          done: Math.min(progress.done + 1, progress.total),
+                          total: progress.total,
+                        })}
+                  </span>
+                </div>
+              ) : (
+                <div className="scanner-drop-actions">
                   <button
                     type="button"
-                    className="scanner-status-pill is-alert"
-                    onClick={() => void initScannerSession()}
-                    title={scannerBaseUrl}
+                    className="pill is-primary"
+                    onClick={() => photosInputRef.current?.click()}
                   >
-                    <span>{t('scanner.actions.retrySession')}</span>
+                    {t('scanner.actions.pickPhotos')}
                   </button>
-                ) : (
-                  <div
-                    className={
-                      snapshot?.openRange.active
-                        ? 'scanner-status-pill is-range'
-                        : 'scanner-status-pill'
-                    }
-                  >
-                    {(capturing || effectiveProgress > 0) && (
-                      <span className="scanner-pulse" />
-                    )}
-                    <span>
-                      {capturing
-                        ? t('scanner.statusCapturing')
-                        : snapshot?.openRange.active
-                          ? t('scanner.statusRange', {
-                              startPage: snapshot.openRange.startPage ?? '?',
-                            })
-                          : t('scanner.statusIdle')}
-                    </span>
-                  </div>
-                )}
-
-                <div className="scanner-counter-pill" aria-live="polite">
-                  <span>
-                    {snapshot?.pagesScanned ?? 0}p · {totalHighlights}{' '}
-                    {t('scanner.counters.highlights').toLowerCase()}
-                  </span>
-                </div>
-              </div>
-
-              {videoDevices.length > 0 && (
-                <div className="scanner-hud-row">
-                  <select
-                    className="scanner-camera-select"
-                    aria-label={t('scanner.title')}
-                    value={selectedDeviceId}
-                    onChange={e => {
-                      setUserPickedCamera(true);
-                      setSelectedDeviceId(e.target.value);
-                    }}
-                  >
-                    {videoDevices.map((dev, idx) => (
-                      <option key={dev.deviceId || idx} value={dev.deviceId}>
-                        {dev.label || `Camera ${idx + 1}`}
-                      </option>
-                    ))}
-                  </select>
+                  {items.length > 0 && (
+                    <button
+                      type="button"
+                      className="pill"
+                      onClick={() => setPhase('review')}
+                    >
+                      {t('scanner.reviewTitle')} ({items.length})
+                    </button>
+                  )}
                 </div>
               )}
-
-              {snapshot?.currentChapter && (
-                <div className="scanner-chapter-pill">
-                  <span>{snapshot.currentChapter}</span>
-                </div>
-              )}
-
-              {snapshot && snapshot.warnings.length > 0 && (
-                <div className="scanner-warning-pill" role="status">
-                  <span>
-                    {snapshot.warnings[snapshot.warnings.length - 1]}
-                  </span>
-                </div>
-              )}
-            </div>
-
-            <div className="scanner-hud-bottom">
-              <button
-                type="button"
-                className="pill is-primary scanner-finish-btn"
-                onClick={() => void handleFinishScan()}
-              >
-                {t('scanner.actions.finish')}
-                {totalHighlights > 0 ? ` (${totalHighlights})` : ''}
-              </button>
             </div>
           </div>
         ) : (
           <>
+            {items.length > 0 && (
+              <section>
+                <h3 className="section-head split">
+                  <span>{t('scanner.pagesSection')}</span>
+                  <span className="head-value">
+                    {activePhoto + 1} / {items.length}
+                  </span>
+                </h3>
+
+                <div className="scanner-photo-strip" role="tablist">
+                  {items.map((it, idx) => {
+                    const active = idx === activePhoto;
+                    const marked = photoHasHighlight(idx);
+                    return (
+                      <button
+                        key={`${it.file.name}-${idx}`}
+                        type="button"
+                        role="tab"
+                        aria-selected={active}
+                        className={[
+                          'scanner-thumb',
+                          active ? 'is-active' : '',
+                          marked ? 'is-marked' : '',
+                        ]
+                          .filter(Boolean)
+                          .join(' ')}
+                        onClick={() => setActivePhoto(idx)}
+                      >
+                        <img src={it.previewUrl} alt="" loading="lazy" />
+                        <span className="scanner-thumb-badge">
+                          {photoBadgeLabel(idx)}
+                        </span>
+                      </button>
+                    );
+                  })}
+                  <button
+                    type="button"
+                    className="scanner-thumb is-add"
+                    disabled={busy}
+                    title={t('scanner.actions.addMorePhotos')}
+                    onClick={() => photosInputRef.current?.click()}
+                  >
+                    <PlusGlyph />
+                  </button>
+                </div>
+
+                {activeItem && (
+                  <div className="card scanner-inspector-card">
+                    <div className="scanner-inspector-bar">
+                      <button
+                        type="button"
+                        className="round quiet"
+                        disabled={activePhoto <= 0}
+                        onClick={() =>
+                          setActivePhoto(i => Math.max(0, i - 1))
+                        }
+                      >
+                        <ChevronLeftGlyph />
+                      </button>
+                      <span className="scanner-inspector-title">
+                        {photoBadgeLabel(activePhoto)}
+                      </span>
+                      {destination === 'new' && (
+                        <button
+                          type="button"
+                          className="text-action scanner-use-cover-btn"
+                          onClick={() => handleUsePhotoAsCover(activePhoto)}
+                        >
+                          {t('scanner.useAsCover')}
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        className="round quiet"
+                        disabled={activePhoto >= items.length - 1}
+                        onClick={() =>
+                          setActivePhoto(i =>
+                            Math.min(items.length - 1, i + 1),
+                          )
+                        }
+                      >
+                        <ChevronRightGlyph />
+                      </button>
+                    </div>
+
+                    <div
+                      className="scanner-photo-stage"
+                      style={{
+                        aspectRatio: `${activeItem.page.width} / ${activeItem.page.height}`,
+                      }}
+                    >
+                      <img
+                        src={activeItem.previewUrl}
+                        alt=""
+                        className="scanner-stage-img"
+                      />
+                      <div className="scanner-stage-lines">
+                        {activeItem.page.lines.map((ln, lIdx) => {
+                          const here: Mark = {
+                            photo: activePhoto,
+                            line: lIdx,
+                          };
+                          const inRange = marks.some(m =>
+                            isMarkInside(here, m),
+                          );
+                          const isStart = marks.some(
+                            m =>
+                              m.start.photo === activePhoto &&
+                              m.start.line === lIdx,
+                          );
+                          const isEnd = marks.some(
+                            m =>
+                              m.end.photo === activePhoto &&
+                              m.end.line === lIdx,
+                          );
+                          const leftPct =
+                            (ln.x1 / activeItem.page.width) * 100;
+                          const topPct =
+                            (ln.y1 / activeItem.page.height) * 100;
+                          const widthPct =
+                            ((ln.x2 - ln.x1) / activeItem.page.width) * 100;
+                          const heightPct =
+                            ((ln.y2 - ln.y1) / activeItem.page.height) * 100;
+
+                          return (
+                            <button
+                              key={lIdx}
+                              type="button"
+                              className={[
+                                'scanner-line-box',
+                                inRange ? 'is-in-range' : '',
+                                isStart ? 'is-start' : '',
+                                isEnd ? 'is-end' : '',
+                              ]
+                                .filter(Boolean)
+                                .join(' ')}
+                              style={{
+                                left: `${leftPct}%`,
+                                top: `${topPct}%`,
+                                width: `${widthPct}%`,
+                                height: `${heightPct}%`,
+                              }}
+                              title={ln.text}
+                              onClick={() =>
+                                setLineSheet({
+                                  photo: activePhoto,
+                                  line: lIdx,
+                                })
+                              }
+                            >
+                              {isStart && (
+                                <span className="scanner-line-tag is-start">
+                                  {t('scanner.markStart')}
+                                </span>
+                              )}
+                              {isEnd && (
+                                <span className="scanner-line-tag is-end">
+                                  {t('scanner.markEnd')}
+                                </span>
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {activeItem.page.lines.length > 0 && (
+                      <p className="scanner-tap-hint">
+                        {t('scanner.tapHint')}
+                      </p>
+                    )}
+                  </div>
+                )}
+              </section>
+            )}
+
+            <ActionSheet
+              open={lineSheet !== null}
+              cancel={t('common.cancel')}
+              actions={
+                lineSheet
+                  ? [
+                      {
+                        label: t('scanner.setStartHere'),
+                        onSelect: () =>
+                          handleSetMarkBoundary('start', lineSheet),
+                      },
+                      {
+                        label: t('scanner.setEndHere'),
+                        onSelect: () =>
+                          handleSetMarkBoundary('end', lineSheet),
+                      },
+                      {
+                        label: t('scanner.newHighlightHere'),
+                        onSelect: () =>
+                          handleSetMarkBoundary('new', lineSheet),
+                      },
+                      ...(photoHasHighlight(lineSheet.photo)
+                        ? [
+                            {
+                              label: t('scanner.removeHighlightHere'),
+                              destructive: true,
+                              onSelect: () =>
+                                handleSetMarkBoundary('remove', lineSheet),
+                            },
+                          ]
+                        : []),
+                    ]
+                  : []
+              }
+              onClose={() => setLineSheet(null)}
+            />
+
             {shelf.length > 0 && (
               <div className="card">
                 <div className="cell">
