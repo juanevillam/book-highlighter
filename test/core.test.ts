@@ -17,12 +17,6 @@ import {
   parsePageRef,
   parseYear,
 } from '../src/lib/bookFields';
-import {
-  CameraGateStateMachine,
-  computeMotionScore,
-  computeSharpnessScore,
-  rgbaToGrayscale,
-} from '../src/lib/cameraGate';
 import { sortLibrary } from '../src/lib/librarySort';
 import {
   pageIndexForAnchor,
@@ -35,6 +29,13 @@ import {
   readerPalette,
   TEXT_SCALES,
 } from '../src/lib/readerThemes';
+import { type PageAnalysis } from '../src/lib/photoImport/analyze';
+import {
+  assembleBook,
+  findMarks,
+  repairPageNumbers,
+} from '../src/lib/photoImport/assemble';
+import { cleanOcr } from '../src/lib/photoImport/clean';
 import { shelfEntries } from '../src/lib/shelf';
 
 const makeBook = (overrides: Partial<Book>): Book => ({
@@ -249,57 +250,159 @@ describe('readerThemes, readerSections & paginator reflow anchor stability', () 
   });
 });
 
-describe('CameraGateStateMachine', () => {
-  const makeCheckerboardGray = (
-    w: number,
-    h: number,
-    shift: number = 0,
-  ): Uint8Array => {
-    const buf = new Uint8Array(w * h);
-    for (let y = 0; y < h; y += 1) {
-      for (let x = 0; x < w; x += 1) {
-        const cell = (((x + shift) >> 2) + (y >> 2)) & 1;
-        buf[y * w + x] = cell ? 225 : 30;
-      }
-    }
-    return buf;
-  };
+describe('photoImport pipeline & book assembly', () => {
+  it('cleans Spanish OCR typography artifacts and repairs missing/truncated page numbers', () => {
+    expect(cleanOcr('--Hola , dijo Siddhartha .')).toBe('—Hola, dijo Siddhartha.');
 
-  it('converts RGBA to luminance and triggers capture after page turn + crisp settle', () => {
-    const rgba = new Uint8ClampedArray([255, 255, 255, 255, 0, 0, 0, 255]);
-    const luma = rgbaToGrayscale(rgba, 2);
-    expect(luma[0]).toBeGreaterThan(245);
-    expect(luma[1]).toBe(0);
-
-    const w = 64;
-    const h = 48;
-    const pageA = makeCheckerboardGray(w, h, 0);
-    const pageB = makeCheckerboardGray(w, h, 4);
-
-    expect(computeSharpnessScore(pageA, w, h)).toBeGreaterThan(100);
-    expect(computeMotionScore(pageA, pageB)).toBeGreaterThan(50);
-
-    const gate = new CameraGateStateMachine({
-      captureInitialPage: false,
-      settleDurationMs: 250,
-      cooldownMs: 500,
+    const mkPage = (
+      kind: PageAnalysis['kind'],
+      pageNumber: number | null,
+    ): PageAnalysis => ({
+      kind,
+      width: 1200,
+      height: 1600,
+      columnX1: 120,
+      columnX2: 1080,
+      lines: [],
+      pageNumber,
+      headingIndex: null,
+      toc: [],
+      coverLines: [],
+      flags: [],
     });
 
-    // Initial idle frame
-    expect(gate.stepGrayscale(pageA, w, h, 0).shouldCapture).toBe(false);
-    // Page turn motion (`pageA -> pageB`)
-    const turnStep = gate.stepGrayscale(pageB, w, h, 100);
-    expect(turnStep.phase).toBe('turning');
-    expect(turnStep.shouldCapture).toBe(false);
+    const pages: PageAnalysis[] = [
+      mkPage('cover', null),
+      mkPage('page', 25),
+      mkPage('page', 26),
+      mkPage('page', null), // unnumbered page 27
+      mkPage('page', 2), // misread 52 -> 2
+      mkPage('page', 53),
+      mkPage('page', null), // unnumbered page 54
+      mkPage('index', null),
+    ];
 
-    // Page settles on `pageB`
-    const settleStart = gate.stepGrayscale(pageB, w, h, 200);
-    expect(settleStart.phase).toBe('settling');
-    expect(settleStart.shouldCapture).toBe(false);
+    expect(repairPageNumbers(pages)).toEqual([
+      null,
+      25,
+      26,
+      27,
+      52,
+      53,
+      54,
+      null,
+    ]);
+  });
 
-    // Held steady for 260ms -> triggers capture!
-    const captured = gate.stepGrayscale(pageB, w, h, 460);
-    expect(captured.shouldCapture).toBe(true);
-    expect(captured.phase).toBe('cooldown');
+  it('pairs start/end sticky flags by outer margin parity and groups highlights under TOC chapters', () => {
+    const pages: PageAnalysis[] = [
+      {
+        kind: 'cover',
+        width: 1200,
+        height: 1600,
+        columnX1: 100,
+        columnX2: 1100,
+        lines: [],
+        pageNumber: null,
+        headingIndex: null,
+        toc: [],
+        coverLines: ['SIDDHARTHA', 'HERMANN HESSE'],
+        flags: [],
+      },
+      {
+        kind: 'page',
+        width: 1200,
+        height: 1600,
+        columnX1: 120,
+        columnX2: 1080,
+        lines: [
+          { text: 'Contexto previo.', x1: 120, y1: 100, x2: 500, y2: 130 },
+          {
+            text: 'En el camino, Siddhartha regaló su túnica a un brahmán-',
+            x1: 160,
+            y1: 200,
+            x2: 1060,
+            y2: 230,
+          },
+          {
+            text: 'pobre, quedándose solo con el taparrabos.',
+            x1: 120,
+            y1: 240,
+            x2: 900,
+            y2: 270,
+          },
+        ],
+        pageNumber: 25,
+        headingIndex: null,
+        toc: [],
+        coverLines: [],
+        flags: [{ side: 'R', y: 215, lineIndex: 1 }],
+      },
+      {
+        kind: 'page',
+        width: 1200,
+        height: 1600,
+        columnX1: 120,
+        columnX2: 1080,
+        lines: [
+          {
+            text: 'Dejemos este tipo de satisfac-',
+            x1: 120,
+            y1: 300,
+            x2: 1060,
+            y2: 330,
+          },
+          {
+            text: 'ciones a los viejos samanas.',
+            x1: 120,
+            y1: 340,
+            x2: 800,
+            y2: 370,
+          },
+          {
+            text: 'Otro párrafo posterior.',
+            x1: 160,
+            y1: 420,
+            x2: 700,
+            y2: 450,
+          },
+        ],
+        pageNumber: null, // repaired to 26 (even -> outer side 'L')
+        headingIndex: null,
+        toc: [],
+        coverLines: [],
+        flags: [{ side: 'L', y: 315, lineIndex: 0 }],
+      },
+      {
+        kind: 'index',
+        width: 1200,
+        height: 1600,
+        columnX1: 120,
+        columnX2: 1080,
+        lines: [],
+        pageNumber: null,
+        headingIndex: 0,
+        toc: [{ title: 'Con los samanas', page: 23 }],
+        coverLines: [],
+        flags: [],
+      },
+    ];
+
+    const nums = repairPageNumbers(pages);
+    expect(findMarks(pages, nums)).toEqual([
+      { start: { photo: 1, line: 1 }, end: { photo: 2, line: 0 } },
+    ]);
+
+    const draft = assembleBook(pages);
+    expect(draft.title).toBe('Siddhartha');
+    expect(draft.author).toBe('Hermann Hesse');
+    expect(draft.coverPhoto).toBe(0);
+    expect(draft.chapters).toHaveLength(1);
+    expect(draft.chapters[0].name).toBe('Con los samanas');
+    expect(draft.chapters[0].pages).toBe('25–26');
+    expect(draft.chapters[0].highlights[0]).toMatchObject({
+      page: '25–26',
+      text: 'En el camino, Siddhartha regaló su túnica a un brahmánpobre, quedándose solo con el taparrabos. Dejemos este tipo de satisfacciones a los viejos samanas.',
+    });
   });
 });
