@@ -4,14 +4,12 @@ import {
   createBook,
   EMPTY_BODY,
   recoverBook,
-  saveBookBody,
   trashBook,
   updateBook,
   type Book,
   type BookFields,
 } from '../books';
 import { t } from '../i18n';
-import { formatYear } from '../lib/bookFields';
 import { genreLabel, GENRES } from '../lib/genres';
 import { uploadFailureKey, uploadImage, type Asset } from '../media';
 import { useBodiesStore } from '../store/bodies';
@@ -51,22 +49,19 @@ export function BookFormPanel({
   onClose: () => void;
 }) {
   const allBooks = useBooksStore(state => state.books);
-  const ensureBody = useBodiesStore(state => state.ensure);
   const primeBody = useBodiesStore(state => state.prime);
-  const bodyEntry = useBodiesStore(state =>
-    book ? state.entries[book.id] : undefined,
-  );
 
   const [name, setName] = useState(book?.name ?? '');
   const [author, setAuthor] = useState(book?.author ?? '');
-  const [year, setYear] = useState<number | null>(book?.year ?? null);
+  // Years are AD only (0 onward); an empty field means no year.
+  const [yearText, setYearText] = useState(
+    book?.year != null && book.year >= 0 ? String(book.year) : '',
+  );
   const [genres, setGenres] = useState<string[]>(book?.genres ?? []);
   const [series, setSeries] = useState<string | null>(book?.series ?? null);
   const [seriesNumber, setSeriesNumber] = useState<number>(
     book?.seriesNumber ?? 1,
   );
-  const [summary, setSummary] = useState('');
-  const [summaryLoaded, setSummaryLoaded] = useState(!book);
   const [cover, setCover] = useState<CoverDraft>(
     book?.artUrl
       ? { state: 'unchanged', url: book.artUrl }
@@ -76,29 +71,11 @@ export function BookFormPanel({
 
   const [coverSheet, setCoverSheet] = useState(false);
   const [genresOpen, setGenresOpen] = useState(false);
-  const [yearOpen, setYearOpen] = useState(false);
   const [seriesDialog, setSeriesDialog] = useState(false);
   const [newSeriesInput, setNewSeriesInput] = useState('');
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const newSeriesDialogRef = useRef<HTMLDialogElement>(null);
-
-  useEffect(() => {
-    if (!book) {
-      setSummary('');
-      setSummaryLoaded(true);
-      return;
-    }
-    setSummaryLoaded(false);
-    ensureBody(book.id)
-      .then(loaded => {
-        setSummary(loaded.summary);
-        setSummaryLoaded(true);
-      })
-      .catch(() => {
-        setSummaryLoaded(true);
-      });
-  }, [book, ensureBody]);
 
   useEffect(() => {
     return () => {
@@ -134,7 +111,8 @@ export function BookFormPanel({
         ? cover.url
         : '';
 
-  const canSave = name.trim().length > 0 && !busy;
+  const canSave =
+    name.trim().length > 0 && author.trim().length > 0 && !busy;
 
   const handleSave = async () => {
     if (!canSave) return;
@@ -148,6 +126,7 @@ export function BookFormPanel({
       }
 
       const cleanSeries = series?.trim() || null;
+      const year = yearText === '' ? null : Number.parseInt(yearText, 10);
       const fields: BookFields = {
         name: name.trim(),
         author: author.trim(),
@@ -158,10 +137,7 @@ export function BookFormPanel({
       };
 
       if (!book) {
-        const initialBody = {
-          ...EMPTY_BODY,
-          summary: summary.trim(),
-        };
+        const initialBody = { ...EMPTY_BODY };
         const createdId = await createBook({
           fields,
           cover: uploadedCover ?? null,
@@ -176,12 +152,6 @@ export function BookFormPanel({
           fields,
           ...(uploadedCover === undefined ? {} : { cover: uploadedCover }),
         });
-        const currentBody = bodyEntry?.body ?? (await ensureBody(book.id));
-        if (summaryLoaded && summary.trim() !== currentBody.summary.trim()) {
-          const updatedBody = { ...currentBody, summary: summary.trim() };
-          await saveBookBody(book.id, updatedBody);
-          primeBody(book.id, updatedBody);
-        }
         showToast(t('snackbar.book-updated'));
         onSaved(book.id);
       }
@@ -221,12 +191,7 @@ export function BookFormPanel({
       ? genres.map(g => genreLabel(k => t(k), g)).join(', ')
       : t('bookEdit.genres.none');
 
-  const yearSummary =
-    year !== null
-      ? formatYear(year, y => t('bookEdit.year.bc', { year: y }))
-      : t('bookEdit.year.none');
-
-  const childDepth = genresOpen || yearOpen ? 1 : 0;
+  const childDepth = genresOpen ? 1 : 0;
 
   return (
     <>
@@ -346,18 +311,23 @@ export function BookFormPanel({
         </div>
 
         <div className="card">
-          <button
-            type="button"
-            className="cell link-row"
-            disabled={busy}
-            onClick={() => setYearOpen(true)}
-          >
-            <span className="cell-name">{t('bookEdit.year.label')}</span>
-            <span className="cell-value">{yearSummary}</span>
-            <span className="chevron">
-              <ChevronRightGlyph />
-            </span>
-          </button>
+          <label className="cell field">
+            <span className="field-caption">{t('bookEdit.year.label')}</span>
+            <input
+              inputMode="numeric"
+              value={yearText}
+              placeholder={t('bookEdit.year.placeholder')}
+              disabled={busy}
+              onChange={e =>
+                setYearText(
+                  e.target.value
+                    .replace(/\D/g, '')
+                    .slice(0, 4)
+                    .replace(/^0+(?=\d)/, ''),
+                )
+              }
+            />
+          </label>
 
           <button
             type="button"
@@ -423,21 +393,6 @@ export function BookFormPanel({
           )}
         </div>
 
-        <section>
-          <h3 className="section-head">{t('bookEdit.summary.label')}</h3>
-          <div className="card">
-            <div className="cell textarea-cell">
-              <textarea
-                rows={5}
-                value={summary}
-                placeholder={t('bookEdit.summary.placeholder')}
-                disabled={busy || !summaryLoaded}
-                onChange={e => setSummary(e.target.value)}
-              />
-            </div>
-          </div>
-        </section>
-
         {book && (
           <div className="card">
             <button
@@ -458,15 +413,6 @@ export function BookFormPanel({
           selected={genres}
           onChange={setGenres}
           onClose={() => setGenresOpen(false)}
-        />
-      )}
-
-      {yearOpen && (
-        <YearPickerSheet
-          index={index + 1}
-          value={year}
-          onChange={setYear}
-          onClose={() => setYearOpen(false)}
         />
       )}
 
@@ -580,147 +526,6 @@ export function GenresPickerSheet({
           );
         })}
       </div>
-    </SidePanel>
-  );
-}
-
-export function YearPickerSheet({
-  index,
-  value,
-  onChange,
-  onClose,
-}: {
-  index: number;
-  value: number | null;
-  onChange: (next: number | null) => void;
-  onClose: () => void;
-}) {
-  const currentYear = new Date().getFullYear();
-  const [hasYear, setHasYear] = useState(value !== null);
-  const [era, setEra] = useState<'ad' | 'bc'>(
-    value !== null && value < 0 ? 'bc' : 'ad',
-  );
-  const [digits, setDigits] = useState(
-    value !== null ? String(Math.abs(value)) : String(currentYear),
-  );
-
-  const apply = (nextHas: boolean, nextEra: 'ad' | 'bc', nextDigits: string) => {
-    if (!nextHas) {
-      onChange(null);
-      return;
-    }
-    const parsed = Number.parseInt(nextDigits.replace(/\D/g, ''), 10);
-    if (!Number.isFinite(parsed) || parsed <= 0) {
-      onChange(null);
-      return;
-    }
-    const clamped = Math.min(9999, parsed);
-    onChange(nextEra === 'bc' ? -clamped : clamped);
-  };
-
-  const quickYears = [
-    currentYear,
-    currentYear - 1,
-    2020,
-    2010,
-    2000,
-    1950,
-    1900,
-    -44,
-    -380,
-  ];
-
-  return (
-    <SidePanel
-      open
-      index={index}
-      title={t('bookEdit.year.label')}
-      onClose={onClose}
-    >
-      <div className="card">
-        <label className="cell">
-          <span className="cell-name">{t('bookEdit.year.label')}</span>
-          <input
-            type="checkbox"
-            className="switch"
-            checked={hasYear}
-            onChange={e => {
-              const checked = e.target.checked;
-              setHasYear(checked);
-              apply(checked, era, digits);
-            }}
-          />
-        </label>
-
-        {hasYear && (
-          <>
-            <div className="cell">
-              <div className="segmented">
-                <button
-                  type="button"
-                  className={era === 'ad' ? 'is-active' : undefined}
-                  onClick={() => {
-                    setEra('ad');
-                    apply(true, 'ad', digits);
-                  }}
-                >
-                  {t('bookEdit.year.eraAd')}
-                </button>
-                <button
-                  type="button"
-                  className={era === 'bc' ? 'is-active' : undefined}
-                  onClick={() => {
-                    setEra('bc');
-                    apply(true, 'bc', digits);
-                  }}
-                >
-                  {t('bookEdit.year.eraBc')}
-                </button>
-              </div>
-            </div>
-
-            <label className="cell field">
-              <span className="field-caption">{t('bookEdit.year.label')}</span>
-              <input
-                inputMode="numeric"
-                value={digits}
-                placeholder={t('bookEdit.year.placeholder')}
-                onChange={e => {
-                  const clean = e.target.value.replace(/\D/g, '').slice(0, 4);
-                  setDigits(clean);
-                  apply(true, era, clean);
-                }}
-              />
-            </label>
-          </>
-        )}
-      </div>
-
-      {hasYear && (
-        <div className="year-chips">
-          {quickYears.map(y => {
-            const label = formatYear(y, abs =>
-              t('bookEdit.year.bc', { year: abs }),
-            );
-            const active = value === y;
-            return (
-              <button
-                key={y}
-                type="button"
-                className={active ? 'pill is-primary' : 'pill'}
-                onClick={() => {
-                  setHasYear(true);
-                  setEra(y < 0 ? 'bc' : 'ad');
-                  setDigits(String(Math.abs(y)));
-                  onChange(y);
-                }}
-              >
-                {label}
-              </button>
-            );
-          })}
-        </div>
-      )}
     </SidePanel>
   );
 }

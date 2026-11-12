@@ -1564,12 +1564,6 @@ button {
   font-size: 1rem;
 }
 
-.year-chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-}
-
 /* Art slot */
 .art-slot {
   display: grid;

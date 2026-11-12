@@ -112,13 +112,10 @@ export const translations = {
     },
     bookEdit: {
       name: { label: 'Title', placeholder: 'Book title' },
-      author: { label: 'Author', placeholder: 'Author (optional)' },
+      author: { label: 'Author', placeholder: 'Author' },
       year: {
         label: 'Year',
-        none: 'None',
         bc: '{year} BC',
-        eraAd: 'AD',
-        eraBc: 'BC',
         placeholder: 'e.g. 1926',
       },
       genres: { label: 'Genre', none: 'None', search: 'Search Genres' },
@@ -129,10 +126,6 @@ export const translations = {
         newTitle: 'New Series',
         newPlaceholder: 'Series name',
         number: 'Book {number} in the Series',
-      },
-      summary: {
-        label: 'Summary',
-        placeholder: 'The book, in your words (optional)',
       },
       cover: {
         add: 'Add Cover',
@@ -516,13 +509,10 @@ export const translations = {
     },
     bookEdit: {
       name: { label: 'Título', placeholder: 'Título del libro' },
-      author: { label: 'Autor', placeholder: 'Autor (opcional)' },
+      author: { label: 'Autor', placeholder: 'Autor' },
       year: {
         label: 'Año',
-        none: 'Ninguno',
         bc: '{year} a. C.',
-        eraAd: 'd. C.',
-        eraBc: 'a. C.',
         placeholder: 'p. ej. 1926',
       },
       genres: { label: 'Género', none: 'Ninguno', search: 'Buscar géneros' },
@@ -533,10 +523,6 @@ export const translations = {
         newTitle: 'Nueva serie',
         newPlaceholder: 'Nombre de la serie',
         number: 'Libro {number} de la serie',
-      },
-      summary: {
-        label: 'Resumen',
-        placeholder: 'El libro, en tus palabras (opcional)',
       },
       cover: {
         add: 'Añadir portada',
@@ -927,13 +913,10 @@ export const translations = {
     },
     bookEdit: {
       name: { label: '书名', placeholder: '图书书名' },
-      author: { label: '作者', placeholder: '作者（可选）' },
+      author: { label: '作者', placeholder: '作者' },
       year: {
         label: '年份',
-        none: '无',
         bc: '公元前 {year} 年',
-        eraAd: '公元',
-        eraBc: '公元前',
         placeholder: '例如 1926',
       },
       genres: { label: '类型', none: '无', search: '搜索类型' },
@@ -944,10 +927,6 @@ export const translations = {
         newTitle: '新建系列',
         newPlaceholder: '系列名称',
         number: '系列第 {number} 本',
-      },
-      summary: {
-        label: '摘要',
-        placeholder: '用你自己的话讲这本书（可选）',
       },
       cover: {
         add: '添加封面',
