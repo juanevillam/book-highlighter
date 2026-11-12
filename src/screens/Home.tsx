@@ -23,7 +23,6 @@ import { ExportPanel } from '../ui/ExportForm';
 import { GearGlyph } from '../ui/glyphs';
 import { LibraryGrid } from '../ui/LibraryGrid';
 import { Reader } from '../ui/Reader';
-import { ScannerSheet } from '../ui/ScannerSheet';
 import { SeriesSheet } from '../ui/SeriesSheet';
 import { SettingsForm } from '../ui/SettingsForm';
 import { SidePanel } from '../ui/SidePanel';
@@ -74,8 +73,7 @@ type Entry =
   | { kind: 'series'; name: string }
   | { kind: 'bookForm'; book: Book | null }
   | { kind: 'export'; book: Book | null }
-  | { kind: 'chapters'; bookId: string }
-  | { kind: 'scanner'; targetBook: Book | null };
+  | { kind: 'chapters'; bookId: string };
 
 type Layer = {
   id: number;
@@ -199,7 +197,6 @@ export function Home({ user }: { user: User }) {
       live.length === 1 &&
       base === entry.kind &&
       entry.kind !== 'bookForm' &&
-      entry.kind !== 'scanner' &&
       entry.kind !== 'series'
     ) {
       closeAll();
@@ -293,23 +290,6 @@ export function Home({ user }: { user: User }) {
             depth={effectiveDepth}
             index={indexInGroup}
             initialBook={entry.book}
-            onClose={handleClose}
-          />
-        );
-
-      case 'scanner':
-        return (
-          <ScannerSheet
-            key={layer.id}
-            open={isOpen}
-            depth={effectiveDepth}
-            index={indexInGroup}
-            targetBook={entry.targetBook}
-            onSaved={bookId => {
-              setSelectedBookId(bookId);
-              setMobileStageOpen(true);
-              closeAll();
-            }}
             onClose={handleClose}
           />
         );
@@ -453,8 +433,8 @@ export function Home({ user }: { user: User }) {
           onSelectSeries={name =>
             stageThen(() => openOnly({ kind: 'series', name }))
           }
-          onScanNewBook={() =>
-            stageThen(() => openOnly({ kind: 'scanner', targetBook: null }))
+          onNewBook={() =>
+            stageThen(() => openOnly({ kind: 'bookForm', book: null }))
           }
         />
       </main>
@@ -465,11 +445,6 @@ export function Home({ user }: { user: User }) {
             book={selectedBook}
             onCloseMobile={() => setMobileStageOpen(false)}
             onRead={() => setReadingBookId(selectedBook.id)}
-            onScanPages={() =>
-              stageThen(() =>
-                openOnly({ kind: 'scanner', targetBook: selectedBook }),
-              )
-            }
             onOpenChapters={() =>
               stageThen(() =>
                 openOnly({ kind: 'chapters', bookId: selectedBook.id }),

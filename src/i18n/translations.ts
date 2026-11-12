@@ -31,9 +31,9 @@ export const translations = {
     welcome: {
       features: {
         library: {
-          title: 'Scan Sticky-Note Highlights',
+          title: 'Your Summaries, on a Shelf',
           subtitle:
-            'Flip through a physical book to capture every highlight.',
+            'Every book you have summarized, together and in your own order.',
         },
         read: {
           title: 'Read It Like a Book',
@@ -65,13 +65,9 @@ export const translations = {
     },
     home: {
       newBook: 'New Book',
-      newChoice: {
-        scan: 'Scan Physical Book',
-        manual: 'Write Manually',
-      },
       empty: {
         title: 'Your Shelf Is Empty',
-        subtitle: 'Scan a physical book or add your first summary.',
+        subtitle: 'Add your first book summary.',
       },
       recentlyDeleted: 'Recently Deleted',
       seriesCount: { one: '1 book', other: '{count} books' },
@@ -97,7 +93,6 @@ export const translations = {
     book: {
       read: 'Read',
       continue: 'Continue',
-      scanPages: 'Scan Pages',
       exportPdf: 'Export PDF',
       summary: 'Summary',
       chapters: 'Chapters',
@@ -155,7 +150,7 @@ export const translations = {
       untitled: 'Untitled Chapter',
       empty: {
         title: 'No Chapters',
-        subtitle: 'Add the first chapter or scan pages from your book.',
+        subtitle: 'Tap + to add the first chapter.',
       },
       delete: 'Delete',
       deleteConfirm: {
@@ -172,7 +167,7 @@ export const translations = {
       pagesPlaceholder: 'e.g. 523, 538, 543',
       highlights: 'Highlights',
       add: 'Add Highlight',
-      empty: 'No highlights yet. Add one below.',
+      empty: 'No highlights yet. Tap + to add one.',
       page: 'p. {page}',
     },
     highlightEdit: {
@@ -225,50 +220,6 @@ export const translations = {
         'The PDF is set on 6 × 9 in trade paper like the book in the reader: its cover, its summary, then every highlight.',
       footerAll:
         'Each book is saved as its own 6 × 9 in PDF: its cover, its summary, then every highlight.',
-    },
-    scanner: {
-      title: 'Scan Book',
-      reviewTitle: 'Review Scan',
-      dropTitle: 'Upload Book Photos',
-      dropSubtitle:
-        'Select photos in order: cover, highlighted pages from start to end, and the table of contents.',
-      loadingModels: 'Loading on-device OCR ({percent}%)…',
-      readingPhotos: 'Reading photo {done} of {total}…',
-      pagesSection: 'Page Photos',
-      pageBadge: 'p. {page}',
-      kindCover: 'Cover',
-      kindIndex: 'Index',
-      kindPage: 'Page',
-      tapHint:
-        'Tap any line on the photo to adjust where a highlight starts or ends.',
-      markStart: 'Start',
-      markEnd: 'End',
-      setStartHere: 'Set Highlight Start Here',
-      setEndHere: 'Set Highlight End Here',
-      newHighlightHere: 'New Highlight on This Line',
-      removeHighlightHere: 'Remove Highlight on This Page',
-      useAsCover: 'Use as Cover',
-      counters: {
-        scanned: 'Photos',
-        highlights: 'Highlights',
-        none: '—',
-      },
-      actions: {
-        pickPhotos: 'Select Book Photos',
-        addMorePhotos: 'Add More Photos',
-        backToCamera: 'Choose Photos',
-        saveBook: 'Save to Library',
-        appendBook: 'Save Highlights',
-        addChapter: 'Add Chapter',
-        addHighlight: 'Add Highlight',
-      },
-      target: {
-        label: 'Destination',
-        newBook: 'New Book',
-        existingBook: 'Append to Book',
-      },
-      draftEmpty:
-        'No highlights detected yet. Tap a line on any page photo above or add a chapter manually below.',
     },
     trash: {
       title: 'Recently Deleted',
@@ -484,9 +435,9 @@ export const translations = {
     welcome: {
       features: {
         library: {
-          title: 'Escanea resaltados físicos',
+          title: 'Tus resúmenes, en una estantería',
           subtitle:
-            'Pasa las páginas de tu libro físico y captura cada nota.',
+            'Todos los libros que has resumido, juntos y en tu propio orden.',
         },
         read: {
           title: 'Léelo como un libro',
@@ -518,13 +469,9 @@ export const translations = {
     },
     home: {
       newBook: 'Nuevo libro',
-      newChoice: {
-        scan: 'Escanear libro físico',
-        manual: 'Escribir manualmente',
-      },
       empty: {
         title: 'Tu estantería está vacía',
-        subtitle: 'Escanea un libro físico o escribe tu primer resumen.',
+        subtitle: 'Escribe el primer resumen de un libro.',
       },
       recentlyDeleted: 'Eliminados recientemente',
       seriesCount: { one: '1 libro', other: '{count} libros' },
@@ -550,7 +497,6 @@ export const translations = {
     book: {
       read: 'Leer',
       continue: 'Continuar',
-      scanPages: 'Escanear páginas',
       exportPdf: 'Exportar PDF',
       summary: 'Resumen',
       chapters: 'Capítulos',
@@ -608,7 +554,7 @@ export const translations = {
       untitled: 'Capítulo sin título',
       empty: {
         title: 'No hay capítulos',
-        subtitle: 'Añade el primer capítulo o escanea páginas del libro.',
+        subtitle: 'Toca + para añadir el primer capítulo.',
       },
       delete: 'Eliminar',
       deleteConfirm: {
@@ -625,7 +571,7 @@ export const translations = {
       pagesPlaceholder: 'p. ej. 523, 538 y 543',
       highlights: 'Resaltados',
       add: 'Añadir resaltado',
-      empty: 'Aún no hay resaltados. Añade uno abajo.',
+      empty: 'Aún no hay resaltados. Toca + para añadir uno.',
       page: 'pág. {page}',
     },
     highlightEdit: {
@@ -678,50 +624,6 @@ export const translations = {
         'El PDF se compone en papel 6 × 9 in como en el lector: su portada, su resumen y cada resaltado.',
       footerAll:
         'Cada libro se guarda como su propio PDF 6 × 9 in: su portada, su resumen y cada resaltado.',
-    },
-    scanner: {
-      title: 'Escanear libro',
-      reviewTitle: 'Revisar escaneo',
-      dropTitle: 'Subir fotos del libro',
-      dropSubtitle:
-        'Elige las fotos en orden: portada, páginas resaltadas de inicio a fin y el índice.',
-      loadingModels: 'Cargando lector OCR local ({percent}%)…',
-      readingPhotos: 'Leyendo foto {done} de {total}…',
-      pagesSection: 'Fotos de páginas',
-      pageBadge: 'pág. {page}',
-      kindCover: 'Portada',
-      kindIndex: 'Índice',
-      kindPage: 'Página',
-      tapHint:
-        'Toca cualquier línea en la foto para mover dónde empieza o termina el resaltado.',
-      markStart: 'Inicio',
-      markEnd: 'Fin',
-      setStartHere: 'Marcar inicio aquí',
-      setEndHere: 'Marcar fin aquí',
-      newHighlightHere: 'Nuevo resaltado en esta línea',
-      removeHighlightHere: 'Quitar resaltado de esta página',
-      useAsCover: 'Usar como portada',
-      counters: {
-        scanned: 'Fotos',
-        highlights: 'Resaltados',
-        none: '—',
-      },
-      actions: {
-        pickPhotos: 'Elegir fotos del libro',
-        addMorePhotos: 'Añadir más fotos',
-        backToCamera: 'Elegir fotos',
-        saveBook: 'Guardar en biblioteca',
-        appendBook: 'Guardar resaltados',
-        addChapter: 'Añadir capítulo',
-        addHighlight: 'Añadir resaltado',
-      },
-      target: {
-        label: 'Destino',
-        newBook: 'Nuevo libro',
-        existingBook: 'Añadir a libro',
-      },
-      draftEmpty:
-        'Aún no se detectaron resaltados. Toca una línea en las fotos arriba o añade capítulos manualmente abajo.',
     },
     trash: {
       title: 'Eliminados recientemente',
@@ -946,8 +848,8 @@ export const translations = {
     welcome: {
       features: {
         library: {
-          title: '扫描实体书便签高亮',
-          subtitle: '翻阅实体书，自动捕捉章节与高亮段落。',
+          title: '你的摘要，摆上书架',
+          subtitle: '你总结过的每一本书，汇集一处，按你的顺序排列。',
         },
         read: {
           title: '像读书一样阅读',
@@ -978,13 +880,9 @@ export const translations = {
     },
     home: {
       newBook: '新建图书',
-      newChoice: {
-        scan: '扫描实体书',
-        manual: '手动填写',
-      },
       empty: {
         title: '你的书架还是空的',
-        subtitle: '扫描一本实体书，或手动添加第一篇摘要。',
+        subtitle: '添加你的第一篇图书摘要。',
       },
       recentlyDeleted: '最近删除',
       seriesCount: { one: '1 本书', other: '{count} 本书' },
@@ -1010,7 +908,6 @@ export const translations = {
     book: {
       read: '阅读',
       continue: '继续',
-      scanPages: '扫描页面',
       exportPdf: '导出 PDF',
       summary: '摘要',
       chapters: '章节',
@@ -1068,7 +965,7 @@ export const translations = {
       untitled: '未命名章节',
       empty: {
         title: '没有章节',
-        subtitle: '添加第一个章节，或扫描书页。',
+        subtitle: '轻点“+”添加第一个章节。',
       },
       delete: '删除',
       deleteConfirm: {
@@ -1084,7 +981,7 @@ export const translations = {
       pagesPlaceholder: '例如 523, 538, 543',
       highlights: '高亮',
       add: '添加高亮',
-      empty: '还没有高亮。在下方添加一条。',
+      empty: '还没有高亮。轻点“+”添加一条。',
       page: '第 {page} 页',
     },
     highlightEdit: {
@@ -1135,49 +1032,6 @@ export const translations = {
       action: '导出',
       footer: 'PDF 按 6 × 9 英寸书籍排版：封面、摘要，然后是每条高亮。',
       footerAll: '每本书都会存储为单独的 6 × 9 英寸 PDF：封面、摘要，然后是每条高亮。',
-    },
-    scanner: {
-      title: '扫描图书',
-      reviewTitle: '检查扫描结果',
-      dropTitle: '上传书页照片',
-      dropSubtitle:
-        '按顺序选择照片：封面、带便签高亮的书页（从起始页到结束页）以及目录。',
-      loadingModels: '正在加载本地 OCR 模型（{percent}%）…',
-      readingPhotos: '正在读取第 {done} / {total} 张照片…',
-      pagesSection: '书页照片',
-      pageBadge: '第 {page} 页',
-      kindCover: '封面',
-      kindIndex: '目录',
-      kindPage: '书页',
-      tapHint: '点击照片上的任意行，可调整高亮的起始或结束位置。',
-      markStart: '起点',
-      markEnd: '终点',
-      setStartHere: '将此处设为起点',
-      setEndHere: '将此处设为终点',
-      newHighlightHere: '在此行新建高亮',
-      removeHighlightHere: '移除此页上的高亮',
-      useAsCover: '设为封面',
-      counters: {
-        scanned: '照片',
-        highlights: '高亮',
-        none: '—',
-      },
-      actions: {
-        pickPhotos: '选择书页照片',
-        addMorePhotos: '添加更多照片',
-        backToCamera: '重新选择照片',
-        saveBook: '存储到书架',
-        appendBook: '存储高亮',
-        addChapter: '添加章节',
-        addHighlight: '添加高亮',
-      },
-      target: {
-        label: '保存位置',
-        newBook: '新建图书',
-        existingBook: '追加到现有图书',
-      },
-      draftEmpty:
-        '尚未识别到高亮。请点击上方照片中的文字行，或在下方手动添加章节。',
     },
     trash: {
       title: '最近删除',

@@ -158,12 +158,13 @@ export function ChaptersPanel({
                   </span>
                   <span className="reorder-sub">
                     {[
-                      chapter.pages
-                        ? /^loc\./i.test(chapter.pages)
-                          ? chapter.pages
-                          : t('chapter.page', { page: chapter.pages })
+                      chapter.highlights.length > 0
+                        ? plural(
+                            'book.highlightCount',
+                            chapter.highlights.length,
+                          )
                         : '',
-                      plural('book.highlightCount', chapter.highlights.length),
+                      chapter.pages,
                     ]
                       .filter(Boolean)
                       .join(' · ')}
@@ -232,6 +233,14 @@ export function ChaptersPanel({
           onMoveHighlight={(from, to) =>
             void persist(moveHighlight(body, activeChapter.id, from, to))
           }
+          onDeleteHighlight={hlId => {
+            const before = body;
+            void persist(removeHighlight(body, activeChapter.id, hlId));
+            showToast(t('snackbar.highlight-deleted'), {
+              label: t('common.undo'),
+              onAction: () => void persist(before),
+            });
+          }}
           onDeleteChapter={() => setConfirmDeleteChapterId(activeChapter.id)}
           onClose={() => setActiveChapterId(null)}
         />
@@ -268,6 +277,7 @@ export function ChaptersPanel({
           onDelete={
             editingHighlight.mode === 'edit'
               ? () => {
+                  const before = body;
                   void persist(
                     removeHighlight(
                       body,
@@ -275,7 +285,10 @@ export function ChaptersPanel({
                       editingHighlight.highlight.id,
                     ),
                   );
-                  showToast(t('snackbar.highlight-deleted'));
+                  showToast(t('snackbar.highlight-deleted'), {
+                    label: t('common.undo'),
+                    onAction: () => void persist(before),
+                  });
                   setEditingHighlight(null);
                 }
               : undefined
@@ -353,6 +366,7 @@ function ChapterDetailPanel({
   onAddHighlight,
   onEditHighlight,
   onMoveHighlight,
+  onDeleteHighlight,
   onDeleteChapter,
   onClose,
 }: {
@@ -363,6 +377,7 @@ function ChapterDetailPanel({
   onAddHighlight: () => void;
   onEditHighlight: (highlight: Highlight) => void;
   onMoveHighlight: (from: number, to: number) => void;
+  onDeleteHighlight: (highlightId: string) => void;
   onDeleteChapter: () => void;
   onClose: () => void;
 }) {
@@ -420,7 +435,7 @@ function ChapterDetailPanel({
             placeholder={t('chapter.pagesPlaceholder')}
             onChange={e => setPages(e.target.value)}
             onBlur={() => {
-              const tidy = parsePageRef(pages) ?? '';
+              const tidy = pages.trim();
               setPages(tidy);
               if (tidy !== chapter.pages) {
                 onUpdateMeta({ pages: tidy });
@@ -480,6 +495,14 @@ function ChapterDetailPanel({
                     onClick={() => onMoveHighlight(idx, idx + 1)}
                   >
                     <SortDirectionGlyph ascending={false} />
+                  </button>
+                  <button
+                    type="button"
+                    className="round quiet is-destructive"
+                    title={t('common.delete')}
+                    onClick={() => onDeleteHighlight(hl.id)}
+                  >
+                    <TrashGlyph />
                   </button>
                 </div>
               </div>

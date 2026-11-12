@@ -1,7 +1,7 @@
 import { useState } from 'react';
 
 import { type Book } from '../books';
-import { plural, t } from '../i18n';
+import { t } from '../i18n';
 import { LIBRARY_SORT_KEYS, type LibrarySortKey } from '../lib/librarySort';
 import { type ShelfEntry } from '../lib/shelf';
 import { useLibrarySortStore } from '../store/librarySort';
@@ -26,7 +26,7 @@ export function LibraryGrid({
   selectedBookId,
   onSelectBook,
   onSelectSeries,
-  onScanNewBook,
+  onNewBook,
 }: {
   entries: ShelfEntry[];
   hasSettled: boolean;
@@ -34,7 +34,7 @@ export function LibraryGrid({
   selectedBookId: string | null;
   onSelectBook: (book: Book) => void;
   onSelectSeries: (name: string) => void;
-  onScanNewBook: () => void;
+  onNewBook: () => void;
 }) {
   const sort = useLibrarySortStore(state => state.sort);
   const selectKey = useLibrarySortStore(state => state.selectKey);
@@ -101,15 +101,14 @@ export function LibraryGrid({
           <button
             type="button"
             className="tile is-add"
-            onClick={onScanNewBook}
+            onClick={onNewBook}
           >
             <span className="tile-art is-book">
               <span className="artwork is-empty">
                 <PlusGlyph />
               </span>
             </span>
-            <span className="tile-name">{t('home.newBook')}</span>
-            <span className="tile-sub">{t('home.newChoice.scan')}</span>
+            <span className="tile-name">{t('app.bookNew')}</span>
           </button>
         </li>
 
@@ -202,13 +201,13 @@ export function LibraryGrid({
                       name={topBook.name}
                       width={TILE_WIDTH}
                     />
-                    <span className="series-badge">({books.length})</span>
+                    <span className="series-badge">{books.length}</span>
                   </span>
                 </span>
                 <span className="tile-name">{name}</span>
-                <span className="tile-sub">
-                  {plural('home.seriesCount', books.length)}
-                </span>
+                {topBook.author && (
+                  <span className="tile-sub">{topBook.author}</span>
+                )}
               </button>
             </li>
           );

@@ -13,14 +13,14 @@ import { BrandTile } from '../ui/brand';
 import {
   GoogleG,
   HighlightsFeatureIcon,
+  LibraryFeatureIcon,
   ReadFeatureIcon,
-  ScanFeatureIcon,
 } from '../ui/icons';
 
 const APP_NAME = 'Book Highlighter';
 
 const FEATURES = [
-  { key: 'library', Icon: ScanFeatureIcon },
+  { key: 'library', Icon: LibraryFeatureIcon },
   { key: 'read', Icon: ReadFeatureIcon },
   { key: 'highlights', Icon: HighlightsFeatureIcon },
 ] as const;

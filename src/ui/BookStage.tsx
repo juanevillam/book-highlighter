@@ -10,7 +10,6 @@ import { Artwork } from './Artwork';
 import { StageBackdrop } from './Backdrop';
 import {
   BookOpenGlyph,
-  CameraGlyph,
   ChevronRightGlyph,
   CloseGlyph,
   PencilGlyph,
@@ -24,7 +23,6 @@ export function BookStage({
   book,
   onCloseMobile,
   onRead,
-  onScanPages,
   onOpenChapters,
   onEditBook,
   onExportBook,
@@ -32,7 +30,6 @@ export function BookStage({
   book: Book;
   onCloseMobile: () => void;
   onRead: () => void;
-  onScanPages: () => void;
   onOpenChapters: () => void;
   onEditBook: () => void;
   onExportBook: () => void;
@@ -56,7 +53,10 @@ export function BookStage({
     .join(' · ');
 
   const summary = bodyEntry?.body.summary.trim() ?? '';
-  const chaptersSummary = `${plural('book.chapterCount', book.chapterCount)} · ${plural('book.highlightCount', book.highlightCount)}`;
+  const chaptersSummary =
+    book.chapterCount === 0
+      ? ''
+      : `${plural('book.chapterCount', book.chapterCount)} · ${plural('book.highlightCount', book.highlightCount)}`;
 
   return (
     <div
@@ -164,16 +164,6 @@ export function BookStage({
               <span>
                 {t(book.readerAnchor ? 'book.continue' : 'book.read')}
               </span>
-            </button>
-            <button
-              type="button"
-              className="pill book-scan-btn"
-              onClick={onScanPages}
-            >
-              <span className="btn-glyph">
-                <CameraGlyph />
-              </span>
-              <span>{t('book.scanPages')}</span>
             </button>
           </div>
         </div>
