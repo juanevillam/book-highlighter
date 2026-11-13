@@ -17,7 +17,7 @@ import { selectShelf, useBooksStore } from '../store/books';
 import { useLibrarySortStore } from '../store/librarySort';
 import { useReaderSettingsStore } from '../store/readerSettings';
 
-import { CheckGlyph } from './glyphs';
+import { CheckGlyph, CloseGlyph } from './glyphs';
 import { SidePanel } from './SidePanel';
 import { showToast } from './Toast';
 
@@ -102,6 +102,17 @@ export function ExportPanel({
       depth={depth}
       index={index}
       title={t(initialBook ? 'export.title' : 'export.titleAll')}
+      action={
+        <button
+          type="button"
+          className="round"
+          disabled={busy}
+          onClick={onClose}
+        >
+          <CloseGlyph />
+          <span className="sr">{t('common.close')}</span>
+        </button>
+      }
       trailing={
         <button
           type="button"

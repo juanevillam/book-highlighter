@@ -18,7 +18,7 @@ import { selectShelf, useBooksStore } from '../store/books';
 import { ActionSheet } from './ActionSheet';
 import {
   CheckGlyph,
-  ChevronLeftGlyph,
+  CloseGlyph,
   ChevronRightGlyph,
   PlusGlyph,
   SearchGlyph,
@@ -207,8 +207,8 @@ export function BookFormPanel({
             disabled={busy}
             onClick={onClose}
           >
-            <ChevronLeftGlyph />
-            <span className="sr">{t('common.cancel')}</span>
+            <CloseGlyph />
+            <span className="sr">{t('common.close')}</span>
           </button>
         }
         trailing={
@@ -316,7 +316,7 @@ export function BookFormPanel({
             <input
               inputMode="numeric"
               value={yearText}
-              placeholder={t('bookEdit.year.placeholder')}
+              placeholder={t('bookEdit.year.label')}
               disabled={busy}
               onChange={e =>
                 setYearText(

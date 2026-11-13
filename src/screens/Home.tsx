@@ -82,7 +82,8 @@ type Layer = {
   tools: boolean;
 };
 
-const isToolEntry = (_entry: Entry) => false;
+const isToolEntry = (entry: Entry) =>
+  entry.kind === 'chapters' || entry.kind === 'export';
 
 let nextLayerId = 0;
 
@@ -196,7 +197,7 @@ export function Home({ user }: { user: User }) {
     if (
       live.length === 1 &&
       base === entry.kind &&
-      entry.kind !== 'bookForm' &&
+      !(entry.kind === 'bookForm' && entry.book === null) &&
       entry.kind !== 'series'
     ) {
       closeAll();
@@ -443,6 +444,16 @@ export function Home({ user }: { user: User }) {
         {selectedBook && (
           <BookStage
             book={selectedBook}
+            panel={
+              base === 'chapters' ||
+              base === 'export' ||
+              (base === 'bookForm' &&
+                live.length === 1 &&
+                live[0]?.entry.kind === 'bookForm' &&
+                live[0].entry.book !== null)
+                ? base
+                : null
+            }
             onCloseMobile={() => setMobileStageOpen(false)}
             onRead={() => setReadingBookId(selectedBook.id)}
             onOpenChapters={() =>

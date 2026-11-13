@@ -94,6 +94,8 @@ export const translations = {
       read: 'Read',
       continue: 'Continue',
       exportPdf: 'Export PDF',
+      exportShort: 'Export',
+      exportSummary: 'PDF · 6 × 9 in',
       summary: 'Summary',
       chapters: 'Chapters',
       notWritten: 'Not Written',
@@ -111,17 +113,15 @@ export const translations = {
       },
     },
     bookEdit: {
-      name: { label: 'Title', placeholder: 'Book title' },
+      name: { label: 'Title', placeholder: 'Title' },
       author: { label: 'Author', placeholder: 'Author' },
       year: {
         label: 'Year',
         bc: '{year} BC',
-        placeholder: 'e.g. 1926',
       },
       genres: { label: 'Genre', none: 'None', search: 'Search Genres' },
       series: {
         label: 'Series',
-        none: 'None',
         new: 'New Series…',
         newTitle: 'New Series',
         newPlaceholder: 'Series name',
@@ -491,6 +491,8 @@ export const translations = {
       read: 'Leer',
       continue: 'Continuar',
       exportPdf: 'Exportar PDF',
+      exportShort: 'Exportar',
+      exportSummary: 'PDF · 6 × 9 in',
       summary: 'Resumen',
       chapters: 'Capítulos',
       notWritten: 'Sin escribir',
@@ -508,12 +510,11 @@ export const translations = {
       },
     },
     bookEdit: {
-      name: { label: 'Título', placeholder: 'Título del libro' },
+      name: { label: 'Título', placeholder: 'Título' },
       author: { label: 'Autor', placeholder: 'Autor' },
       year: {
         label: 'Año',
         bc: '{year} a. C.',
-        placeholder: 'p. ej. 1926',
       },
       genres: { label: 'Género', none: 'Ninguno', search: 'Buscar géneros' },
       series: {
@@ -895,6 +896,8 @@ export const translations = {
       read: '阅读',
       continue: '继续',
       exportPdf: '导出 PDF',
+      exportShort: '导出',
+      exportSummary: 'PDF · 6 × 9 英寸',
       summary: '摘要',
       chapters: '章节',
       notWritten: '未填写',
@@ -912,17 +915,15 @@ export const translations = {
       },
     },
     bookEdit: {
-      name: { label: '书名', placeholder: '图书书名' },
+      name: { label: '书名', placeholder: '书名' },
       author: { label: '作者', placeholder: '作者' },
       year: {
         label: '年份',
         bc: '公元前 {year} 年',
-        placeholder: '例如 1926',
       },
       genres: { label: '类型', none: '无', search: '搜索类型' },
       series: {
         label: '系列',
-        none: '无',
         new: '新建系列…',
         newTitle: '新建系列',
         newPlaceholder: '系列名称',

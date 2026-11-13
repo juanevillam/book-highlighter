@@ -24,7 +24,7 @@ import { useBodiesStore } from '../store/bodies';
 import { ConfirmDialog } from './ConfirmDialog';
 import {
   CheckGlyph,
-  ChevronLeftGlyph,
+  CloseGlyph,
   ChevronRightGlyph,
   ContentsGlyph,
   PlusGlyph,
@@ -108,6 +108,12 @@ export function ChaptersPanel({
         index={index}
         title={t('book.chapters')}
         action={
+          <button type="button" className="round" onClick={onClose}>
+            <CloseGlyph />
+            <span className="sr">{t('common.close')}</span>
+          </button>
+        }
+        trailing={
           <button
             type="button"
             className="round"
@@ -397,8 +403,8 @@ function ChapterDetailPanel({
       title={chapter.name || t('chapters.untitled')}
       action={
         <button type="button" className="round" onClick={onClose}>
-          <ChevronLeftGlyph />
-          <span className="sr">{t('common.back')}</span>
+          <CloseGlyph />
+          <span className="sr">{t('common.close')}</span>
         </button>
       }
       trailing={
@@ -549,7 +555,7 @@ function HighlightEditorPanel({
       title={t(initial ? 'highlightEdit.title' : 'highlightEdit.titleNew')}
       action={
         <button type="button" className="round" onClick={onClose}>
-          <ChevronLeftGlyph />
+          <CloseGlyph />
           <span className="sr">{t('common.cancel')}</span>
         </button>
       }

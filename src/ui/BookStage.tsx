@@ -8,10 +8,11 @@ import { useBodiesStore } from '../store/bodies';
 
 import { Artwork } from './Artwork';
 import { StageBackdrop } from './Backdrop';
+import { CalendarGlyph, GenreGlyph } from './genreGlyphs';
 import {
   BookOpenGlyph,
-  ChevronRightGlyph,
   CloseGlyph,
+  ContentsGlyph,
   PencilGlyph,
   ShareGlyph,
 } from './glyphs';
@@ -19,8 +20,17 @@ import {
 const DISMISS_PX = 110;
 const DISMISS_VELOCITY = 0.6;
 
+export type StagePanel = 'chapters' | 'export' | 'bookForm';
+
+/**
+ * The book's column — Sound Shaper's player column, slot for slot: the
+ * cover over the flowing wash, the title over the author, the genres where
+ * the scrubber sits, Read where the transport sits, and the glass dock with
+ * Chapters and Export as Shape and Clips, Edit hugging the end.
+ */
 export function BookStage({
   book,
+  panel,
   onCloseMobile,
   onRead,
   onOpenChapters,
@@ -28,6 +38,7 @@ export function BookStage({
   onExportBook,
 }: {
   book: Book;
+  panel: StagePanel | null;
   onCloseMobile: () => void;
   onRead: () => void;
   onOpenChapters: () => void;
@@ -35,28 +46,18 @@ export function BookStage({
   onExportBook: () => void;
 }) {
   const ensureBody = useBodiesStore(state => state.ensure);
-  const bodyEntry = useBodiesStore(state => state.entries[book.id]);
   const [pull, setPull] = useState<number | null>(null);
   const grab = useRef<{ y: number; t: number; id: number } | null>(null);
 
+  // Warm the body so Chapters and the reader open without a wait.
   useEffect(() => {
     void ensureBody(book.id).catch(() => {});
   }, [book.id, ensureBody]);
 
-  const metaLine = [
-    book.year !== null
-      ? formatYear(book.year, y => t('bookEdit.year.bc', { year: y }))
-      : '',
-    book.genres.map(g => genreLabel(k => t(k), g)).join(', '),
-  ]
-    .filter(Boolean)
-    .join(' · ');
-
-  const summary = bodyEntry?.body.summary.trim() ?? '';
   const chaptersSummary =
     book.chapterCount === 0
-      ? ''
-      : `${plural('book.chapterCount', book.chapterCount)} · ${plural('book.highlightCount', book.highlightCount)}`;
+      ? plural('book.chapterCount', 0)
+      : `${book.chapterCount} · ${plural('book.highlightCount', book.highlightCount)}`;
 
   return (
     <div
@@ -115,86 +116,103 @@ export function BookStage({
         >
           <span className="grabber" />
         </button>
-
-        <div className="glass-pill">
-          <button
-            type="button"
-            title={t('book.exportPdf')}
-            onClick={onExportBook}
-          >
-            <ShareGlyph />
-            <span className="sr">{t('book.exportPdf')}</span>
-          </button>
-          <button
-            type="button"
-            title={t('common.edit')}
-            onClick={onEditBook}
-          >
-            <PencilGlyph />
-            <span className="sr">{t('common.edit')}</span>
-          </button>
-        </div>
       </div>
 
-      <div className="book-stage-scroll">
-        <div className="book-hero">
-          <div className="book-hero-cover">
-            <Artwork
-              artUrl={book.artUrl}
-              name={book.name}
-              width={340}
-              quickWidth={220}
-              eager
-            />
-          </div>
-
-          <h2 className="book-hero-title">{book.name}</h2>
-          {book.author && <p className="book-hero-author">{book.author}</p>}
-          {metaLine && <p className="book-hero-meta">{metaLine}</p>}
-
-          <div className="book-hero-actions">
-            <button
-              type="button"
-              className="pill is-primary book-read-btn"
-              onClick={onRead}
-            >
-              <span className="btn-glyph">
-                <BookOpenGlyph />
-              </span>
-              <span>
-                {t(book.readerAnchor ? 'book.continue' : 'book.read')}
-              </span>
-            </button>
-          </div>
+      <section className="now" aria-label={book.name}>
+        <div className="now-art">
+          <Artwork
+            artUrl={book.artUrl}
+            name={book.name}
+            width={520}
+            quickWidth={220}
+            eager
+          />
         </div>
 
-        {summary && (
-          <section className="stage-section">
-            <h3 className="section-head">{t('book.summary')}</h3>
-            <div className="card stage-prose-card">
-              <p className="stage-prose">{summary}</p>
-            </div>
-          </section>
+        <div className="now-copy">
+          <span className="now-title">{book.name}</span>
+          {book.author && <span className="now-artist">{book.author}</span>}
+        </div>
+
+        {book.year !== null || book.genres.length > 0 ? (
+          <ul className="genre-tags">
+            {book.year !== null && (
+              <li className="genre-tag">
+                <CalendarGlyph />
+                <span>
+                  {formatYear(book.year, y =>
+                    t('bookEdit.year.bc', { year: y }),
+                  )}
+                </span>
+              </li>
+            )}
+            {book.genres.map(g => (
+              <li key={g} className="genre-tag">
+                <GenreGlyph genre={g} />
+                <span>{genreLabel(k => t(k), g)}</span>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <div className="genre-tags" aria-hidden="true" />
         )}
 
-        <section className="stage-section">
-          <div className="card">
-            <button
-              type="button"
-              className="cell link-row chapters-entry"
-              onClick={onOpenChapters}
-            >
-              <span className="chapters-entry-copy">
-                <span className="cell-name">{t('book.chapters')}</span>
-                <span className="chapters-entry-sub">{chaptersSummary}</span>
-              </span>
-              <span className="chevron">
-                <ChevronRightGlyph />
-              </span>
-            </button>
-          </div>
-        </section>
-      </div>
+        <div className="transport">
+          <button
+            type="button"
+            className="pill is-primary book-read-btn"
+            onClick={onRead}
+          >
+            <span className="btn-glyph">
+              <BookOpenGlyph />
+            </span>
+            <span>{t(book.readerAnchor ? 'book.continue' : 'book.read')}</span>
+          </button>
+        </div>
+
+        <div className="dock">
+          <button
+            type="button"
+            className="dock-cell"
+            aria-expanded={panel === 'chapters'}
+            onClick={onOpenChapters}
+          >
+            <span className="dock-icon">
+              <ContentsGlyph />
+            </span>
+            <span className="dock-copy">
+              <span className="dock-label">{t('book.chapters')}</span>
+              <span className="dock-summary">{chaptersSummary}</span>
+            </span>
+          </button>
+          <button
+            type="button"
+            className="dock-cell"
+            aria-expanded={panel === 'export'}
+            onClick={onExportBook}
+          >
+            <span className="dock-icon">
+              <ShareGlyph />
+            </span>
+            <span className="dock-copy">
+              <span className="dock-label">{t('book.exportShort')}</span>
+              <span className="dock-summary">{t('book.exportSummary')}</span>
+            </span>
+          </button>
+          <button
+            type="button"
+            className="dock-cell is-hug"
+            aria-expanded={panel === 'bookForm'}
+            aria-label={t('app.bookEdit')}
+            onClick={onEditBook}
+          >
+            <span className="dock-icon">
+              <PencilGlyph />
+            </span>
+            <span className="dock-label">{t('common.edit')}</span>
+          </button>
+        </div>
+      </section>
     </div>
   );
 }
