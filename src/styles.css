@@ -733,8 +733,8 @@ button {
 
 .grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(9.75rem, 45%), 1fr));
-  gap: 1.25rem 0.9375rem;
+  grid-template-columns: repeat(auto-fill, minmax(min(10.5rem, 45%), 1fr));
+  gap: 1.125rem 0.875rem;
   margin: 0.25rem 0 0;
   padding: 0;
   list-style: none;
@@ -769,14 +769,20 @@ button {
   width: 100%;
   aspect-ratio: 1;
   margin-bottom: 0.625rem;
-  border-radius: 12%;
+  border-radius: 15%;
   isolation: isolate;
   transition: transform 560ms var(--ios-curve);
 }
 
 .tile-art.is-book {
   aspect-ratio: 2 / 3;
-  border-radius: 0.875rem;
+  border-radius: 13.5% / 9%;
+}
+
+.tile-art > .artwork,
+.tile-art > .series-front {
+  position: absolute;
+  inset: 0;
 }
 
 .tile-art::after {
@@ -845,8 +851,8 @@ button {
 }
 
 .tile.is-add .artwork.is-empty svg {
-  width: 28%;
-  height: 28%;
+  width: 30%;
+  height: 30%;
   color: var(--ink-2);
 }
 
@@ -859,7 +865,7 @@ button {
   position: absolute;
   inset: calc((var(--depth, 1) - var(--step, 1)) * 6px)
     calc(var(--step, 1) * 5px) calc(var(--step, 1) * 6px);
-  border-radius: 0.75rem;
+  border-radius: 12% / 8%;
   overflow: hidden;
   opacity: calc(1 - var(--step, 1) * 0.24);
   box-shadow: 0 2px 8px rgb(0 0 0 / 0.35);
@@ -923,7 +929,7 @@ button {
 }
 
 .tile-art.bone {
-  border-radius: 0.875rem;
+  border-radius: 13.5% / 9%;
 }
 
 .bone.line {
@@ -1128,14 +1134,19 @@ button {
 }
 
 .now-art {
+  position: relative;
+  flex: none;
   align-self: center;
+  width: calc(min(100cqw, var(--cover-cap)) * 2 / 3);
   height: min(100cqw, var(--cover-cap));
-  aspect-ratio: 2 / 3;
-  width: auto;
-  max-width: 100%;
-  border-radius: 0.875rem;
+  border-radius: 13.5% / 9%;
   overflow: hidden;
   /* No shadow, as Sound Shaper's cover: the wash behind it does the lift. */
+}
+
+.now-art > .artwork {
+  position: absolute;
+  inset: 0;
 }
 
 .now-copy {
@@ -1745,9 +1756,9 @@ button {
 }
 
 .art-box.is-book {
-  width: 7.25rem;
+  width: 7.5rem;
   aspect-ratio: 2 / 3;
-  border-radius: 0.875rem;
+  border-radius: 13.5% / 9%;
 }
 
 .art-pick:active .art-box {
@@ -2353,8 +2364,8 @@ button {
 @media (min-width: 64rem) {
   .home {
     --pad: clamp(1.5rem, 2.4vw, 2.5rem);
-    --stage-w: clamp(27rem, min(35vw, 64svh), 34rem);
-    --tools-w: clamp(23.5rem, 27vw, 28.5rem);
+    --stage-w: clamp(25.5rem, min(32vw, 60svh), 32rem);
+    --tools-w: clamp(22.75rem, 26.5vw, 27.75rem);
     display: grid;
     grid-template-columns: minmax(0, 1fr) 0;
     height: 100svh;
@@ -2366,7 +2377,6 @@ button {
   }
 
   .home.is-staged.is-tooled {
-    --stage-w: clamp(25.5rem, min(32vw, 60svh), 32rem);
     grid-template-columns: minmax(0, 1fr) var(--stage-w) var(--tools-w);
   }
 
@@ -2383,8 +2393,7 @@ button {
   }
 
   .grid {
-    grid-template-columns: repeat(auto-fill, 10.25rem);
-    justify-content: start;
+    grid-template-columns: repeat(auto-fill, minmax(10.5rem, 1fr));
   }
 
   .stage {
@@ -2478,7 +2487,7 @@ button {
   .now-column .now {
     max-width: none;
     margin: 0;
-    --cover-cap: calc(100svh - 21rem);
+    --cover-cap: calc(100svh - 23rem);
   }
 
   .side {
