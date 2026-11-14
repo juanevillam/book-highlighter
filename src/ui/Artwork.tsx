@@ -2,8 +2,13 @@ import { useState } from 'react';
 
 import { thumbUrl } from '../lib/thumbUrl';
 
-const BACKDROP_WIDTH = 64;
-
+/**
+ * An item's picture, or — with none — the app's art-less box (the first
+ * letter on the empty-media fill).
+ *
+ * A NEW COVER NEVER PASSES THROUGH GREY. The last picture this slot showed
+ * stays underneath until the new one has landed and faded in over it.
+ */
 export function Artwork({
   artUrl,
   name,
@@ -19,15 +24,13 @@ export function Artwork({
 }) {
   const src = artUrl ? thumbUrl(artUrl, width) : '';
   const quick = artUrl && quickWidth ? thumbUrl(artUrl, quickWidth) : '';
-  const backdrop = artUrl ? thumbUrl(artUrl, BACKDROP_WIDTH) : '';
   const [ready, setReady] = useState('');
   const [quickReady, setQuickReady] = useState('');
-  const [backdropReady, setBackdropReady] = useState('');
 
   if (!src) {
     return (
       <span className="artwork is-empty" aria-hidden="true">
-        <span>{name.trim().slice(0, 1) || 'B'}</span>
+        <span>{name.trim().slice(0, 1)}</span>
       </span>
     );
   }
@@ -36,48 +39,35 @@ export function Artwork({
 
   return (
     <span className="artwork" aria-hidden="true">
-      {backdrop && (
-        <img
-          key={`bg-${backdrop}`}
-          src={backdrop}
-          alt=""
-          draggable={false}
-          className={
-            backdropReady === backdrop
-              ? 'artwork-backdrop is-ready'
-              : 'artwork-backdrop'
-          }
-          onLoad={() => setBackdropReady(backdrop)}
-        />
-      )}
-      {!landed && ready && (
-        <img
-          src={ready}
-          alt=""
-          draggable={false}
-          className="artwork-fg is-ready"
-        />
-      )}
+      {!landed && ready && <img src={ready} alt="" draggable={false} className="is-ready" />}
       {!landed && quick && (
         <img
           key={quick}
+          ref={el => {
+            if (el?.complete && el.naturalWidth > 0 && quickReady !== quick) {
+              setQuickReady(quick);
+            }
+          }}
           src={quick}
           alt=""
           draggable={false}
-          className={
-            quickReady === quick ? 'artwork-fg is-ready' : 'artwork-fg'
-          }
+          className={quickReady === quick ? 'is-ready' : undefined}
           onLoad={() => setQuickReady(quick)}
         />
       )}
       <img
         key={src}
+        ref={el => {
+          if (el?.complete && el.naturalWidth > 0 && ready !== src) {
+            setReady(src);
+          }
+        }}
         src={src}
         alt=""
         loading={eager ? 'eager' : 'lazy'}
         decoding="async"
         draggable={false}
-        className={landed ? 'artwork-fg is-ready' : 'artwork-fg'}
+        className={landed ? 'is-ready' : undefined}
         onLoad={() => setReady(src)}
       />
     </span>

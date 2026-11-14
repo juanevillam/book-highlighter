@@ -1,8 +1,8 @@
 import { type Book } from '../books';
 
 export type ShelfEntry =
-  | { kind: 'book'; book: Book }
-  | { kind: 'series'; name: string; books: Book[] };
+  | { kind: 'book'; book: Book; position: number | null }
+  | { kind: 'series'; name: string; books: Book[]; position: number | null };
 
 export const bySeriesOrder = (a: Book, b: Book) =>
   (a.seriesNumber ?? Number.MAX_SAFE_INTEGER) -
@@ -14,7 +14,7 @@ export const shelfEntries = (sorted: Book[]): ShelfEntry[] => {
 
   for (const book of sorted) {
     if (!book.series) {
-      entries.push({ kind: 'book', book });
+      entries.push({ kind: 'book', book, position: book.position });
       continue;
     }
     if (placed.has(book.series)) continue;
@@ -26,6 +26,7 @@ export const shelfEntries = (sorted: Book[]): ShelfEntry[] => {
       books: sorted
         .filter(entry => entry.series === book.series)
         .sort(bySeriesOrder),
+      position: book.position,
     });
   }
 

@@ -1,8 +1,16 @@
-import { useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
+import { doc, onSnapshot } from 'firebase/firestore';
 import { create } from 'zustand';
 
-import { subscribeToBooks, type Book } from '../books';
+import {
+  backfillShelfPositions,
+  subscribeToBooks,
+  type Book,
+} from '../books';
+import { requireDb, USERS_COLLECTION } from '../firebase';
+import { needsPositionRepair } from '../lib/gridOrder';
+import { shelfEntries } from '../lib/shelf';
 
 type BooksState = {
   books: Book[];
@@ -29,11 +37,28 @@ export const useBooksSubscription = (uid: string) => {
   const setBooks = useBooksStore(state => state.setBooks);
   const setError = useBooksStore(state => state.setError);
   const reset = useBooksStore(state => state.reset);
+  const repairing = useRef(false);
 
   useEffect(() => {
     reset();
     const unsubscribe = subscribeToBooks({
-      onNext: books => setBooks(books),
+      onNext: (books, meta) => {
+        setBooks(books);
+        const entries = shelfEntries(books);
+        if (
+          !repairing.current &&
+          !meta.fromCache &&
+          entries.length > 0 &&
+          needsPositionRepair(entries)
+        ) {
+          repairing.current = true;
+          backfillShelfPositions(entries)
+            .catch(error => console.warn('repair book positions', error))
+            .finally(() => {
+              repairing.current = false;
+            });
+        }
+      },
       onError: error => setError(error),
     });
     return () => {
@@ -41,4 +66,46 @@ export const useBooksSubscription = (uid: string) => {
       reset();
     };
   }, [uid, setBooks, setError, reset]);
+};
+
+const addTileCacheKey = (uid: string) => `bookhighlighter.addTilePos.${uid}`;
+
+const readCachedAddTilePos = (uid: string): number | null => {
+  try {
+    const raw = localStorage.getItem(addTileCacheKey(uid));
+    if (!raw) return null;
+    const n = Number(raw);
+    return Number.isFinite(n) ? n : null;
+  } catch {
+    return null;
+  }
+};
+
+export const useAddTilePosition = (uid: string): number | null => {
+  const [position, setPosition] = useState<number | null>(() =>
+    readCachedAddTilePos(uid),
+  );
+
+  useEffect(
+    () =>
+      onSnapshot(
+        doc(requireDb(), USERS_COLLECTION, uid),
+        snapshot => {
+          const val = snapshot.data()?.addTilePosition;
+          const next =
+            typeof val === 'number' && Number.isFinite(val) ? val : null;
+          setPosition(next);
+          try {
+            if (next === null) localStorage.removeItem(addTileCacheKey(uid));
+            else localStorage.setItem(addTileCacheKey(uid), String(next));
+          } catch {
+            // Ignore storage errors.
+          }
+        },
+        error => console.warn('add tile position', error),
+      ),
+    [uid],
+  );
+
+  return position;
 };

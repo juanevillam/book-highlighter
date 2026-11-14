@@ -4,6 +4,7 @@ import {
   createBook,
   deleteBook,
   EMPTY_BODY,
+  leadPosition,
   updateBook,
   type Book,
   type BookFields,
@@ -15,7 +16,7 @@ import { useBodiesStore } from '../store/bodies';
 import { selectShelf, useBooksStore } from '../store/books';
 
 import { ActionSheet } from './ActionSheet';
-import { ConfirmDialog } from './ConfirmDialog';
+import { ConfirmDialog, useModalDialog } from './ConfirmDialog';
 import {
   CheckGlyph,
   CloseGlyph,
@@ -78,7 +79,29 @@ export function BookFormPanel({
   const [newSeriesInput, setNewSeriesInput] = useState('');
 
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const newSeriesDialogRef = useRef<HTMLDialogElement>(null);
+  const { ref: newSeriesDialogRef, closing: closingSeriesDialog } =
+    useModalDialog(seriesDialog);
+
+  useEffect(() => {
+    if (!open) return;
+    setName(book?.name ?? '');
+    setAuthor(book?.author ?? '');
+    setYearText(
+      book?.year != null && book.year >= 0 ? String(book.year) : '',
+    );
+    setGenres(book?.genres ?? []);
+    setSeries(book?.series ?? null);
+    setSeriesNumber(book?.seriesNumber ?? 1);
+    setCover(
+      book?.artUrl
+        ? { state: 'unchanged', url: book.artUrl }
+        : { state: 'unchanged', url: '' },
+    );
+    setGenresOpen(false);
+    setConfirming(false);
+    setCoverSheet(false);
+    setSeriesDialog(false);
+  }, [open, book]);
 
   useEffect(() => {
     return () => {
@@ -89,13 +112,7 @@ export function BookFormPanel({
   }, [cover]);
 
   useEffect(() => {
-    const dialog = newSeriesDialogRef.current;
-    if (!dialog) return;
-    if (seriesDialog && !dialog.open) {
-      setNewSeriesInput('');
-      dialog.showModal();
-    }
-    if (!seriesDialog && dialog.open) dialog.close();
+    if (seriesDialog) setNewSeriesInput('');
   }, [seriesDialog]);
 
   const existingSeriesNames = useMemo(() => {
@@ -145,6 +162,7 @@ export function BookFormPanel({
           fields,
           cover: uploadedCover ?? null,
           body: initialBody,
+          position: leadPosition(allBooks, cleanSeries),
         });
         primeBody(createdId, initialBody);
         showToast(t('snackbar.book-created'));
@@ -220,17 +238,9 @@ export function BookFormPanel({
                 : fileInputRef.current?.click()
             }
           >
-            <span className="art-box is-book">
+            <span className="art-box">
               {coverPreview ? (
-                <>
-                  <img
-                    src={coverPreview}
-                    alt=""
-                    aria-hidden="true"
-                    className="art-box-backdrop"
-                  />
-                  <img src={coverPreview} alt="" className="art-box-fg" />
-                </>
+                <img src={coverPreview} alt="" />
               ) : (
                 <PlusGlyph />
               )}
@@ -417,19 +427,24 @@ export function BookFormPanel({
         )}
       </SidePanel>
 
-      {genresOpen && (
-        <GenresPickerSheet
-          index={index + 1}
-          selected={genres}
-          onChange={setGenres}
-          onClose={() => setGenresOpen(false)}
-        />
-      )}
+      <GenresPickerSheet
+        open={open && genresOpen}
+        index={index + 1}
+        selected={genres}
+        onChange={setGenres}
+        onClose={() => setGenresOpen(false)}
+      />
 
       <dialog
         ref={newSeriesDialogRef}
-        className="confirm"
-        onClose={() => setSeriesDialog(false)}
+        className={closingSeriesDialog ? 'confirm is-closing' : 'confirm'}
+        onCancel={e => {
+          e.preventDefault();
+          setSeriesDialog(false);
+        }}
+        onClose={() => {
+          if (seriesDialog) setSeriesDialog(false);
+        }}
         onClick={e => e.target === e.currentTarget && setSeriesDialog(false)}
       >
         <form
@@ -471,11 +486,13 @@ export function BookFormPanel({
 }
 
 export function GenresPickerSheet({
+  open = true,
   index,
   selected,
   onChange,
   onClose,
 }: {
+  open?: boolean;
   index: number;
   selected: string[];
   onChange: (next: string[]) => void;
@@ -502,7 +519,7 @@ export function GenresPickerSheet({
 
   return (
     <SidePanel
-      open
+      open={open}
       index={index}
       title={t('bookEdit.genres.label')}
       onClose={onClose}

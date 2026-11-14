@@ -344,12 +344,30 @@ export function Reader({
   });
 
   const [chromeShown, setChromeShown] = useState(true);
+  const [closing, setClosing] = useState(false);
   const [activeSheet, setActiveSheet] = useState<'settings' | 'contents' | null>(
     null,
   );
   const [pageIndex, setPageIndex] = useState(0);
   const [curl, setCurl] = useState<ActiveCurl | null>(null);
   const [slideOffsetPx, setSlideOffsetPx] = useState(0);
+
+  const requestClose = useCallback(() => {
+    if (
+      typeof window !== 'undefined' &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    ) {
+      onClose();
+      return;
+    }
+    setClosing(true);
+  }, [onClose]);
+
+  useEffect(() => {
+    if (!closing) return;
+    const timer = window.setTimeout(onClose, 220);
+    return () => window.clearTimeout(timer);
+  }, [closing, onClose]);
 
   const initialAnchorApplied = useRef(false);
   const currentAnchorRef = useRef(book.readerAnchor);
@@ -527,7 +545,7 @@ export function Reader({
       }
       if (e.key === 'Escape') {
         e.stopPropagation();
-        onClose();
+        requestClose();
       } else if (
         pageTurn !== 'scroll' &&
         (e.key === 'ArrowRight' || e.key === ' ')
@@ -542,7 +560,7 @@ export function Reader({
 
     window.addEventListener('keydown', onKeyDown, true);
     return () => window.removeEventListener('keydown', onKeyDown, true);
-  }, [activeSheet, commitTurn, onClose, pageTurn]);
+  }, [activeSheet, commitTurn, pageTurn, requestClose]);
 
   const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     if (
@@ -712,7 +730,13 @@ export function Reader({
 
   const readerOverlay = (
     <div
-      className={palette.dark ? 'reader is-dark' : 'reader is-light'}
+      className={[
+        'reader',
+        palette.dark ? 'is-dark' : 'is-light',
+        closing && 'is-closing',
+      ]
+        .filter(Boolean)
+        .join(' ')}
       style={{
         backgroundColor: palette.page,
         color: palette.text,
@@ -725,7 +749,11 @@ export function Reader({
       aria-label={book.name}
     >
       <header className={showBar ? 'reader-bar is-shown' : 'reader-bar'}>
-        <button type="button" className="round reader-btn" onClick={onClose}>
+        <button
+          type="button"
+          className="round reader-btn"
+          onClick={requestClose}
+        >
           <CloseGlyph />
           <span className="sr">{t('reader.close')}</span>
         </button>

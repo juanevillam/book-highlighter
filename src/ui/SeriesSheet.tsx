@@ -24,7 +24,7 @@ export function SeriesSheet({
             className={book.id === selectedBookId ? 'tile is-active' : 'tile'}
             onClick={() => onSelectBook(book)}
           >
-            <span className="tile-art is-book">
+            <span className="tile-art">
               <Artwork artUrl={book.artUrl} name={book.name} width={220} />
             </span>
             <span className="tile-name">{book.name}</span>

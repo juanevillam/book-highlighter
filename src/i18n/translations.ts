@@ -65,6 +65,7 @@ export const translations = {
     },
     home: {
       newBook: 'New Book',
+      reorder: 'Reorder',
       empty: {
         title: 'Your Shelf Is Empty',
         subtitle: 'Add your first book summary.',
@@ -370,6 +371,7 @@ export const translations = {
       'book-delete-failed': "Couldn't delete the book. Try again.",
       'highlight-deleted': 'Highlight deleted',
       'notes-save-failed': "Couldn't save your changes. Try again.",
+      'reorder-failed': "Couldn't reorder your books. Try again.",
       'scan-saved': 'Scanned highlights saved',
       'scan-failed': "Couldn't process page. Try again.",
       'picture-too-large': 'Cover image must be under 5 MB.',
@@ -448,6 +450,7 @@ export const translations = {
     },
     home: {
       newBook: 'Nuevo libro',
+      reorder: 'Reordenar',
       empty: {
         title: 'Tu estantería está vacía',
         subtitle: 'Escribe el primer resumen de un libro.',
@@ -761,6 +764,8 @@ export const translations = {
       'highlight-deleted': 'Resaltado eliminado',
       'notes-save-failed':
         'No se pudieron guardar los cambios. Vuelve a intentarlo.',
+      'reorder-failed':
+        'No se pudieron reordenar tus libros. Vuelve a intentarlo.',
       'scan-saved': 'Resaltados escaneados guardados',
       'scan-failed': 'No se pudo procesar la página. Reintenta.',
       'picture-too-large': 'La portada debe pesar menos de 5 MB.',
@@ -838,6 +843,7 @@ export const translations = {
     },
     home: {
       newBook: '新建图书',
+      reorder: '重新排序',
       empty: {
         title: '你的书架还是空的',
         subtitle: '添加你的第一篇图书摘要。',
@@ -1137,6 +1143,7 @@ export const translations = {
       'book-delete-failed': '无法删除这本书。请再试一次。',
       'highlight-deleted': '已删除高亮',
       'notes-save-failed': '无法存储你的更改。请再试一次。',
+      'reorder-failed': '无法重新排序图书。请再试一次。',
       'scan-saved': '已存储扫描的高亮',
       'scan-failed': '无法处理该页面，请重试。',
       'picture-too-large': '封面图片须小于 5 MB。',

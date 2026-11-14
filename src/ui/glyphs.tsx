@@ -125,31 +125,19 @@ export const TextSizeGlyph = () => (
   </svg>
 );
 
-export const FilterGlyph = () => (
-  <svg viewBox="0 0 24 24" aria-hidden="true">
-    <path d="M4 6.5h16M7 12h10M10 17.5h4" {...strokeProps} strokeWidth={2} />
-  </svg>
-);
-
-export const SortDirectionGlyph = ({ ascending }: { ascending: boolean }) => (
-  <svg viewBox="0 0 24 24" aria-hidden="true">
-    {ascending ? (
-      <path d="M12 19V5m0 0-5 5m5-5 5 5" {...strokeProps} strokeWidth={2} />
-    ) : (
-      <path d="M12 5v14m0 0-5-5m5 5 5-5" {...strokeProps} strokeWidth={2} />
-    )}
-  </svg>
-);
-
-export const GripGlyph = () => (
-  <svg viewBox="0 0 24 24" aria-hidden="true">
-    <path d="M5 9h14M5 15h14" {...strokeProps} strokeWidth={1.9} />
-  </svg>
-);
-
 export const SearchGlyph = () => (
   <svg viewBox="0 0 24 24" aria-hidden="true">
     <circle cx="10.8" cy="10.8" r="6.3" {...strokeProps} />
     <path d="m15.6 15.6 4.2 4.2" {...strokeProps} />
+  </svg>
+);
+
+export const ReorderGlyph = () => (
+  <svg viewBox="0 0 24 24" aria-hidden="true">
+    <path
+      d="M8 19V5M4.5 8.5 8 5l3.5 3.5M16 5v14M12.5 15.5 16 19l3.5-3.5"
+      {...strokeProps}
+      strokeWidth={1.85}
+    />
   </svg>
 );

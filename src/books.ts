@@ -6,6 +6,7 @@ import {
   onSnapshot,
   query,
   serverTimestamp,
+  setDoc,
   updateDoc,
   writeBatch,
   type QueryDocumentSnapshot,
@@ -20,6 +21,8 @@ import {
   requireUid,
   USERS_COLLECTION,
 } from './firebase';
+import { byGridOrder, positionBetween } from './lib/gridOrder';
+import { type ShelfEntry } from './lib/shelf';
 import { destroyAsset } from './media';
 
 export type ReaderAnchor = { blockId: string; offset: number };
@@ -36,6 +39,7 @@ export type Book = {
   id: string;
   lastOpenedAt: number | null;
   name: string;
+  position: number | null;
   readerAnchor: ReaderAnchor | null;
   series: string | null;
   seriesNumber: number | null;
@@ -119,6 +123,10 @@ const bookToModel = (snapshot: QueryDocumentSnapshot): Book => {
     id: snapshot.id,
     lastOpenedAt: millis(data.lastOpenedAt),
     name: (data.name as string) ?? '',
+    position:
+      typeof data.position === 'number' && Number.isFinite(data.position)
+        ? data.position
+        : null,
     readerAnchor: toAnchor(data.readerAnchor),
     series:
       typeof data.series === 'string' && data.series.trim()
@@ -180,7 +188,7 @@ export const subscribeToBooks = ({
   onSnapshot(
     query(booksCollection()),
     snapshot =>
-      onNext(snapshot.docs.map(bookToModel), {
+      onNext(byGridOrder(snapshot.docs.map(bookToModel)), {
         fromCache: snapshot.metadata.fromCache,
       }),
     error => {
@@ -189,6 +197,32 @@ export const subscribeToBooks = ({
     },
   );
 
+/**
+ * Where a new book lands in the grid: if it joins an existing series that
+ * already has a slot, it inherits that series's position; otherwise it lands
+ * at the front of the shelf ahead of the first book (matching Sound Shaper's
+ * `leadPosition`).
+ */
+export const leadPosition = (
+  books: readonly Book[],
+  series?: string | null,
+): number => {
+  if (series) {
+    const existing = books.find(
+      b => b.series === series && b.position !== null,
+    );
+    if (existing?.position != null) return existing.position;
+  }
+
+  const positions = books
+    .map(book => book.position)
+    .filter((position): position is number => position !== null);
+
+  return positions.length
+    ? (positionBetween(null, Math.min(...positions)) ?? 0)
+    : 0;
+};
+
 export const getBookBody = async (bookId: string): Promise<BookBody> =>
   toBody((await getDoc(bodyDoc(bookId))).data());
 
@@ -196,10 +230,12 @@ export const createBook = async ({
   body = EMPTY_BODY,
   cover,
   fields,
+  position = 0,
 }: {
   body?: BookBody;
   cover: { publicId: string; url: string } | null;
   fields: BookFields;
+  position?: number;
 }): Promise<string> => {
   const ref = doc(booksCollection());
   const batch = writeBatch(requireDb());
@@ -212,6 +248,7 @@ export const createBook = async ({
     createdAt: serverTimestamp(),
     finishedAt: null,
     lastOpenedAt: null,
+    position,
     readerAnchor: null,
     updatedAt: serverTimestamp(),
   });
@@ -292,4 +329,75 @@ export const deleteBook = async (bookId: string): Promise<void> => {
 
   await deleteDoc(bodyDoc(bookId));
   await deleteDoc(ref);
+};
+
+export const moveBook = (bookId: string, position: number): Promise<void> =>
+  updateDoc(bookDoc(bookId), { position });
+
+export const moveSeries = async (
+  bookIds: string[],
+  position: number,
+): Promise<void> => {
+  if (bookIds.length === 0) return;
+  const batch = writeBatch(requireDb());
+  for (const id of bookIds) {
+    batch.update(bookDoc(id), { position });
+  }
+  await batch.commit();
+};
+
+export const setAddTilePosition = (position: number): Promise<void> =>
+  setDoc(
+    doc(requireDb(), USERS_COLLECTION, requireUid()),
+    { addTilePosition: position },
+    { merge: true },
+  );
+
+export const backfillShelfPositions = async (
+  entries: ShelfEntry[],
+): Promise<void> => {
+  if (entries.length === 0) return;
+  const batch = writeBatch(requireDb());
+  entries.forEach((entry, index) => {
+    if (entry.kind === 'book') {
+      batch.update(bookDoc(entry.book.id), { position: index });
+    } else {
+      for (const b of entry.books) {
+        batch.update(bookDoc(b.id), { position: index });
+      }
+    }
+  });
+  await batch.commit();
+};
+
+export const renormalizeShelfOrder = async (
+  order: Array<{ id: string; position: number }>,
+  entriesByKey: Map<string, ShelfEntry>,
+  addTileKey: string,
+): Promise<void> => {
+  const db = requireDb();
+  const uid = requireUid();
+  const batch = writeBatch(db);
+
+  for (const item of order) {
+    if (item.id === addTileKey) {
+      batch.set(
+        doc(db, USERS_COLLECTION, uid),
+        { addTilePosition: item.position },
+        { merge: true },
+      );
+      continue;
+    }
+    const entry = entriesByKey.get(item.id);
+    if (!entry) continue;
+    if (entry.kind === 'book') {
+      batch.update(bookDoc(entry.book.id), { position: item.position });
+    } else {
+      for (const b of entry.books) {
+        batch.update(bookDoc(b.id), { position: item.position });
+      }
+    }
+  }
+
+  await batch.commit();
 };

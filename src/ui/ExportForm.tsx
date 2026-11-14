@@ -4,7 +4,6 @@ import { track } from '../analytics';
 import { useScheme } from '../appearance';
 import { type Book } from '../books';
 import { t } from '../i18n';
-import { sortLibrary } from '../lib/librarySort';
 import {
   effectiveTheme,
   READER_THEMES,
@@ -14,7 +13,6 @@ import {
 } from '../lib/readerThemes';
 import { useBodiesStore } from '../store/bodies';
 import { selectShelf, useBooksStore } from '../store/books';
-import { useLibrarySortStore } from '../store/librarySort';
 import { useReaderSettingsStore } from '../store/readerSettings';
 
 import { CheckGlyph, CloseGlyph } from './glyphs';
@@ -39,7 +37,6 @@ export function ExportPanel({
 }) {
   const scheme = useScheme();
   const books = useBooksStore(state => state.books);
-  const sort = useLibrarySortStore(state => state.sort);
   const ensureBody = useBodiesStore(state => state.ensure);
 
   const savedReaderTheme = useReaderSettingsStore(state => state.theme);
@@ -54,7 +51,7 @@ export function ExportPanel({
   const [scaleIndex, setScaleIndex] = useState<number>(savedScaleIndex);
   const [busy, setBusy] = useState(false);
 
-  const shelf = sortLibrary(selectShelf({ books }), sort);
+  const shelf = selectShelf({ books });
   const targetBooks =
     scope === 'book' && initialBook ? [initialBook] : shelf;
 

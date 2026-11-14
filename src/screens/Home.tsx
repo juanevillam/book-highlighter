@@ -5,15 +5,14 @@ import { type User } from 'firebase/auth';
 
 import { type Book } from '../books';
 import { t } from '../i18n';
-import { sortLibrary } from '../lib/librarySort';
 import { shelfEntries } from '../lib/shelf';
 import { useBodiesStore } from '../store/bodies';
 import {
   selectShelf,
+  useAddTilePosition,
   useBooksStore,
   useBooksSubscription,
 } from '../store/books';
-import { useLibrarySortStore } from '../store/librarySort';
 import { useTrophySystem } from '../trophies';
 import { AccountForm } from '../ui/AccountForm';
 import { Backdrop, PlayerBackdrop } from '../ui/Backdrop';
@@ -21,8 +20,8 @@ import { BookFormPanel } from '../ui/BookForm';
 import { BookStage } from '../ui/BookStage';
 import { ChaptersPanel } from '../ui/ChaptersForm';
 import { ExportPanel } from '../ui/ExportForm';
-import { FilterGlyph, GearGlyph } from '../ui/glyphs';
-import { LibraryGrid, SortForm } from '../ui/LibraryGrid';
+import { GearGlyph } from '../ui/glyphs';
+import { LibraryGrid } from '../ui/LibraryGrid';
 import { Reader } from '../ui/Reader';
 import { SeriesSheet } from '../ui/SeriesSheet';
 import { SettingsForm } from '../ui/SettingsForm';
@@ -51,19 +50,20 @@ const morph = (change: () => void) => {
   doc.startViewTransition(() => flushSync(change));
 };
 
-const useLargeTitle = () => {
+const useLargeTitle = (active: boolean) => {
   const title = useRef<HTMLHeadingElement>(null);
   const [titled, setTitled] = useState(false);
 
   useEffect(() => {
+    if (!active || !title.current) return;
     const observer = new IntersectionObserver(
       ([entry]) => setTitled(!entry.isIntersecting),
       { rootMargin: '-56px 0px 0px 0px' },
     );
 
-    if (title.current) observer.observe(title.current);
+    observer.observe(title.current);
     return () => observer.disconnect();
-  }, []);
+  }, [active]);
 
   return { title, titled };
 };
@@ -73,7 +73,7 @@ type ToolEntry =
   | { kind: 'export'; book: Book };
 
 type ModalEntry =
-  | { kind: 'settings' | 'account' | 'trophies' | 'sort' }
+  | { kind: 'settings' | 'account' | 'trophies' }
   | { kind: 'series'; name: string }
   | { kind: 'bookForm'; book: Book | null }
   | { kind: 'export'; book: null };
@@ -97,12 +97,9 @@ export function Home({ user }: { user: User }) {
   const books = useBooksStore(state => state.books);
   const hasSettled = useBooksStore(state => state.hasSettled);
   const error = useBooksStore(state => state.error);
-  const sort = useLibrarySortStore(state => state.sort);
+  const addTilePosition = useAddTilePosition(user.uid);
 
-  const shelf = useMemo(
-    () => sortLibrary(selectShelf({ books }), sort),
-    [books, sort],
-  );
+  const shelf = useMemo(() => selectShelf({ books }), [books]);
   const entries = useMemo(() => shelfEntries(shelf), [shelf]);
 
   const [selectedBookId, setSelectedBookId] = useState<string | null>(null);
@@ -111,17 +108,31 @@ export function Home({ user }: { user: User }) {
   const [toolLayers, setToolLayers] = useState<Layer<ToolEntry>[]>([]);
   const [modalLayers, setModalLayers] = useState<Layer<ModalEntry>[]>([]);
   const [, setProfileTick] = useState(0);
+  const [coldLoad, setColdLoad] = useState(false);
+  const hydrated = useRef(false);
 
-  const { title, titled } = useLargeTitle();
+  useEffect(() => {
+    if (hasSettled || error) return;
+    const id = setTimeout(() => setColdLoad(true), 220);
+    return () => clearTimeout(id);
+  }, [hasSettled, error]);
+
+  const readyOrCold = hasSettled || Boolean(error) || coldLoad;
+  const { title, titled } = useLargeTitle(readyOrCold);
 
   // Clear cached bodies on sign-out / unmount.
   useEffect(() => () => useBodiesStore.getState().reset(), []);
 
-  // Keep `selectedBook` synchronized with live shelf; prime first book on desktop.
-  const selectedBook = useMemo(
-    () => shelf.find(b => b.id === selectedBookId) ?? null,
-    [shelf, selectedBookId],
-  );
+  // Keep `selectedBook` synchronized with live shelf; prime first book on desktop
+  // synchronously on the first settled render so the layout never jumps from 1 to 2 columns.
+  const selectedBook = useMemo(() => {
+    if (!hasSettled || shelf.length === 0) return null;
+    if (selectedBookId) {
+      const found = shelf.find(b => b.id === selectedBookId);
+      if (found) return found;
+    }
+    return matchMedia(DESK).matches ? shelf[0] : null;
+  }, [hasSettled, shelf, selectedBookId]);
 
   useEffect(() => {
     if (!hasSettled) return;
@@ -147,11 +158,18 @@ export function Home({ user }: { user: User }) {
 
   const [stood, setStood] = useState(false);
   const hasCurrent = Boolean(selectedBook);
+  const isStaged = hydrated.current ? stood : hasCurrent;
 
   useEffect(() => {
+    if (!hasSettled && !error) return;
+    if (!hydrated.current) {
+      hydrated.current = true;
+      setStood(hasCurrent);
+      return;
+    }
     if (hasCurrent === stood) return;
     morph(() => setStood(hasCurrent));
-  }, [hasCurrent, stood]);
+  }, [hasSettled, error, hasCurrent, stood]);
 
   const tooled = liveTools.length > 0 && hasCurrent;
   const [toolsShown, setToolsShown] = useState(false);
@@ -257,10 +275,12 @@ export function Home({ user }: { user: User }) {
     return () => document.removeEventListener('keydown', onKey);
   });
 
+  if (!readyOrCold) return null;
+
   const className = [
     'home',
     selectedBook ? 'has-current' : '',
-    stood ? 'is-staged' : '',
+    isStaged ? 'is-staged' : '',
     mobileStageOpen ? 'is-expanded' : '',
     toolsShown ? 'is-tooled' : '',
   ]
@@ -304,7 +324,10 @@ export function Home({ user }: { user: User }) {
         );
 
       case 'chapters': {
-        const book = shelf.find(b => b.id === entry.bookId) ?? selectedBook;
+        const book =
+          shelf.find(b => b.id === entry.bookId) ??
+          books.find(b => b.id === entry.bookId) ??
+          selectedBook;
         if (!book) return null;
         return (
           <ChaptersPanel
@@ -385,21 +408,6 @@ export function Home({ user }: { user: User }) {
           </SidePanel>
         );
 
-      case 'sort':
-        return (
-          <SidePanel
-            key={layer.id}
-            open={isOpen}
-            switching={switching}
-            depth={effectiveDepth}
-            index={indexInGroup}
-            title={t('home.sort.label')}
-            onClose={handleClose}
-          >
-            <SortForm />
-          </SidePanel>
-        );
-
       case 'series': {
         const seriesBooks = shelf.filter(b => b.series === entry.name);
         return (
@@ -459,28 +467,15 @@ export function Home({ user }: { user: User }) {
             {APP_NAME}
           </span>
 
-          <div className="bar-actions">
-            <button
-              type="button"
-              className="round"
-              disabled={!hasSettled || Boolean(error)}
-              aria-expanded={modalBase === 'sort'}
-              aria-label={`${t('home.sort.label')}: ${t(`home.sort.keys.${sort.key}`)}`}
-              onClick={() => openModal({ kind: 'sort' })}
-            >
-              <FilterGlyph />
-              <span className="sr">{t('home.sort.label')}</span>
-            </button>
-            <button
-              type="button"
-              className="round"
-              aria-expanded={modalBase === 'settings'}
-              onClick={() => openModal({ kind: 'settings' })}
-            >
-              <GearGlyph />
-              <span className="sr">{t('app.settings')}</span>
-            </button>
-          </div>
+          <button
+            type="button"
+            className="round bar-glyph"
+            aria-expanded={modalBase === 'settings'}
+            onClick={() => openModal({ kind: 'settings' })}
+          >
+            <GearGlyph />
+            <span className="sr">{t('app.settings')}</span>
+          </button>
         </header>
 
         <h1 ref={title} className="large-title">
@@ -489,6 +484,7 @@ export function Home({ user }: { user: User }) {
 
         <LibraryGrid
           entries={entries}
+          addTilePosition={addTilePosition}
           hasSettled={hasSettled}
           error={error}
           selectedBookId={selectedBook?.id ?? null}

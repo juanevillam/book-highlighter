@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 
 import {
   EMPTY_BODY,
@@ -21,15 +21,13 @@ import {
 import { parsePageRef } from '../lib/bookFields';
 import { useBodiesStore } from '../store/bodies';
 
-import { ConfirmDialog } from './ConfirmDialog';
+import { ConfirmDialog, useModalDialog } from './ConfirmDialog';
 import {
   CheckGlyph,
-  CloseGlyph,
   ChevronRightGlyph,
+  CloseGlyph,
   ContentsGlyph,
   PlusGlyph,
-  SortDirectionGlyph,
-  TrashGlyph,
 } from './glyphs';
 import { SidePanel } from './SidePanel';
 import { showToast } from './Toast';
@@ -38,6 +36,26 @@ const makeId = () =>
   typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
     ? crypto.randomUUID()
     : `id-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+
+function SortableCardList<T extends { id: string }>({
+  items,
+  renderRow,
+}: {
+  items: T[];
+  onMove?: (from: number, to: number) => void;
+  onPressItem?: (item: T) => void;
+  renderRow: (item: T) => ReactNode;
+}) {
+  return (
+    <ul className="card reorder-list">
+      {items.map(item => (
+        <li key={item.id} className="cell reorder-item">
+          {renderRow(item)}
+        </li>
+      ))}
+    </ul>
+  );
+}
 
 export function ChaptersPanel({
   open,
@@ -70,25 +88,37 @@ export function ChaptersPanel({
     string | null
   >(null);
 
-  const addDialogRef = useRef<HTMLDialogElement>(null);
+  const { ref: addDialogRef, closing: closingAddDialog } =
+    useModalDialog(addingChapter);
 
   useEffect(() => {
     void ensureBody(book.id).catch(() => {});
   }, [book.id, ensureBody]);
 
   useEffect(() => {
-    const dialog = addDialogRef.current;
-    if (!dialog) return;
-    if (addingChapter && !dialog.open) {
-      setNewChapterName('');
-      dialog.showModal();
+    if (!open) {
+      setActiveChapterId(null);
+      setEditingHighlight(null);
+      setAddingChapter(false);
+      setConfirmDeleteChapterId(null);
     }
-    if (!addingChapter && dialog.open) dialog.close();
+  }, [open, book.id]);
+
+  useEffect(() => {
+    if (addingChapter) setNewChapterName('');
   }, [addingChapter]);
 
   const body: BookBody = entry?.body ?? EMPTY_BODY;
   const activeChapter: Chapter | null =
     body.chapters.find(ch => ch.id === activeChapterId) ?? null;
+
+  const shownChapterRef = useRef<Chapter | null>(null);
+  if (activeChapter) shownChapterRef.current = activeChapter;
+  const viewChapter = activeChapter ?? shownChapterRef.current;
+
+  const shownHighlightRef = useRef<typeof editingHighlight>(null);
+  if (editingHighlight) shownHighlightRef.current = editingHighlight;
+  const viewHighlight = editingHighlight ?? shownHighlightRef.current;
 
   const persist = async (nextBody: BookBody) => {
     try {
@@ -154,119 +184,80 @@ export function ChaptersPanel({
             </button>
           </div>
         ) : (
-          <div className="card">
-            {body.chapters.map((chapter, idx) => (
-              <div key={chapter.id} className="cell reorder-row">
+          <SortableCardList
+            items={body.chapters}
+            onMove={(from, to) => void persist(moveChapter(body, from, to))}
+            onPressItem={chapter => setActiveChapterId(chapter.id)}
+            renderRow={chapter => {
+              const sub = [
+                chapter.highlights.length > 0
+                  ? plural('book.highlightCount', chapter.highlights.length)
+                  : '',
+                chapter.pages,
+              ]
+                .filter(Boolean)
+                .join(' · ');
+
+              return (
                 <button
                   type="button"
-                  className="reorder-main"
+                  className="reorder-row-btn"
                   onClick={() => setActiveChapterId(chapter.id)}
                 >
-                  <span className="reorder-title">
-                    {chapter.name || t('chapters.untitled')}
+                  <span className="reorder-main">
+                    <span className="reorder-title">
+                      {chapter.name || t('chapters.untitled')}
+                    </span>
+                    {sub && <span className="reorder-sub">{sub}</span>}
                   </span>
-                  <span className="reorder-sub">
-                    {[
-                      chapter.highlights.length > 0
-                        ? plural(
-                            'book.highlightCount',
-                            chapter.highlights.length,
-                          )
-                        : '',
-                      chapter.pages,
-                    ]
-                      .filter(Boolean)
-                      .join(' · ')}
-                  </span>
-                </button>
-
-                <div className="reorder-controls">
-                  <button
-                    type="button"
-                    className="round quiet"
-                    disabled={idx === 0}
-                    title={t('common.moveUp')}
-                    onClick={() =>
-                      void persist(moveChapter(body, idx, idx - 1))
-                    }
-                  >
-                    <SortDirectionGlyph ascending />
-                  </button>
-                  <button
-                    type="button"
-                    className="round quiet"
-                    disabled={idx === body.chapters.length - 1}
-                    title={t('common.moveDown')}
-                    onClick={() =>
-                      void persist(moveChapter(body, idx, idx + 1))
-                    }
-                  >
-                    <SortDirectionGlyph ascending={false} />
-                  </button>
-                  <button
-                    type="button"
-                    className="round quiet is-destructive"
-                    title={t('chapters.delete')}
-                    onClick={() => setConfirmDeleteChapterId(chapter.id)}
-                  >
-                    <TrashGlyph />
-                  </button>
                   <span className="chevron">
                     <ChevronRightGlyph />
                   </span>
-                </div>
-              </div>
-            ))}
-          </div>
+                </button>
+              );
+            }}
+          />
         )}
       </SidePanel>
 
-      {activeChapter && (
+      {viewChapter && (
         <ChapterDetailPanel
+          open={open && activeChapter !== null}
           index={index + 1}
           depth={depth + (editingHighlight ? 1 : 0)}
-          chapter={activeChapter}
+          chapter={viewChapter}
           onUpdateMeta={(fields: Partial<Pick<Chapter, 'name' | 'pages'>>) =>
-            void persist(updateChapter(body, activeChapter.id, fields))
+            void persist(updateChapter(body, viewChapter.id, fields))
           }
           onAddHighlight={() =>
-            setEditingHighlight({ mode: 'new', chapterId: activeChapter.id })
+            setEditingHighlight({ mode: 'new', chapterId: viewChapter.id })
           }
           onEditHighlight={hl =>
             setEditingHighlight({
               mode: 'edit',
-              chapterId: activeChapter.id,
+              chapterId: viewChapter.id,
               highlight: hl,
             })
           }
           onMoveHighlight={(from, to) =>
-            void persist(moveHighlight(body, activeChapter.id, from, to))
+            void persist(moveHighlight(body, viewChapter.id, from, to))
           }
-          onDeleteHighlight={hlId => {
-            const before = body;
-            void persist(removeHighlight(body, activeChapter.id, hlId));
-            showToast(t('snackbar.highlight-deleted'), {
-              label: t('common.undo'),
-              onAction: () => void persist(before),
-            });
-          }}
-          onDeleteChapter={() => setConfirmDeleteChapterId(activeChapter.id)}
+          onDeleteChapter={() => setConfirmDeleteChapterId(viewChapter.id)}
           onClose={() => setActiveChapterId(null)}
         />
       )}
 
-      {editingHighlight && (
+      {viewHighlight && (
         <HighlightEditorPanel
+          open={open && editingHighlight !== null}
           index={index + 2}
           initial={
-            editingHighlight.mode === 'edit'
-              ? editingHighlight.highlight
-              : null
+            viewHighlight.mode === 'edit' ? viewHighlight.highlight : null
           }
           onSave={({ text, page }) => {
-            if (editingHighlight.mode === 'new') {
+            if (viewHighlight.mode === 'new') {
               void persist(
-                addHighlight(body, editingHighlight.chapterId, {
+                addHighlight(body, viewHighlight.chapterId, {
                   id: makeId(),
                   text,
                   page,
@@ -274,8 +265,8 @@ export function ChaptersPanel({
               );
             } else {
               void persist(
-                updateHighlight(body, editingHighlight.chapterId, {
-                  id: editingHighlight.highlight.id,
+                updateHighlight(body, viewHighlight.chapterId, {
+                  id: viewHighlight.highlight.id,
                   text,
                   page,
                 }),
@@ -284,14 +275,14 @@ export function ChaptersPanel({
             setEditingHighlight(null);
           }}
           onDelete={
-            editingHighlight.mode === 'edit'
+            viewHighlight.mode === 'edit'
               ? () => {
                   const before = body;
                   void persist(
                     removeHighlight(
                       body,
-                      editingHighlight.chapterId,
-                      editingHighlight.highlight.id,
+                      viewHighlight.chapterId,
+                      viewHighlight.highlight.id,
                     ),
                   );
                   showToast(t('snackbar.highlight-deleted'), {
@@ -308,8 +299,14 @@ export function ChaptersPanel({
 
       <dialog
         ref={addDialogRef}
-        className="confirm"
-        onClose={() => setAddingChapter(false)}
+        className={closingAddDialog ? 'confirm is-closing' : 'confirm'}
+        onCancel={e => {
+          e.preventDefault();
+          setAddingChapter(false);
+        }}
+        onClose={() => {
+          if (addingChapter) setAddingChapter(false);
+        }}
         onClick={e => e.target === e.currentTarget && setAddingChapter(false)}
       >
         <form
@@ -368,6 +365,7 @@ export function ChaptersPanel({
 }
 
 function ChapterDetailPanel({
+  open,
   index,
   depth,
   chapter,
@@ -375,10 +373,10 @@ function ChapterDetailPanel({
   onAddHighlight,
   onEditHighlight,
   onMoveHighlight,
-  onDeleteHighlight,
   onDeleteChapter,
   onClose,
 }: {
+  open: boolean;
   index: number;
   depth: number;
   chapter: Chapter;
@@ -386,7 +384,6 @@ function ChapterDetailPanel({
   onAddHighlight: () => void;
   onEditHighlight: (highlight: Highlight) => void;
   onMoveHighlight: (from: number, to: number) => void;
-  onDeleteHighlight: (highlightId: string) => void;
   onDeleteChapter: () => void;
   onClose: () => void;
 }) {
@@ -400,7 +397,7 @@ function ChapterDetailPanel({
 
   return (
     <SidePanel
-      open
+      open={open}
       depth={depth}
       index={index}
       title={chapter.name || t('chapters.untitled')}
@@ -462,64 +459,31 @@ function ChapterDetailPanel({
           <span className="head-value">{chapter.highlights.length}</span>
         </h3>
 
-        <div className="card">
-          <button
-            type="button"
-            className="cell new-clip-row"
-            onClick={onAddHighlight}
-          >
-            <span>+ {t('chapter.add')}</span>
-          </button>
-
-          {chapter.highlights.length === 0 ? (
+        {chapter.highlights.length === 0 ? (
+          <div className="card">
             <div className="cell muted-empty">{t('chapter.empty')}</div>
-          ) : (
-            chapter.highlights.map((hl, idx) => (
-              <div key={hl.id} className="cell highlight-row">
-                <button
-                  type="button"
-                  className="highlight-body-btn"
-                  onClick={() => onEditHighlight(hl)}
-                >
-                  <span className="highlight-quote">“{hl.text}”</span>
-                  {hl.page && (
-                    <span className="highlight-page">
-                      {t('chapter.page', { page: hl.page })}
-                    </span>
-                  )}
-                </button>
-                <div className="highlight-move">
-                  <button
-                    type="button"
-                    className="round quiet"
-                    disabled={idx === 0}
-                    title={t('common.moveUp')}
-                    onClick={() => onMoveHighlight(idx, idx - 1)}
-                  >
-                    <SortDirectionGlyph ascending />
-                  </button>
-                  <button
-                    type="button"
-                    className="round quiet"
-                    disabled={idx === chapter.highlights.length - 1}
-                    title={t('common.moveDown')}
-                    onClick={() => onMoveHighlight(idx, idx + 1)}
-                  >
-                    <SortDirectionGlyph ascending={false} />
-                  </button>
-                  <button
-                    type="button"
-                    className="round quiet is-destructive"
-                    title={t('common.delete')}
-                    onClick={() => onDeleteHighlight(hl.id)}
-                  >
-                    <TrashGlyph />
-                  </button>
-                </div>
-              </div>
-            ))
-          )}
-        </div>
+          </div>
+        ) : (
+          <SortableCardList
+            items={chapter.highlights}
+            onMove={onMoveHighlight}
+            onPressItem={onEditHighlight}
+            renderRow={hl => (
+              <button
+                type="button"
+                className="highlight-body-btn"
+                onClick={() => onEditHighlight(hl)}
+              >
+                <span className="highlight-quote">“{hl.text}”</span>
+                {hl.page && (
+                  <span className="highlight-page">
+                    {t('chapter.page', { page: hl.page })}
+                  </span>
+                )}
+              </button>
+            )}
+          />
+        )}
       </section>
 
       <div className="card">
@@ -536,12 +500,14 @@ function ChapterDetailPanel({
 }
 
 function HighlightEditorPanel({
+  open,
   index,
   initial,
   onSave,
   onDelete,
   onClose,
 }: {
+  open: boolean;
   index: number;
   initial: Highlight | null;
   onSave: (value: { text: string; page: string | null }) => void;
@@ -551,11 +517,17 @@ function HighlightEditorPanel({
   const [text, setText] = useState(initial?.text ?? '');
   const [page, setPage] = useState(initial?.page ?? '');
 
+  useEffect(() => {
+    if (!open) return;
+    setText(initial?.text ?? '');
+    setPage(initial?.page ?? '');
+  }, [open, initial?.id, initial?.text, initial?.page]);
+
   const valid = text.trim().length > 0;
 
   return (
     <SidePanel
-      open
+      open={open}
       index={index}
       title={t(initial ? 'highlightEdit.title' : 'highlightEdit.titleNew')}
       action={

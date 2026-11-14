@@ -17,7 +17,11 @@ import {
   parsePageRef,
   parseYear,
 } from '../src/lib/bookFields';
-import { sortLibrary } from '../src/lib/librarySort';
+import {
+  byGridOrder,
+  needsPositionRepair,
+  positionForMove,
+} from '../src/lib/gridOrder';
 import {
   pageIndexForAnchor,
   paginateSections,
@@ -43,6 +47,7 @@ const makeBook = (overrides: Partial<Book>): Book => ({
   finishedAt: null,
   genres: ['philosophy'],
   lastOpenedAt: null,
+  position: 0,
   readerAnchor: null,
   series: null,
   seriesNumber: null,
@@ -74,14 +79,14 @@ describe('bookFields', () => {
   });
 });
 
-describe('librarySort & shelfEntries', () => {
+describe('gridOrder & shelfEntries', () => {
   const books: Book[] = [
     makeBook({
       id: '1',
       name: 'Homo Deus',
       author: 'Yuval Noah Harari',
       year: 2015,
-      lastOpenedAt: 200,
+      position: 0,
       series: 'Sapiens',
       seriesNumber: 2,
     }),
@@ -90,7 +95,7 @@ describe('librarySort & shelfEntries', () => {
       name: 'Sapiens',
       author: 'Yuval Noah Harari',
       year: 2011,
-      lastOpenedAt: 500,
+      position: 0,
       series: 'Sapiens',
       seriesNumber: 1,
     }),
@@ -99,19 +104,18 @@ describe('librarySort & shelfEntries', () => {
       name: 'Meditations',
       author: 'Marcus Aurelius',
       year: 180,
-      lastOpenedAt: 350,
+      position: 1,
     }),
   ];
 
-  it('sorts recent descending and groups series in seriesNumber order', () => {
-    const sorted = sortLibrary(books, { key: 'recent', ascending: false });
-    expect(sorted.map(b => b.id)).toEqual(['2', '3', '1']);
-
+  it('orders shelf by fractional position and groups series in seriesNumber order', () => {
+    const sorted = byGridOrder(books);
     const entries = shelfEntries(sorted);
     expect(entries).toHaveLength(2);
     expect(entries[0]).toMatchObject({
       kind: 'series',
       name: 'Sapiens',
+      position: 0,
     });
     if (entries[0].kind === 'series') {
       expect(entries[0].books.map(b => b.id)).toEqual(['2', '1']);
@@ -119,7 +123,19 @@ describe('librarySort & shelfEntries', () => {
     expect(entries[1]).toMatchObject({
       kind: 'book',
       book: { id: '3' },
+      position: 1,
     });
+    expect(needsPositionRepair(entries)).toBe(false);
+    expect(
+      positionForMove(
+        [
+          { position: 0 },
+          { position: null },
+          { position: 1 },
+        ],
+        1,
+      ),
+    ).toBe(0.5);
   });
 });
 
