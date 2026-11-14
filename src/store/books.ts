@@ -23,12 +23,7 @@ export const useBooksStore = create<BooksState>()(set => ({
 }));
 
 export const selectShelf = ({ books }: Pick<BooksState, 'books'>): Book[] =>
-  books.filter(book => book.trashedAt === null);
-
-export const selectTrash = ({ books }: Pick<BooksState, 'books'>): Book[] =>
-  books
-    .filter(book => book.trashedAt !== null)
-    .sort((a, b) => (b.trashedAt ?? 0) - (a.trashedAt ?? 0));
+  books;
 
 export const useBooksSubscription = (uid: string) => {
   const setBooks = useBooksStore(state => state.setBooks);

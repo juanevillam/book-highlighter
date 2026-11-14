@@ -1,5 +1,11 @@
 import { useEffect, useRef } from 'react';
 
+/**
+ * A yes/no question, in the site's own language rather than a copy of an OS
+ * alert: a card on the hairline, the title, the sentence under it, and two
+ * pills. It is a real `<dialog>`, so the browser owns the top layer, the
+ * focus trap and Escape.
+ */
 export function ConfirmDialog({
   open,
   title,
@@ -23,6 +29,7 @@ export function ConfirmDialog({
 
   useEffect(() => {
     const dialog = ref.current;
+
     if (!dialog) return;
     if (open && !dialog.open) dialog.showModal();
     if (!open && dialog.open) dialog.close();
@@ -34,6 +41,7 @@ export function ConfirmDialog({
       className="confirm"
       onClose={onClose}
       onClick={e => {
+        // A click on the backdrop lands on the dialog itself.
         if (e.target === e.currentTarget) onClose();
       }}
     >

@@ -3,29 +3,109 @@ import { useEffect, useRef, useState } from 'react';
 import { thumbUrl } from '../lib/thumbUrl';
 
 /**
- * Sound Shaper's FLOW, number for number (sound-shaper/web/src/ui/Backdrop
- * carries the reasoning): two copies of the cover, blurred less than the
- * still wash, turning in opposite directions about pivots off the column's
- * centre, so the colours drift and pool. There is no music here, so the
- * clock simply runs in real time; Reduce Motion keeps the still wash.
+ * Two layers and a front: a new picture is LOADED before it takes the front,
+ * so the old wash holds until there is something to fade to. Flipping on the
+ * prop alone faded the old cover out over an image still on the network —
+ * the column dropped to bare ground for a beat on every change of cover.
+ */
+function useCrossfade(src: string): {
+  layers: [string, string];
+  front: number;
+} {
+  const [state, setState] = useState<{
+    layers: [string, string];
+    front: number;
+  }>({ layers: ['', ''], front: 0 });
+
+  useEffect(() => {
+    let live = true;
+    const show = () =>
+      live &&
+      setState(({ layers, front }) => {
+        if (layers[front] === src) return { layers, front };
+        const back = 1 - front;
+        const next: [string, string] = [...layers];
+        next[back] = src;
+        return { layers: next, front: back };
+      });
+
+    if (!src) {
+      show();
+      return () => {
+        live = false;
+      };
+    }
+    const img = new Image();
+    img.src = src;
+    img.decode().then(show, show);
+    return () => {
+      live = false;
+    };
+  }, [src]);
+
+  return state;
+}
+
+/**
+ * The app's PlayerBackdrop, on the web: the active cover, blurred and dimmed,
+ * behind everything. Two layers, so a new cover fades in over the last rather
+ * than snapping.
+ */
+export function Backdrop({ artUrl }: { artUrl: string }) {
+  const { layers, front } = useCrossfade(artUrl ? thumbUrl(artUrl, 160) : '');
+
+  return (
+    <div className="backdrop" aria-hidden="true">
+      {layers.map((src, i) =>
+        src ? (
+          <img
+            key={i}
+            src={src}
+            alt=""
+            className={i === front ? 'is-on' : undefined}
+          />
+        ) : null,
+      )}
+    </div>
+  );
+}
+
+/**
+ * THE FLOW — the app's, number for number (PlayerBackdrop.tsx there carries
+ * the reasoning and the measurement): two copies of the cover, blurred less
+ * than the still wash, turning in opposite directions about pivots off the
+ * column's centre, so the colours drift and pool. One clock advances by real
+ * time × speed while `flowing` is true (always on in Book Highlighter; while
+ * playing in Sound Shaper) and freezes in place when paused. Reduce Motion
+ * keeps the still wash.
  */
 const FLOW_LAYERS = [
   { periodS: 24, direction: 1, opacity: 0.85, x: -0.3, y: -0.2 },
   { periodS: 33, direction: -1, opacity: 0.7, x: 0.32, y: 0.22 },
 ] as const;
 
-function useFlow(root: React.RefObject<HTMLDivElement | null>, on: boolean) {
+const reducedMotion = () =>
+  window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/** Drives every `.flow` turner under `root` from one clock. */
+function useFlow(
+  root: React.RefObject<HTMLDivElement | null>,
+  flowing: boolean,
+  rate: number,
+) {
   const phase = useRef(0);
+  const speed = useRef(rate);
+  speed.current = rate;
 
   useEffect(() => {
-    if (!on || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    if (!flowing || reducedMotion()) return;
     let frame = 0;
     let last = performance.now();
     const tick = (now: number) => {
       const dt = now - last;
       last = now;
       // A long gap is a hidden tab coming back, not time to catch up on.
-      if (dt < 100) phase.current += dt / 1000;
+      if (dt < 100) phase.current += (dt / 1000) * speed.current;
       root.current?.querySelectorAll<HTMLElement>('.flow').forEach(turner => {
         const layer = FLOW_LAYERS[Number(turner.dataset.layer)];
         const turn =
@@ -36,40 +116,61 @@ function useFlow(root: React.RefObject<HTMLDivElement | null>, on: boolean) {
     };
     frame = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(frame);
-  }, [on, root]);
+  }, [flowing, root]);
 }
 
-export function StageBackdrop({ artUrl }: { artUrl: string }) {
-  const src = artUrl ? thumbUrl(artUrl, 320) : '';
-  const [loaded, setLoaded] = useState('');
+/**
+ * THE APP'S PlayerBackdrop, LITERALLY: the cover fetched small (w_320, so
+ * w_640 at 2x), blurred 60, at 0.75 over the page colour, with the same
+ * fade laid over it — the app's stops, moved from its overscanned box into
+ * the column's own height (screen y = offset × 1514 − 320 on the 874pt
+ * phone they were measured on). An art-less item takes the app's stand-in:
+ * the ink, in two crossing ramps.
+ */
+export function PlayerBackdrop({
+  artUrl,
+  flowing = true,
+  rate = 1,
+}: {
+  artUrl: string;
+  flowing?: boolean;
+  rate?: number;
+}) {
+  const { layers, front } = useCrossfade(artUrl ? thumbUrl(artUrl, 320) : '');
   const root = useRef<HTMLDivElement>(null);
-  useFlow(root, Boolean(src));
+  useFlow(root, flowing, rate);
 
   return (
     <div className="player-backdrop" aria-hidden="true" ref={root}>
-      {src ? (
-        <div className={loaded === src ? 'wash is-on' : 'wash'}>
-          <img key={src} src={src} alt="" onLoad={() => setLoaded(src)} />
-          {FLOW_LAYERS.map((layer, n) => (
-            <div
-              key={n}
-              className="flow"
-              data-layer={n}
-              style={
-                {
-                  '--x': layer.x,
-                  '--y': layer.y,
-                  opacity: layer.opacity,
-                } as React.CSSProperties
-              }
-            >
-              <img src={src} alt="" />
-            </div>
-          ))}
+      <div className={layers[front] ? 'standin' : 'standin is-on'} />
+      {/* BOTH WASHES STAY MOUNTED, picture or not. Mounting one only once it
+          had a picture put it on screen ALREADY at its resting opacity — no
+          transition runs on an element's first style — so the first change
+          of item, and every change out of an art-less one, cut instead of
+          crossing. */}
+      {layers.map((src, i) => (
+        <div key={i} className={i === front ? 'wash is-on' : 'wash'}>
+          {src ? <img src={src} alt="" /> : null}
+          {src
+            ? FLOW_LAYERS.map((layer, n) => (
+                <div
+                  key={n}
+                  className="flow"
+                  data-layer={n}
+                  style={
+                    {
+                      '--x': layer.x,
+                      '--y': layer.y,
+                      opacity: layer.opacity,
+                    } as React.CSSProperties
+                  }
+                >
+                  <img src={src} alt="" />
+                </div>
+              ))
+            : null}
         </div>
-      ) : (
-        <div className="standin is-on" />
-      )}
+      ))}
       <div className="fade" />
     </div>
   );

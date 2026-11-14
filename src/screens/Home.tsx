@@ -16,18 +16,18 @@ import {
 import { useLibrarySortStore } from '../store/librarySort';
 import { useTrophySystem } from '../trophies';
 import { AccountForm } from '../ui/AccountForm';
+import { Backdrop, PlayerBackdrop } from '../ui/Backdrop';
 import { BookFormPanel } from '../ui/BookForm';
 import { BookStage } from '../ui/BookStage';
 import { ChaptersPanel } from '../ui/ChaptersForm';
 import { ExportPanel } from '../ui/ExportForm';
-import { GearGlyph } from '../ui/glyphs';
-import { LibraryGrid } from '../ui/LibraryGrid';
+import { FilterGlyph, GearGlyph } from '../ui/glyphs';
+import { LibraryGrid, SortForm } from '../ui/LibraryGrid';
 import { Reader } from '../ui/Reader';
 import { SeriesSheet } from '../ui/SeriesSheet';
 import { SettingsForm } from '../ui/SettingsForm';
 import { SidePanel } from '../ui/SidePanel';
 import { Toast } from '../ui/Toast';
-import { TrashSheet } from '../ui/TrashSheet';
 import { TrophiesForm, TrophyBanner } from '../ui/Trophies';
 
 const DESK = '(min-width: 64rem)';
@@ -68,22 +68,25 @@ const useLargeTitle = () => {
   return { title, titled };
 };
 
-type Entry =
-  | { kind: 'settings' | 'account' | 'trophies' | 'trash' }
+type ToolEntry =
+  | { kind: 'chapters'; bookId: string }
+  | { kind: 'export'; book: Book };
+
+type ModalEntry =
+  | { kind: 'settings' | 'account' | 'trophies' | 'sort' }
   | { kind: 'series'; name: string }
   | { kind: 'bookForm'; book: Book | null }
-  | { kind: 'export'; book: Book | null }
-  | { kind: 'chapters'; bookId: string };
+  | { kind: 'export'; book: null };
 
-type Layer = {
+type Entry = ToolEntry | ModalEntry;
+
+type Layer<T extends Entry> = {
   id: number;
-  entry: Entry;
+  entry: T;
   leaving: boolean;
-  tools: boolean;
+  slot?: number;
+  switching?: boolean;
 };
-
-const isToolEntry = (entry: Entry) =>
-  entry.kind === 'chapters' || entry.kind === 'export';
 
 let nextLayerId = 0;
 
@@ -105,7 +108,8 @@ export function Home({ user }: { user: User }) {
   const [selectedBookId, setSelectedBookId] = useState<string | null>(null);
   const [mobileStageOpen, setMobileStageOpen] = useState(false);
   const [readingBookId, setReadingBookId] = useState<string | null>(null);
-  const [layers, setLayers] = useState<Layer[]>([]);
+  const [toolLayers, setToolLayers] = useState<Layer<ToolEntry>[]>([]);
+  const [modalLayers, setModalLayers] = useState<Layer<ModalEntry>[]>([]);
   const [, setProfileTick] = useState(0);
 
   const { title, titled } = useLargeTitle();
@@ -136,79 +140,103 @@ export function Home({ user }: { user: User }) {
     [shelf, readingBookId],
   );
 
-  const live = layers.filter(layer => !layer.leaving);
-  const base = live[0]?.entry.kind ?? null;
+  const liveTools = toolLayers.filter(layer => !layer.leaving);
+  const toolBase = liveTools[0]?.entry.kind ?? null;
+  const liveModals = modalLayers.filter(layer => !layer.leaving);
+  const modalBase = liveModals[0]?.entry.kind ?? null;
 
   const [stood, setStood] = useState(false);
   const hasCurrent = Boolean(selectedBook);
 
   useEffect(() => {
     if (hasCurrent === stood) return;
-    if (live.length) setStood(hasCurrent);
-    else morph(() => setStood(hasCurrent));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    morph(() => setStood(hasCurrent));
   }, [hasCurrent, stood]);
 
-  const tooled = live.some(layer => layer.tools);
+  const tooled = liveTools.length > 0 && hasCurrent;
   const [toolsShown, setToolsShown] = useState(false);
   useEffect(() => {
     if (tooled !== toolsShown) morph(() => setToolsShown(tooled));
   }, [tooled, toolsShown]);
 
-  const overStage = live.filter(layer => !layer.tools);
-
-  const leave = (keep: (layer: Layer, index: number) => boolean) => {
-    setLayers(all =>
-      all.map((layer, i) =>
-        layer.leaving || keep(layer, i) ? layer : { ...layer, leaving: true },
-      ),
-    );
+  const leaveIn = <T extends Entry>(
+    setStack: React.Dispatch<React.SetStateAction<Layer<T>[]>>,
+    keep: (layer: Layer<T>, index: number) => boolean,
+  ) => {
+    setStack(all => {
+      const liveBefore = all.filter(l => !l.leaving);
+      return all.map((layer, i) =>
+        layer.leaving || keep(layer, i)
+          ? layer
+          : {
+              ...layer,
+              leaving: true,
+              slot: liveBefore.indexOf(layer),
+            },
+      );
+    });
     window.setTimeout(
-      () => setLayers(all => all.filter(layer => !layer.leaving)),
+      () => setStack(all => all.filter(layer => !layer.leaving)),
       LEAVE_MS,
     );
   };
 
-  const push = (entry: Entry) =>
-    setLayers(all => {
-      const front = all.find(layer => !layer.leaving);
-      const useToolsColumn = front
-        ? front.tools
-        : isToolEntry(entry) && Boolean(selectedBook);
-      return [
-        ...all,
-        {
-          id: (nextLayerId += 1),
-          entry,
-          leaving: false,
-          tools: useToolsColumn,
-        },
-      ];
-    });
+  const pushTool = (entry: ToolEntry, switching = false) =>
+    setToolLayers(all => [
+      ...all,
+      { id: (nextLayerId += 1), entry, leaving: false, switching },
+    ]);
 
-  const pop = () => {
-    const front = live[live.length - 1];
-    if (front) leave(layer => layer.id !== front.id);
+  const popTool = () => {
+    const front = liveTools[liveTools.length - 1];
+    if (front) leaveIn(setToolLayers, layer => layer.id !== front.id);
   };
 
-  const closeAll = () => leave(() => false);
+  const closeTools = () => leaveIn(setToolLayers, () => false);
 
-  const openOnly = (entry: Entry) => {
+  const openTool = (entry: ToolEntry) => {
+    if (liveTools.length === 1 && toolBase === entry.kind) {
+      closeTools();
+      return;
+    }
+    const wasOpen = liveTools.length > 0;
+    if (wasOpen) closeTools();
+    pushTool(entry, wasOpen);
+  };
+
+  const pushModal = (entry: ModalEntry) =>
+    setModalLayers(all => [
+      ...all,
+      { id: (nextLayerId += 1), entry, leaving: false },
+    ]);
+
+  const popModal = () => {
+    const front = liveModals[liveModals.length - 1];
+    if (front) leaveIn(setModalLayers, layer => layer.id !== front.id);
+  };
+
+  const closeModals = () => leaveIn(setModalLayers, () => false);
+
+  const openModal = (entry: ModalEntry) => {
     if (
-      live.length === 1 &&
-      base === entry.kind &&
+      liveModals.length === 1 &&
+      modalBase === entry.kind &&
       !(entry.kind === 'bookForm' && entry.book === null) &&
       entry.kind !== 'series'
     ) {
-      closeAll();
-      return;
+      const prev = liveModals[0].entry;
+      const sameTarget =
+        entry.kind !== 'bookForm' ||
+        prev.kind !== 'bookForm' ||
+        entry.book?.id === prev.book?.id;
+      if (sameTarget) {
+        closeModals();
+        return;
+      }
     }
-    leave(() => false);
-    push(entry);
+    closeModals();
+    pushModal(entry);
   };
-
-  const stageThen = (change: () => void) =>
-    stood || live.length ? change() : morph(change);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -221,29 +249,35 @@ export function Home({ user }: { user: User }) {
       ) {
         return;
       }
-      if (live.length) pop();
+      if (liveModals.length) popModal();
+      else if (liveTools.length) popTool();
       else setMobileStageOpen(false);
     };
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
   });
 
-  const staged = stood || live.length > 0;
   const className = [
     'home',
     selectedBook ? 'has-current' : '',
-    staged ? 'is-staged' : '',
+    stood ? 'is-staged' : '',
     mobileStageOpen ? 'is-expanded' : '',
-    overStage.length ? 'side-open' : '',
-    toolsShown && staged ? 'is-tooled' : '',
+    toolsShown ? 'is-tooled' : '',
   ]
     .filter(Boolean)
     .join(' ');
 
-  const renderLayer = (layer: Layer, indexInGroup: number, depth: number) => {
+  const renderLayer = <T extends Entry>(
+    layer: Layer<T>,
+    indexInGroup: number,
+    depth: number,
+    onPop: () => void,
+    onCloseGroup: () => void,
+  ) => {
     const isOpen = !layer.leaving;
     const effectiveDepth = layer.leaving ? 0 : depth;
-    const handleClose = layer.leaving ? () => {} : pop;
+    const handleClose = layer.leaving ? () => {} : onPop;
+    const switching = Boolean(layer.switching);
     const { entry } = layer;
 
     switch (entry.kind) {
@@ -252,16 +286,17 @@ export function Home({ user }: { user: User }) {
           <BookFormPanel
             key={layer.id}
             open={isOpen}
+            switching={switching}
             depth={effectiveDepth}
             index={indexInGroup}
             book={entry.book}
             onSaved={bookId => {
               setSelectedBookId(bookId);
               setMobileStageOpen(true);
-              closeAll();
+              onCloseGroup();
             }}
             onDeleted={() => {
-              closeAll();
+              onCloseGroup();
               setMobileStageOpen(false);
             }}
             onClose={handleClose}
@@ -275,6 +310,7 @@ export function Home({ user }: { user: User }) {
           <ChaptersPanel
             key={layer.id}
             open={isOpen}
+            switching={switching}
             depth={effectiveDepth}
             index={indexInGroup}
             book={book}
@@ -288,6 +324,7 @@ export function Home({ user }: { user: User }) {
           <ExportPanel
             key={layer.id}
             open={isOpen}
+            switching={switching}
             depth={effectiveDepth}
             index={indexInGroup}
             initialBook={entry.book}
@@ -300,6 +337,7 @@ export function Home({ user }: { user: User }) {
           <SidePanel
             key={layer.id}
             open={isOpen}
+            switching={switching}
             depth={effectiveDepth}
             index={indexInGroup}
             title={t('app.settings')}
@@ -307,7 +345,7 @@ export function Home({ user }: { user: User }) {
           >
             <SettingsForm
               user={user}
-              onAccount={() => push({ kind: 'account' })}
+              onAccount={() => pushModal({ kind: 'account' })}
             />
           </SidePanel>
         );
@@ -317,6 +355,7 @@ export function Home({ user }: { user: User }) {
           <SidePanel
             key={layer.id}
             open={isOpen}
+            switching={switching}
             depth={effectiveDepth}
             index={indexInGroup}
             title={t('settings.account.sheetTitle')}
@@ -325,9 +364,8 @@ export function Home({ user }: { user: User }) {
             <AccountForm
               user={user}
               onChanged={() => setProfileTick(n => n + 1)}
-              onTrophies={() => push({ kind: 'trophies' })}
-              onTrash={() => push({ kind: 'trash' })}
-              onExportAll={() => push({ kind: 'export', book: null })}
+              onTrophies={() => pushModal({ kind: 'trophies' })}
+              onExportAll={() => pushModal({ kind: 'export', book: null })}
             />
           </SidePanel>
         );
@@ -337,6 +375,7 @@ export function Home({ user }: { user: User }) {
           <SidePanel
             key={layer.id}
             open={isOpen}
+            switching={switching}
             depth={effectiveDepth}
             index={indexInGroup}
             title={t('trophies.title')}
@@ -346,17 +385,18 @@ export function Home({ user }: { user: User }) {
           </SidePanel>
         );
 
-      case 'trash':
+      case 'sort':
         return (
           <SidePanel
             key={layer.id}
             open={isOpen}
+            switching={switching}
             depth={effectiveDepth}
             index={indexInGroup}
-            title={t('trash.title')}
+            title={t('home.sort.label')}
             onClose={handleClose}
           >
-            <TrashSheet />
+            <SortForm />
           </SidePanel>
         );
 
@@ -366,6 +406,7 @@ export function Home({ user }: { user: User }) {
           <SidePanel
             key={layer.id}
             open={isOpen}
+            switching={switching}
             depth={effectiveDepth}
             index={indexInGroup}
             title={entry.name}
@@ -377,7 +418,7 @@ export function Home({ user }: { user: User }) {
               onSelectBook={book => {
                 setSelectedBookId(book.id);
                 setMobileStageOpen(true);
-                closeAll();
+                onCloseGroup();
               }}
             />
           </SidePanel>
@@ -386,17 +427,30 @@ export function Home({ user }: { user: User }) {
     }
   };
 
-  const renderSheetGroup = (tools: boolean) => {
-    const group = layers.filter(layer => layer.tools === tools);
+  const renderStack = <T extends Entry>(
+    group: Layer<T>[],
+    onPop: () => void,
+    onCloseGroup: () => void,
+  ) => {
     const front = group.filter(layer => !layer.leaving);
     return group.map((layer, idx) => {
-      const depth = front.length - 1 - front.indexOf(layer);
-      return renderLayer(layer, idx, depth);
+      const liveIndex = front.indexOf(layer);
+      const depth = front.length - 1 - liveIndex;
+      const index = liveIndex >= 0 ? liveIndex : (layer.slot ?? idx);
+      return renderLayer(layer, index, depth, onPop, onCloseGroup);
     });
   };
 
+  const editingCurrent =
+    liveModals.length === 1 &&
+    liveModals[0].entry.kind === 'bookForm' &&
+    liveModals[0].entry.book !== null &&
+    liveModals[0].entry.book.id === selectedBook?.id;
+
   return (
     <div className={className}>
+      <Backdrop artUrl={selectedBook?.artUrl ?? ''} />
+
       <main className="library">
         <header className={titled ? 'bar is-edge is-titled' : 'bar'}>
           <span className="bar-lead" aria-hidden="true" />
@@ -405,15 +459,28 @@ export function Home({ user }: { user: User }) {
             {APP_NAME}
           </span>
 
-          <button
-            type="button"
-            className="round bar-glyph"
-            aria-expanded={base === 'settings'}
-            onClick={() => stageThen(() => openOnly({ kind: 'settings' }))}
-          >
-            <GearGlyph />
-            <span className="sr">{t('app.settings')}</span>
-          </button>
+          <div className="bar-actions">
+            <button
+              type="button"
+              className="round"
+              disabled={!hasSettled || Boolean(error)}
+              aria-expanded={modalBase === 'sort'}
+              aria-label={`${t('home.sort.label')}: ${t(`home.sort.keys.${sort.key}`)}`}
+              onClick={() => openModal({ kind: 'sort' })}
+            >
+              <FilterGlyph />
+              <span className="sr">{t('home.sort.label')}</span>
+            </button>
+            <button
+              type="button"
+              className="round"
+              aria-expanded={modalBase === 'settings'}
+              onClick={() => openModal({ kind: 'settings' })}
+            >
+              <GearGlyph />
+              <span className="sr">{t('app.settings')}</span>
+            </button>
+          </div>
         </header>
 
         <h1 ref={title} className="large-title">
@@ -426,65 +493,64 @@ export function Home({ user }: { user: User }) {
           error={error}
           selectedBookId={selectedBook?.id ?? null}
           onSelectBook={book => {
-            stageThen(() => {
-              setSelectedBookId(book.id);
-              setMobileStageOpen(true);
-            });
+            setSelectedBookId(book.id);
+            setMobileStageOpen(true);
           }}
-          onSelectSeries={name =>
-            stageThen(() => openOnly({ kind: 'series', name }))
-          }
-          onNewBook={() =>
-            stageThen(() => openOnly({ kind: 'bookForm', book: null }))
-          }
+          onSelectSeries={name => openModal({ kind: 'series', name })}
+          onNewBook={() => openModal({ kind: 'bookForm', book: null })}
         />
       </main>
 
       <div className="stage">
-        {selectedBook && (
-          <BookStage
-            book={selectedBook}
-            panel={
-              base === 'chapters' ||
-              base === 'export' ||
-              (base === 'bookForm' &&
-                live.length === 1 &&
-                live[0]?.entry.kind === 'bookForm' &&
-                live[0].entry.book !== null)
-                ? base
-                : null
-            }
-            onCloseMobile={() => setMobileStageOpen(false)}
-            onRead={() => setReadingBookId(selectedBook.id)}
-            onOpenChapters={() =>
-              stageThen(() =>
-                openOnly({ kind: 'chapters', bookId: selectedBook.id }),
-              )
-            }
-            onEditBook={() =>
-              stageThen(() =>
-                openOnly({ kind: 'bookForm', book: selectedBook }),
-              )
-            }
-            onExportBook={() =>
-              stageThen(() => openOnly({ kind: 'export', book: selectedBook }))
-            }
-          />
-        )}
-
-        {renderSheetGroup(false)}
+        <div className="now-column">
+          <PlayerBackdrop artUrl={selectedBook?.artUrl ?? ''} />
+          {selectedBook && (
+            <BookStage
+              book={selectedBook}
+              panel={
+                editingCurrent
+                  ? 'bookForm'
+                  : toolBase === 'chapters' || toolBase === 'export'
+                    ? toolBase
+                    : null
+              }
+              onCloseMobile={() => setMobileStageOpen(false)}
+              onRead={() => setReadingBookId(selectedBook.id)}
+              onOpenChapters={() =>
+                openTool({ kind: 'chapters', bookId: selectedBook.id })
+              }
+              onEditBook={() =>
+                openModal({ kind: 'bookForm', book: selectedBook })
+              }
+              onExportBook={() =>
+                openTool({ kind: 'export', book: selectedBook })
+              }
+            />
+          )}
+        </div>
       </div>
 
-      <div className="tools">{renderSheetGroup(true)}</div>
+      <div className="tools">
+        {renderStack(toolLayers, popTool, closeTools)}
+      </div>
+
+      <div className="modals">
+        <div
+          className={
+            liveModals.length ? 'modal-scrim is-open' : 'modal-scrim'
+          }
+          aria-hidden="true"
+          onClick={closeModals}
+        />
+        {renderStack(modalLayers, popModal, closeModals)}
+      </div>
 
       {readingBook && (
         <Reader book={readingBook} onClose={() => setReadingBookId(null)} />
       )}
 
       <Toast />
-      <TrophyBanner
-        onOpen={() => stageThen(() => openOnly({ kind: 'trophies' }))}
-      />
+      <TrophyBanner onOpen={() => openModal({ kind: 'trophies' })} />
     </div>
   );
 }

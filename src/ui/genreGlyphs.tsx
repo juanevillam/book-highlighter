@@ -232,6 +232,33 @@ const PATHS: Record<Family, React.ReactNode> = {
   ),
 };
 
+export const YEAR_TINT = '#f5c451';
+
+const TINTS: Record<Family, string> = {
+  story: '#64d2ff',
+  future: '#5e5ce6',
+  magic: '#bf5af2',
+  mystery: '#ff6961',
+  heart: '#ff6482',
+  compass: '#ff9f0a',
+  feather: '#5ac8fa',
+  time: '#e8965a',
+  idea: '#ffd60a',
+  spirit: '#da8fff',
+  science: '#30d158',
+  mind: '#a78bfa',
+  tech: '#409cff',
+  money: '#34d399',
+  society: '#38bdf8',
+  art: '#f472b6',
+  moon: '#818cf8',
+};
+
+export function genreTint(genre: string): string {
+  const family: Family = isGenre(genre) ? FAMILY[genre] : 'story';
+  return TINTS[family];
+}
+
 export function GenreGlyph({ genre }: { genre: string }) {
   const family: Family = isGenre(genre) ? FAMILY[genre] : 'story';
   return (

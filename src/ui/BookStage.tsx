@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 
 import { type Book } from '../books';
 import { plural, t } from '../i18n';
@@ -7,8 +7,7 @@ import { genreLabel } from '../lib/genres';
 import { useBodiesStore } from '../store/bodies';
 
 import { Artwork } from './Artwork';
-import { StageBackdrop } from './Backdrop';
-import { CalendarGlyph, GenreGlyph } from './genreGlyphs';
+import { CalendarGlyph, GenreGlyph, genreTint, YEAR_TINT } from './genreGlyphs';
 import {
   BookOpenGlyph,
   CloseGlyph,
@@ -17,7 +16,7 @@ import {
   ShareGlyph,
 } from './glyphs';
 
-const DISMISS_PX = 110;
+const DISMISS_PX = 120;
 const DISMISS_VELOCITY = 0.6;
 
 export type StagePanel = 'chapters' | 'export' | 'bookForm';
@@ -46,8 +45,9 @@ export function BookStage({
   onExportBook: () => void;
 }) {
   const ensureBody = useBodiesStore(state => state.ensure);
-  const [pull, setPull] = useState<number | null>(null);
   const grab = useRef<{ y: number; t: number; id: number } | null>(null);
+  const column = (e: React.PointerEvent) =>
+    (e.currentTarget as HTMLElement).closest<HTMLElement>('.now-column');
 
   // Warm the body so Chapters and the reader open without a wait.
   useEffect(() => {
@@ -60,19 +60,7 @@ export function BookStage({
       : `${book.chapterCount} · ${plural('book.highlightCount', book.highlightCount)}`;
 
   return (
-    <div
-      className="now-column"
-      style={
-        pull !== null
-          ? ({
-              transform: `translateY(${Math.max(pull, 0)}px)`,
-              transition: 'none',
-            } as React.CSSProperties)
-          : undefined
-      }
-    >
-      <StageBackdrop artUrl={book.artUrl} />
-
+    <>
       <div className="stage-bar">
         <button
           type="button"
@@ -89,29 +77,40 @@ export function BookStage({
           aria-label={t('common.close')}
           onClick={onCloseMobile}
           onPointerDown={e => {
+            if (matchMedia('(min-width: 64rem)').matches) return;
             grab.current = { y: e.clientY, t: performance.now(), id: e.pointerId };
             e.currentTarget.setPointerCapture(e.pointerId);
-            setPull(0);
+            const col = column(e);
+            if (col) col.style.transition = 'none';
           }}
           onPointerMove={e => {
-            if (!grab.current || grab.current.id !== e.pointerId) return;
+            if (grab.current?.id !== e.pointerId) return;
             const dy = e.clientY - grab.current.y;
-            setPull(dy > 0 ? dy : 0);
+            const col = column(e);
+            if (col) col.style.transform = `translateY(${dy > 0 ? dy : dy / 6}px)`;
           }}
           onPointerUp={e => {
             const start = grab.current;
             grab.current = null;
-            setPull(null);
             if (!start) return;
+            const col = column(e);
+            if (col) {
+              col.style.transition = '';
+              col.style.transform = '';
+            }
             const dy = e.clientY - start.y;
             const v = dy / Math.max(1, performance.now() - start.t);
             if (dy > DISMISS_PX || (dy > 24 && v > DISMISS_VELOCITY)) {
               onCloseMobile();
             }
           }}
-          onPointerCancel={() => {
+          onPointerCancel={e => {
             grab.current = null;
-            setPull(null);
+            const col = column(e);
+            if (col) {
+              col.style.transition = '';
+              col.style.transform = '';
+            }
           }}
         >
           <span className="grabber" />
@@ -137,7 +136,10 @@ export function BookStage({
         {book.year !== null || book.genres.length > 0 ? (
           <ul className="genre-tags">
             {book.year !== null && (
-              <li className="genre-tag">
+              <li
+                className="genre-tag"
+                style={{ '--tag-tint': YEAR_TINT } as React.CSSProperties}
+              >
                 <CalendarGlyph />
                 <span>
                   {formatYear(book.year, y =>
@@ -147,7 +149,11 @@ export function BookStage({
               </li>
             )}
             {book.genres.map(g => (
-              <li key={g} className="genre-tag">
+              <li
+                key={g}
+                className="genre-tag"
+                style={{ '--tag-tint': genreTint(g) } as React.CSSProperties}
+              >
                 <GenreGlyph genre={g} />
                 <span>{genreLabel(k => t(k), g)}</span>
               </li>
@@ -213,6 +219,6 @@ export function BookStage({
           </button>
         </div>
       </section>
-    </div>
+    </>
   );
 }

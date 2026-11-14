@@ -1,5 +1,9 @@
 import { useEffect, useSyncExternalStore } from 'react';
 
+/**
+ * The app's snackbar on the web: one line, standing low and centred, gone on
+ * its own. Fired from anywhere — a save that closed its sheet still says so.
+ */
 type ToastMessage = {
   text: string;
   id: number;
@@ -34,16 +38,19 @@ const subscribe = (listener: () => void) => {
   return () => listeners.delete(listener);
 };
 
-const DURATION_MS = 3800;
+const DURATION_MS = 3200;
 
 export function Toast() {
   const current = useSyncExternalStore(subscribe, () => message);
 
   useEffect(() => {
     if (!current) return;
-    const timer = setTimeout(() => {
-      if (message?.id === current.id) clearToast();
-    }, current.onAction ? 5000 : DURATION_MS);
+    const timer = setTimeout(
+      () => {
+        if (message?.id === current.id) clearToast();
+      },
+      current.onAction ? 5000 : DURATION_MS,
+    );
     return () => clearTimeout(timer);
   }, [current]);
 

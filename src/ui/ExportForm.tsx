@@ -23,12 +23,14 @@ import { showToast } from './Toast';
 
 export function ExportPanel({
   open,
+  switching = false,
   depth = 0,
   index = 0,
   initialBook,
   onClose,
 }: {
   open: boolean;
+  switching?: boolean;
   depth?: number;
   index?: number;
   /** When null, opened from Account -> "Export All Books". */
@@ -99,6 +101,7 @@ export function ExportPanel({
   return (
     <SidePanel
       open={open}
+      switching={switching}
       depth={depth}
       index={index}
       title={t(initialBook ? 'export.title' : 'export.titleAll')}

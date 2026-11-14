@@ -39,7 +39,6 @@ export type Book = {
   readerAnchor: ReaderAnchor | null;
   series: string | null;
   seriesNumber: number | null;
-  trashedAt: number | null;
   updatedAt: number | null;
   year: number | null;
 };
@@ -127,7 +126,6 @@ const bookToModel = (snapshot: QueryDocumentSnapshot): Book => {
         : null,
     seriesNumber:
       typeof data.seriesNumber === 'number' ? data.seriesNumber : null,
-    trashedAt: millis(data.trashedAt),
     updatedAt: millis(data.updatedAt),
     year: typeof data.year === 'number' ? data.year : null,
   };
@@ -215,7 +213,6 @@ export const createBook = async ({
     finishedAt: null,
     lastOpenedAt: null,
     readerAnchor: null,
-    trashedAt: null,
     updatedAt: serverTimestamp(),
   });
   batch.set(bodyDoc(ref.id), body);
@@ -284,15 +281,7 @@ export const markBookRead = (
     console.warn('books.markBookRead', error);
   });
 
-export const trashBook = async (bookId: string): Promise<void> => {
-  await updateDoc(bookDoc(bookId), { trashedAt: serverTimestamp() });
-};
-
-export const recoverBook = async (bookId: string): Promise<void> => {
-  await updateDoc(bookDoc(bookId), { trashedAt: null });
-};
-
-export const deleteBookPermanently = async (bookId: string): Promise<void> => {
+export const deleteBook = async (bookId: string): Promise<void> => {
   const ref = bookDoc(bookId);
   const artPublicId =
     ((await getDoc(ref)).data()?.artPublicId as string) ?? '';

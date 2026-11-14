@@ -2,6 +2,8 @@ import { useState } from 'react';
 
 import { thumbUrl } from '../lib/thumbUrl';
 
+const BACKDROP_WIDTH = 64;
+
 export function Artwork({
   artUrl,
   name,
@@ -17,8 +19,10 @@ export function Artwork({
 }) {
   const src = artUrl ? thumbUrl(artUrl, width) : '';
   const quick = artUrl && quickWidth ? thumbUrl(artUrl, quickWidth) : '';
+  const backdrop = artUrl ? thumbUrl(artUrl, BACKDROP_WIDTH) : '';
   const [ready, setReady] = useState('');
   const [quickReady, setQuickReady] = useState('');
+  const [backdropReady, setBackdropReady] = useState('');
 
   if (!src) {
     return (
@@ -32,8 +36,27 @@ export function Artwork({
 
   return (
     <span className="artwork" aria-hidden="true">
+      {backdrop && (
+        <img
+          key={`bg-${backdrop}`}
+          src={backdrop}
+          alt=""
+          draggable={false}
+          className={
+            backdropReady === backdrop
+              ? 'artwork-backdrop is-ready'
+              : 'artwork-backdrop'
+          }
+          onLoad={() => setBackdropReady(backdrop)}
+        />
+      )}
       {!landed && ready && (
-        <img src={ready} alt="" draggable={false} className="is-ready" />
+        <img
+          src={ready}
+          alt=""
+          draggable={false}
+          className="artwork-fg is-ready"
+        />
       )}
       {!landed && quick && (
         <img
@@ -41,7 +64,9 @@ export function Artwork({
           src={quick}
           alt=""
           draggable={false}
-          className={quickReady === quick ? 'is-ready' : undefined}
+          className={
+            quickReady === quick ? 'artwork-fg is-ready' : 'artwork-fg'
+          }
           onLoad={() => setQuickReady(quick)}
         />
       )}
@@ -52,7 +77,7 @@ export function Artwork({
         loading={eager ? 'eager' : 'lazy'}
         decoding="async"
         draggable={false}
-        className={landed ? 'is-ready' : undefined}
+        className={landed ? 'artwork-fg is-ready' : 'artwork-fg'}
         onLoad={() => setReady(src)}
       />
     </span>

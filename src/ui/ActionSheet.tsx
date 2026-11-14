@@ -6,6 +6,17 @@ export type SheetAction = {
   onSelect: () => void;
 };
 
+/**
+ * The app's action sheet (`ActionSheetIOS`): a card of choices and, apart
+ * from it, Cancel. It is how the app asks what to do with a picture that is
+ * already there — Change or Remove — so the slot carries ONE caption instead
+ * of two buttons. A phone gets it at the bottom, where iOS puts it; a desk
+ * gets it centred, where its confirmations already stand.
+ *
+ * A real `<dialog>`: the browser owns the top layer, the focus trap and
+ * Escape. A choice runs inside the click that picked it, so one that opens a
+ * file picker still has the user activation the browser asks for.
+ */
 export function ActionSheet({
   open,
   actions,
@@ -21,6 +32,7 @@ export function ActionSheet({
 
   useEffect(() => {
     const dialog = ref.current;
+
     if (!dialog) return;
     if (open && !dialog.open) dialog.showModal();
     if (!open && dialog.open) dialog.close();
@@ -32,6 +44,7 @@ export function ActionSheet({
       className="action-sheet"
       onClose={onClose}
       onClick={e => {
+        // A click on the backdrop lands on the dialog itself.
         if (e.target === e.currentTarget) onClose();
       }}
     >

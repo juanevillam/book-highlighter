@@ -9,9 +9,9 @@ const strokeProps = {
 export const CloseGlyph = () => (
   <svg viewBox="0 0 24 24" aria-hidden="true">
     <path
-      d="M7 7l10 10M17 7 7 17"
+      d="M6 6l12 12M18 6 6 18"
       stroke="currentColor"
-      strokeWidth="2"
+      strokeWidth="2.1"
       strokeLinecap="round"
     />
   </svg>
@@ -122,6 +122,12 @@ export const TextSizeGlyph = () => (
       {...strokeProps}
       strokeWidth={1.9}
     />
+  </svg>
+);
+
+export const FilterGlyph = () => (
+  <svg viewBox="0 0 24 24" aria-hidden="true">
+    <path d="M4 6.5h16M7 12h10M10 17.5h4" {...strokeProps} strokeWidth={2} />
   </svg>
 );
 

@@ -13,7 +13,7 @@ import {
 } from '../account';
 import { locale, t } from '../i18n';
 import { uploadFailureKey } from '../media';
-import { selectShelf, selectTrash, useBooksStore } from '../store/books';
+import { selectShelf, useBooksStore } from '../store/books';
 
 import { ActionSheet } from './ActionSheet';
 import { ConfirmDialog } from './ConfirmDialog';
@@ -98,13 +98,11 @@ export function AccountForm({
   user,
   onChanged,
   onTrophies,
-  onTrash,
   onExportAll,
 }: {
   user: User;
   onChanged: () => void;
   onTrophies: () => void;
-  onTrash: () => void;
   onExportAll: () => void;
 }) {
   const [memberSince, setMemberSince] = useState<number | null | undefined>();
@@ -117,7 +115,6 @@ export function AccountForm({
 
   const books = useBooksStore(state => state.books);
   const shelfCount = selectShelf({ books }).length;
-  const trashCount = selectTrash({ books }).length;
 
   useEffect(() => {
     let live = true;
@@ -255,49 +252,35 @@ export function AccountForm({
         </div>
       </section>
 
-      <section>
-        <h3 className="section-head">
-          {t('settings.manageAccount.libraryTitle')}
-        </h3>
-        <div className="card">
-          <button
-            type="button"
-            className="cell link-row"
-            disabled={deleting}
-            onClick={onTrophies}
-          >
-            <span className="cell-name">{t('trophies.title')}</span>
-            <span className="chevron">
-              <ChevronRightGlyph />
-            </span>
-          </button>
-          <button
-            type="button"
-            className="cell link-row"
-            disabled={deleting}
-            onClick={onTrash}
-          >
-            <span className="cell-name">{t('trash.title')}</span>
-            {trashCount > 0 && (
-              <span className="cell-value">{trashCount}</span>
-            )}
-            <span className="chevron">
-              <ChevronRightGlyph />
-            </span>
-          </button>
-          <button
-            type="button"
-            className="cell link-row"
-            disabled={deleting || shelfCount === 0}
-            onClick={onExportAll}
-          >
-            <span className="cell-name">{t('export.titleAll')}</span>
-            <span className="chevron">
-              <ChevronRightGlyph />
-            </span>
-          </button>
-        </div>
-      </section>
+      {/* Untitled: the row's label says what it is, matching Sound Shaper. */}
+      <div className="card">
+        <button
+          type="button"
+          className="cell link-row"
+          disabled={deleting}
+          onClick={onTrophies}
+        >
+          <span className="cell-name">{t('trophies.title')}</span>
+          <span className="chevron">
+            <ChevronRightGlyph />
+          </span>
+        </button>
+      </div>
+
+      {/* Detached from Trophies and untitled: Export All Books stands on its own. */}
+      <div className="card">
+        <button
+          type="button"
+          className="cell link-row"
+          disabled={deleting || shelfCount === 0}
+          onClick={onExportAll}
+        >
+          <span className="cell-name">{t('export.titleAll')}</span>
+          <span className="chevron">
+            <ChevronRightGlyph />
+          </span>
+        </button>
+      </div>
 
       <section>
         <div className="card">

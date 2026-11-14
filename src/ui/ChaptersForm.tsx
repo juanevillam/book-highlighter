@@ -41,12 +41,14 @@ const makeId = () =>
 
 export function ChaptersPanel({
   open,
+  switching = false,
   depth = 0,
   index = 0,
   book,
   onClose,
 }: {
   open: boolean;
+  switching?: boolean;
   depth?: number;
   index?: number;
   book: Book;
@@ -104,6 +106,7 @@ export function ChaptersPanel({
     <>
       <SidePanel
         open={open}
+        switching={switching}
         depth={depth + childStackDepth}
         index={index}
         title={t('book.chapters')}
@@ -422,10 +425,11 @@ function ChapterDetailPanel({
     >
       <div className="card">
         <label className="cell field">
-          <span className="field-caption">{t('chapter.name')}</span>
           <input
             value={name}
-            placeholder={t('chapters.untitled')}
+            placeholder={t('chapter.name')}
+            aria-label={t('chapter.name')}
+            autoComplete="off"
             onChange={e => setName(e.target.value)}
             onBlur={() => {
               if (name.trim() !== chapter.name) {
@@ -435,10 +439,11 @@ function ChapterDetailPanel({
           />
         </label>
         <label className="cell field">
-          <span className="field-caption">{t('chapter.pages')}</span>
           <input
             value={pages}
-            placeholder={t('chapter.pagesPlaceholder')}
+            placeholder={t('chapter.pages')}
+            aria-label={t('chapter.pages')}
+            autoComplete="off"
             onChange={e => setPages(e.target.value)}
             onBlur={() => {
               const tidy = pages.trim();
@@ -595,10 +600,11 @@ function HighlightEditorPanel({
 
       <div className="card">
         <label className="cell field">
-          <span className="field-caption">{t('highlightEdit.page')}</span>
           <input
             value={page}
-            placeholder={t('highlightEdit.pagePlaceholder')}
+            placeholder={t('highlightEdit.page')}
+            aria-label={t('highlightEdit.page')}
+            autoComplete="off"
             onChange={e => setPage(e.target.value)}
           />
         </label>

@@ -69,7 +69,6 @@ export const translations = {
         title: 'Your Shelf Is Empty',
         subtitle: 'Add your first book summary.',
       },
-      recentlyDeleted: 'Recently Deleted',
       seriesCount: { one: '1 book', other: '{count} books' },
       error: {
         title: "Couldn't Load Your Books",
@@ -122,6 +121,7 @@ export const translations = {
       genres: { label: 'Genre', none: 'None', search: 'Search Genres' },
       series: {
         label: 'Series',
+        none: 'None',
         new: 'New Series…',
         newTitle: 'New Series',
         newPlaceholder: 'Series name',
@@ -135,6 +135,13 @@ export const translations = {
       save: 'Add',
       saveExisting: 'Save',
       delete: 'Delete Book',
+      deleteConfirm: {
+        title: 'Delete This Book?',
+        message:
+          'The book and everything in it will be deleted. This can’t be undone.',
+        confirm: 'Delete',
+        cancel: 'Cancel',
+      },
     },
     series: { bookNumber: 'Book {number}' },
     chapters: {
@@ -213,25 +220,6 @@ export const translations = {
         'The PDF is set on 6 × 9 in trade paper like the book in the reader: its cover, its summary, then every highlight.',
       footerAll:
         'Each book is saved as its own 6 × 9 in PDF: its cover, its summary, then every highlight.',
-    },
-    trash: {
-      title: 'Recently Deleted',
-      empty: {
-        title: 'No Recently Deleted Books',
-        subtitle:
-          'Books you delete stay here until you delete them permanently.',
-      },
-      recover: 'Recover',
-      deletePermanently: 'Delete Permanently',
-      deleteSwipe: 'Delete',
-      meta: { deleted: 'Deleted', justNow: 'now' },
-      deleteConfirm: {
-        title: 'Delete This Book Permanently?',
-        message:
-          'The book and everything in it will be deleted. This can’t be undone.',
-        confirm: 'Delete',
-        cancel: 'Cancel',
-      },
     },
     genres: {
       fiction: 'Fiction',
@@ -312,7 +300,6 @@ export const translations = {
       manageAccount: {
         title: 'Manage Account',
         infoTitle: 'Account Information',
-        libraryTitle: 'Library',
         name: 'Name',
         addName: 'Add Name',
         email: 'Email',
@@ -379,9 +366,8 @@ export const translations = {
       'book-created': 'Book added',
       'book-updated': 'Book updated',
       'book-save-failed': "Couldn't save the book. Try again.",
-      'book-deleted': 'Book moved to Recently Deleted',
+      'book-deleted': 'Book deleted',
       'book-delete-failed': "Couldn't delete the book. Try again.",
-      'book-recovered': 'Book recovered',
       'highlight-deleted': 'Highlight deleted',
       'notes-save-failed': "Couldn't save your changes. Try again.",
       'scan-saved': 'Scanned highlights saved',
@@ -466,7 +452,6 @@ export const translations = {
         title: 'Tu estantería está vacía',
         subtitle: 'Escribe el primer resumen de un libro.',
       },
-      recentlyDeleted: 'Eliminados recientemente',
       seriesCount: { one: '1 libro', other: '{count} libros' },
       error: {
         title: 'No se pudieron cargar tus libros',
@@ -533,6 +518,13 @@ export const translations = {
       save: 'Añadir',
       saveExisting: 'Guardar',
       delete: 'Eliminar libro',
+      deleteConfirm: {
+        title: '¿Eliminar este libro?',
+        message:
+          'Se eliminarán el libro y todo su contenido. Esta acción no se puede deshacer.',
+        confirm: 'Eliminar',
+        cancel: 'Cancelar',
+      },
     },
     series: { bookNumber: 'Libro {number}' },
     chapters: {
@@ -611,25 +603,6 @@ export const translations = {
         'El PDF se compone en papel 6 × 9 in como en el lector: su portada, su resumen y cada resaltado.',
       footerAll:
         'Cada libro se guarda como su propio PDF 6 × 9 in: su portada, su resumen y cada resaltado.',
-    },
-    trash: {
-      title: 'Eliminados recientemente',
-      empty: {
-        title: 'No hay libros eliminados recientemente',
-        subtitle:
-          'Los libros que eliminas se quedan aquí hasta que los eliminas permanentemente.',
-      },
-      recover: 'Recuperar',
-      deletePermanently: 'Eliminar permanentemente',
-      deleteSwipe: 'Eliminar',
-      meta: { deleted: 'Eliminado', justNow: 'ahora' },
-      deleteConfirm: {
-        title: '¿Eliminar este libro permanentemente?',
-        message:
-          'Se eliminarán el libro y todo su contenido. Esta acción no se puede deshacer.',
-        confirm: 'Eliminar',
-        cancel: 'Cancelar',
-      },
     },
     genres: {
       fiction: 'Ficción',
@@ -714,7 +687,6 @@ export const translations = {
       manageAccount: {
         title: 'Gestionar cuenta',
         infoTitle: 'Información de la cuenta',
-        libraryTitle: 'Biblioteca',
         name: 'Nombre',
         addName: 'Añadir nombre',
         email: 'Correo electrónico',
@@ -783,10 +755,9 @@ export const translations = {
       'book-created': 'Libro añadido',
       'book-updated': 'Libro actualizado',
       'book-save-failed': 'No se pudo guardar el libro. Vuelve a intentarlo.',
-      'book-deleted': 'Libro movido a Eliminados recientemente',
+      'book-deleted': 'Libro eliminado',
       'book-delete-failed':
         'No se pudo eliminar el libro. Vuelve a intentarlo.',
-      'book-recovered': 'Libro recuperado',
       'highlight-deleted': 'Resaltado eliminado',
       'notes-save-failed':
         'No se pudieron guardar los cambios. Vuelve a intentarlo.',
@@ -871,7 +842,6 @@ export const translations = {
         title: '你的书架还是空的',
         subtitle: '添加你的第一篇图书摘要。',
       },
-      recentlyDeleted: '最近删除',
       seriesCount: { one: '1 本书', other: '{count} 本书' },
       error: {
         title: '无法载入你的图书',
@@ -924,6 +894,7 @@ export const translations = {
       genres: { label: '类型', none: '无', search: '搜索类型' },
       series: {
         label: '系列',
+        none: '无',
         new: '新建系列…',
         newTitle: '新建系列',
         newPlaceholder: '系列名称',
@@ -937,6 +908,12 @@ export const translations = {
       save: '添加',
       saveExisting: '存储',
       delete: '删除图书',
+      deleteConfirm: {
+        title: '删除这本书？',
+        message: '这本书及其所有内容将被删除。此操作无法撤销。',
+        confirm: '删除',
+        cancel: '取消',
+      },
     },
     series: { bookNumber: '第 {number} 本' },
     chapters: {
@@ -1012,23 +989,6 @@ export const translations = {
       action: '导出',
       footer: 'PDF 按 6 × 9 英寸书籍排版：封面、摘要，然后是每条高亮。',
       footerAll: '每本书都会存储为单独的 6 × 9 英寸 PDF：封面、摘要，然后是每条高亮。',
-    },
-    trash: {
-      title: '最近删除',
-      empty: {
-        title: '没有最近删除的图书',
-        subtitle: '你删除的图书会保留在这里，直到你将其永久删除。',
-      },
-      recover: '恢复',
-      deletePermanently: '永久删除',
-      deleteSwipe: '删除',
-      meta: { deleted: '删除于', justNow: '刚刚' },
-      deleteConfirm: {
-        title: '永久删除这本书？',
-        message: '这本书及其所有内容将被删除。此操作无法撤销。',
-        confirm: '删除',
-        cancel: '取消',
-      },
     },
     genres: {
       fiction: '小说',
@@ -1109,7 +1069,6 @@ export const translations = {
       manageAccount: {
         title: '管理账户',
         infoTitle: '账户信息',
-        libraryTitle: '资料库',
         name: '姓名',
         addName: '添加姓名',
         email: '电子邮件',
@@ -1174,9 +1133,8 @@ export const translations = {
       'book-created': '已添加图书',
       'book-updated': '已更新图书',
       'book-save-failed': '无法存储这本书。请再试一次。',
-      'book-deleted': '已移至“最近删除”',
+      'book-deleted': '图书已删除',
       'book-delete-failed': '无法删除这本书。请再试一次。',
-      'book-recovered': '已恢复图书',
       'highlight-deleted': '已删除高亮',
       'notes-save-failed': '无法存储你的更改。请再试一次。',
       'scan-saved': '已存储扫描的高亮',

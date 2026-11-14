@@ -2,9 +2,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 
 import {
   createBook,
+  deleteBook,
   EMPTY_BODY,
-  recoverBook,
-  trashBook,
   updateBook,
   type Book,
   type BookFields,
@@ -16,6 +15,7 @@ import { useBodiesStore } from '../store/bodies';
 import { selectShelf, useBooksStore } from '../store/books';
 
 import { ActionSheet } from './ActionSheet';
+import { ConfirmDialog } from './ConfirmDialog';
 import {
   CheckGlyph,
   CloseGlyph,
@@ -33,6 +33,7 @@ type CoverDraft =
 
 export function BookFormPanel({
   open,
+  switching = false,
   depth = 0,
   index = 0,
   book,
@@ -41,6 +42,7 @@ export function BookFormPanel({
   onClose,
 }: {
   open: boolean;
+  switching?: boolean;
   depth?: number;
   index?: number;
   book: Book | null;
@@ -70,6 +72,7 @@ export function BookFormPanel({
   const [busy, setBusy] = useState(false);
 
   const [coverSheet, setCoverSheet] = useState(false);
+  const [confirming, setConfirming] = useState(false);
   const [genresOpen, setGenresOpen] = useState(false);
   const [seriesDialog, setSeriesDialog] = useState(false);
   const [newSeriesInput, setNewSeriesInput] = useState('');
@@ -163,29 +166,6 @@ export function BookFormPanel({
     }
   };
 
-  const handleTrash = async () => {
-    if (!book || busy) return;
-    setBusy(true);
-    try {
-      const deletedId = book.id;
-      await trashBook(deletedId);
-      onDeleted();
-      showToast(t('snackbar.book-deleted'), {
-        label: t('common.undo'),
-        onAction: () => {
-          void recoverBook(deletedId).then(
-            () => showToast(t('snackbar.book-recovered')),
-            () => showToast(t('snackbar.book-save-failed')),
-          );
-        },
-      });
-    } catch (error) {
-      console.warn('trashBook', error);
-      showToast(t('snackbar.book-delete-failed'));
-      setBusy(false);
-    }
-  };
-
   const genresSummary =
     genres.length > 0
       ? genres.map(g => genreLabel(k => t(k), g)).join(', ')
@@ -197,6 +177,7 @@ export function BookFormPanel({
     <>
       <SidePanel
         open={open}
+        switching={switching}
         depth={depth + childDepth}
         index={index}
         title={t(book ? 'app.bookEdit' : 'app.bookNew')}
@@ -241,7 +222,15 @@ export function BookFormPanel({
           >
             <span className="art-box is-book">
               {coverPreview ? (
-                <img src={coverPreview} alt="" />
+                <>
+                  <img
+                    src={coverPreview}
+                    alt=""
+                    aria-hidden="true"
+                    className="art-box-backdrop"
+                  />
+                  <img src={coverPreview} alt="" className="art-box-fg" />
+                </>
               ) : (
                 <PlusGlyph />
               )}
@@ -291,20 +280,22 @@ export function BookFormPanel({
 
         <div className="card">
           <label className="cell field">
-            <span className="field-caption">{t('bookEdit.name.label')}</span>
             <input
               value={name}
-              placeholder={t('bookEdit.name.placeholder')}
+              placeholder={t('bookEdit.name.label')}
+              aria-label={t('bookEdit.name.label')}
               disabled={busy}
+              autoComplete="off"
               onChange={e => setName(e.target.value)}
             />
           </label>
           <label className="cell field">
-            <span className="field-caption">{t('bookEdit.author.label')}</span>
             <input
               value={author}
-              placeholder={t('bookEdit.author.placeholder')}
+              placeholder={t('bookEdit.author.label')}
+              aria-label={t('bookEdit.author.label')}
               disabled={busy}
+              autoComplete="off"
               onChange={e => setAuthor(e.target.value)}
             />
           </label>
@@ -312,12 +303,13 @@ export function BookFormPanel({
 
         <div className="card">
           <label className="cell field">
-            <span className="field-caption">{t('bookEdit.year.label')}</span>
             <input
               inputMode="numeric"
               value={yearText}
               placeholder={t('bookEdit.year.label')}
+              aria-label={t('bookEdit.year.label')}
               disabled={busy}
+              autoComplete="off"
               onChange={e =>
                 setYearText(
                   e.target.value
@@ -399,11 +391,29 @@ export function BookFormPanel({
               type="button"
               className="cell destructive-row"
               disabled={busy}
-              onClick={() => void handleTrash()}
+              onClick={() => setConfirming(true)}
             >
               {t('bookEdit.delete')}
             </button>
           </div>
+        )}
+
+        {book && (
+          <ConfirmDialog
+            open={confirming}
+            title={t('bookEdit.deleteConfirm.title')}
+            message={t('bookEdit.deleteConfirm.message')}
+            cancel={t('bookEdit.deleteConfirm.cancel')}
+            confirm={t('bookEdit.deleteConfirm.confirm')}
+            onConfirm={() => {
+              onDeleted();
+              deleteBook(book.id).then(
+                () => showToast(t('snackbar.book-deleted')),
+                () => showToast(t('snackbar.book-delete-failed')),
+              );
+            }}
+            onClose={() => setConfirming(false)}
+          />
         )}
       </SidePanel>
 

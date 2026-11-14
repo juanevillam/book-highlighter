@@ -46,7 +46,6 @@ const makeBook = (overrides: Partial<Book>): Book => ({
   readerAnchor: null,
   series: null,
   seriesNumber: null,
-  trashedAt: null,
   updatedAt: 1000,
   year: 1922,
   ...overrides,
