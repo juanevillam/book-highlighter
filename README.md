@@ -21,12 +21,12 @@ same Firebase (Auth + Firestore) and Cloudinary foundation as Sound Shaper.
 | -------------- | -------------------------------------------------------------------------------------------------------------------- |
 | `src/screens`  | the two root screens: `Welcome` and `Home` (3-column desktop stage, mobile shelf and sheets)                         |
 | `src/ui`       | the UI kit — shelf grid, book stage, Kindle-style reader (`Reader.tsx`), chapter/highlight editors, sheets, trophies |
-| `src/lib`      | pagination (`paginator.ts`), 6 × 9 in PDF export (`pdfExport.ts`), reader sections and themes, shelf sorting, genres |
+| `src/lib`      | on-device neural OCR & sticky-note highlight detector (`ocr/`, `photoImport/`), pagination (`paginator.ts`), 6 × 9 in PDF export (`pdfExport.ts`), reader sections and themes, shelf sorting, genres |
 | `src/store`    | persisted stores for books, on-demand book bodies, shelf sort, and per-device reader settings                        |
 | `src/trophies` | the PlayStation-style trophy engine and its banner                                                                   |
 | `src/i18n`     | translations (`en`, `es`, `zh`)                                                                                      |
-| `public/`      | PWA manifest (`manifest.webmanifest`), offline Service Worker (`sw.js`), icons, and Cloudflare Pages `_headers`      |
-| `scripts/`     | local Firebase environment setup helper (`setup-firebase.sh`)                                                        |
+| `public/`      | PWA manifest (`manifest.webmanifest`), offline Service Worker (`sw.js`), ONNX OCR models (`models/`), icons, and Cloudflare Pages `_headers` |
+| `scripts/`     | local Firebase environment setup helper (`setup-firebase.sh`) and CLI photo pipeline evaluator (`eval-photos.ts`)    |
 | `test/`        | unit tests for pagination, body edits, shelf sorting, and reader anchors                                             |
 
 Book Highlighter began life in the portfolio monorepo as `apps/booker` and

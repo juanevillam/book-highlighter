@@ -72,6 +72,37 @@ launch) and follows the same disciplined cadence as Sound Shaper and
   never a page number. Screen pages change with text scale, viewport size, and
   rotation; the character-offset anchor keeps the exact paragraph in view.
 
+## On-device neural highlight & TOC detector (`src/lib/ocr/`, `src/lib/photoImport/`)
+
+- **100% in-browser Web Worker (`onnxruntime-web/wasm`) + sequential job queue:**
+  Static PaddleOCR v3 ONNX models (`public/models/det.onnx` +
+  `public/models/rec-latin.onnx` + `public/models/rec-latin.txt`, cached with
+  `Cache-Control: immutable`) run off the main thread in a warm singleton
+  Web Worker (`src/lib/photoImport/client.ts` + `worker.ts`). Zero server cost,
+  offline-ready, and no third-party LLM copyright refusals.
+- **Curved-page line unwarping (`detCurvedBoxes` + `sampleWarpedLineChw`):**
+  Open books photographed in hand curve non-uniformly from top to bottom. Rather
+  than cropping axis-aligned bounding boxes (which swallow adjacent lines on
+  tilted pages), `paddle.ts` tracks each text line's per-column centerline
+  `yc(x)` and local stroke height `medH`, unwarping each curved line into a flat
+  48 px strip before recognition, and pools split diacritic probabilities plus
+  soft-token CTC thresholds (`pBlank < 0.68` for spaces and punctuation).
+- **Paper Sandwich sticky-note detector (`findFlags` in `analyze.ts`):**
+  Detects sticky flags of any hue inside the current page's outer margin strip
+  (`0.006 * W` to `0.038 * W` outside the text column) by requiring a
+  high-saturation band (`rowS >= 80 && rowV >= 110`) sandwiched between bare
+  low-saturation paper both above and below (`aboveS < 42 && belowS < 42`). This
+  rejects both background tabs sticking out past the page edge and thumbs
+  holding the bottom corner. Distinguishes horizontal `'bar'` flags (range
+  start/end) from vertical `'L'` flags (single-paragraph mark).
+- **5-signal paragraph reconstruction & TOC extraction (`assemble.ts`):**
+  Reconstructs paragraph breaks across `1..N` photos of a highlight from (1)
+  first-line indent (`> 0.65 * lh`, excluding right-aligned hanging verse
+  continuations), (2) short previous line ("punto y aparte sin sangría"), (3)
+  vertical block gap, (4) dialogue em-dash (`—`), and (5) cross-line/cross-page
+  hyphenation, paired with an interactive per-photo line inspector in
+  `ChaptersForm.tsx` and TOC (`ÍNDICE`) photo scanning.
+
 ## Library & shelf
 
 - **Sort** (`src/lib/librarySort.ts`): `Recent` (last opened), `Title`,

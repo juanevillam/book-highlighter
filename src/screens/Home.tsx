@@ -492,6 +492,7 @@ export function Home({ user }: { user: User }) {
             setSelectedBookId(book.id);
             setMobileStageOpen(true);
           }}
+          onEditBook={book => openModal({ kind: 'bookForm', book })}
           onSelectSeries={name => openModal({ kind: 'series', name })}
           onNewBook={() => openModal({ kind: 'bookForm', book: null })}
         />

@@ -39,7 +39,9 @@ export function Artwork({
 
   return (
     <span className="artwork" aria-hidden="true">
-      {!landed && ready && <img src={ready} alt="" draggable={false} className="is-ready" />}
+      {!landed && ready && (
+        <img src={ready} alt="" draggable={false} className="is-ready" />
+      )}
       {!landed && quick && (
         <img
           key={quick}

@@ -33,6 +33,14 @@ import {
   readerPalette,
   TEXT_SCALES,
 } from '../src/lib/readerThemes';
+import {
+  extractChaptersFromToc,
+  findHighlightSpan,
+  repairPageNumbers,
+  textBetween,
+} from '../src/lib/photoImport/assemble';
+import { type PageAnalysis } from '../src/lib/photoImport/analyze';
+import { cleanOcr, polishSpanishProse } from '../src/lib/photoImport/clean';
 import { shelfEntries } from '../src/lib/shelf';
 
 const makeBook = (overrides: Partial<Book>): Book => ({
@@ -255,5 +263,95 @@ describe('readerThemes, readerSections & paginator reflow anchor stability', () 
       item => item.blockId === savedAnchor.blockId,
     );
     expect(hasBlock).toBe(true);
+  });
+});
+
+const makePage = (overrides: Partial<PageAnalysis>): PageAnalysis => ({
+  kind: 'page',
+  width: 1000,
+  height: 1400,
+  pageNumber: null,
+  lines: [],
+  columnX1: 100,
+  columnX2: 900,
+  headingIndex: null,
+  flags: [],
+  toc: [],
+  coverLines: [],
+  ...overrides,
+});
+
+describe('photoImport (clean, assemble, sticky span, TOC & 5-signal paragraphs)', () => {
+  it('cleans Latin OCR errors and restores Spanish typography & accents without false question marks', () => {
+    const rawLine1 = cleanOcr('--Dime, Govinda-pregunt6 Siddhartha-, crees que hemos llegado a alguna meta?');
+    const rawLine2 = cleanOcr('Todo mentia, cuando no era mas que podredumbre. <Si-pens6 con la cabeza inclinada-, que quedaria de todo cuanto nos parece sagrado?>');
+    const polished = polishSpanishProse(`${rawLine1}\n\n${rawLine2}`);
+    expect(polished).toContain('—Dime, Govinda —preguntó Siddhartha—, ¿crees que hemos llegado a alguna meta?');
+    expect(polished).toContain('Todo mentía, cuando no era más que podredumbre.');
+    expect(polished).not.toContain('¿cuando no era');
+    expect(polished).toContain('«Sí —pensó con la cabeza inclinada—, ¿qué quedaría de todo cuanto nos parece sagrado?»');
+  });
+
+  it('repairs missing or partially read page numbers across sequential photos', () => {
+    const pages = [
+      makePage({ pageNumber: 25 }),
+      makePage({ pageNumber: null }),
+      makePage({ pageNumber: 2 }), // 27 misread as 2
+      makePage({ pageNumber: 28 }),
+    ];
+    expect(repairPageNumbers(pages)).toEqual([25, 26, 27, 28]);
+  });
+
+  it('reconstructs paragraphs from indent, short previous line (punto y aparte), dialogue dash, and hanging verse', () => {
+    const p1 = makePage({
+      pageNumber: 25,
+      flags: [{ side: 'R', shape: 'bar', y: 120, lineIndex: 0 }],
+      lines: [
+        { text: 'En el camino, Siddhartha regaló su túnica a un brah-', x1: 140, y1: 100, x2: 895, y2: 124 },
+        { text: 'mán pobre. Una tortura era la vida.', x1: 100, y1: 135, x2: 520, y2: 159 }, // ends short -> punto y aparte even if next line is unindented
+        { text: 'Solo una meta se perfilaba ante Siddhartha: quedarse', x1: 100, y1: 170, x2: 895, y2: 194 },
+        { text: 'vacío.', x1: 100, y1: 205, x2: 210, y2: 229 },
+      ],
+    });
+    const p2 = makePage({
+      pageNumber: 26,
+      flags: [{ side: 'L', shape: 'bar', y: 215, lineIndex: 2 }],
+      lines: [
+        { text: '—El puro de espíritu que, meditando, se sumerja', x1: 135, y1: 100, x2: 880, y2: 124 },
+        { text: '[en el Atmán,', x1: 680, y1: 135, x2: 890, y2: 159 }, // hanging right-aligned continuation
+        { text: 'sentirá en su corazón una alegría inefable.', x1: 100, y1: 170, x2: 720, y2: 194 },
+      ],
+    });
+    const nums = repairPageNumbers([p1, p2]);
+    const span = findHighlightSpan([p1, p2], nums);
+    expect(span).toEqual({
+      start: { photo: 0, line: 0 },
+      end: { photo: 1, line: 2 },
+      page: '25–26',
+    });
+    const extracted = textBetween([p1, p2], span!.start, span!.end);
+    expect(extracted).toBe(
+      [
+        'En el camino, Siddhartha regaló su túnica a un brahmán pobre. Una tortura era la vida.',
+        'Solo una meta se perfilaba ante Siddhartha: quedarse vacío.',
+        '—El puro de espíritu que, meditando, se sumerja [en el Atmán, sentirá en su corazón una alegría inefable.',
+      ].join('\n\n'),
+    );
+  });
+
+  it('extracts chapters and inferred page spans from TOC photos', () => {
+    const tocPage = makePage({
+      kind: 'index',
+      toc: [
+        { title: 'El hijo del brahmán', page: 11 },
+        { title: 'Con los samanas', page: 23 },
+        { title: 'Gotama', page: 41 },
+      ],
+    });
+    expect(extractChaptersFromToc([tocPage])).toEqual([
+      { name: 'El hijo del brahmán', pages: '11–22' },
+      { name: 'Con los samanas', pages: '23–40' },
+      { name: 'Gotama', pages: '41' },
+    ]);
   });
 });
