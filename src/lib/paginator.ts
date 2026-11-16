@@ -253,6 +253,64 @@ type RawBlock = {
   keepTogether?: boolean;
 };
 
+export type HighlightSegment = {
+  text: string;
+  italic: boolean;
+  align: 'left' | 'right';
+  tightWithPrev: boolean;
+};
+
+export const parseHighlightSegments = (rawText: string): HighlightSegment[] => {
+  const paragraphs = rawText
+    .trim()
+    .split(/\n\n+/)
+    .map(p => p.trimEnd())
+    .filter(p => p.trim().length > 0);
+  if (paragraphs.length === 0) return [];
+
+  const segments: HighlightSegment[] = [];
+  for (const para of paragraphs) {
+    const rawLines = para.split('\n').filter(l => l.trim().length > 0);
+    const isVerse =
+      rawLines.length > 0 &&
+      rawLines.every(l => /^\s*\*[^*]+\*\s*$/.test(l));
+    if (isVerse) {
+      rawLines.forEach((rawLine, lineIdx) => {
+        const indentedRight = /^\s{2,}\*/.test(rawLine);
+        const inner = rawLine.trim().slice(1, -1).trim();
+        segments.push({
+          text: inner,
+          italic: true,
+          align: indentedRight || inner.startsWith('[') ? 'right' : 'left',
+          tightWithPrev: lineIdx > 0,
+        });
+      });
+    } else {
+      segments.push({
+        text: rawLines.map(l => l.trim()).join(' '),
+        italic: false,
+        align: 'left',
+        tightWithPrev: false,
+      });
+    }
+  }
+
+  if (segments.length === 1 && !segments[0].italic) {
+    segments[0].text = `“${segments[0].text}”`;
+  } else if (segments.length > 1) {
+    const firstProse = segments.find(s => !s.italic);
+    const lastProse = [...segments].reverse().find(s => !s.italic);
+    if (firstProse && !/^[«“"—]/.test(firstProse.text)) {
+      firstProse.text = `“${firstProse.text}`;
+    }
+    if (lastProse && firstProse && /^[“]/.test(firstProse.text)) {
+      lastProse.text = `${lastProse.text}”`;
+    }
+  }
+
+  return segments;
+};
+
 const buildSectionBlocks = (
   section: ReaderSection,
   scale: number,
@@ -319,20 +377,34 @@ const buildSectionBlocks = (
 
   if (section.kind === 'highlights' && section.highlights) {
     section.highlights.forEach((hl, idx) => {
-      const quoted = `“${hl.text.trim()}”`;
-      blocks.push({
-        blockId: `${section.id}:hl:${idx}`,
-        style: 'quote',
-        text: quoted,
-        fontSize: bodySize,
-        lineHeight: Math.round(bodySize * 1.52),
-        align: 'left',
-        italic: false,
-        bold: false,
-        muted: false,
-        serif: true,
-        gapBefore: idx === 0 ? Math.round(20 * scale) : Math.round(20 * scale),
-        keepWithNext: Boolean(hl.page),
+      const segments = parseHighlightSegments(hl.text);
+      segments.forEach((seg, segIdx) => {
+        const isFirstSeg = segIdx === 0;
+        const isLastSeg = segIdx === segments.length - 1;
+        blocks.push({
+          blockId:
+            segIdx === 0
+              ? `${section.id}:hl:${idx}`
+              : `${section.id}:hl:${idx}:${segIdx}`,
+          style: 'quote',
+          text: seg.text,
+          fontSize: bodySize,
+          lineHeight: Math.round(bodySize * 1.52),
+          align: seg.align,
+          italic: seg.italic,
+          bold: false,
+          muted: false,
+          serif: true,
+          gapBefore: isFirstSeg
+            ? Math.round(20 * scale)
+            : seg.tightWithPrev
+              ? Math.round(2 * scale)
+              : Math.round(12 * scale),
+          keepWithNext:
+            (isLastSeg && Boolean(hl.page)) ||
+            Boolean(segments[segIdx + 1]?.tightWithPrev),
+          keepTogether: seg.italic,
+        });
       });
 
       if (hl.page) {

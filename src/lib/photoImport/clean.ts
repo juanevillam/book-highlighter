@@ -326,10 +326,202 @@ const EXACT_WORD_FIXES: Record<string, string> = {
   sentiran: 'sentirán',
   podra: 'podrá',
   podran: 'podrán',
+  volvera: 'volverá',
+  volveran: 'volverán',
+  quedara: 'quedará',
+  quedaran: 'quedarán',
+  sera: 'será',
+  seran: 'serán',
   convertianse: 'convertíanse',
   mostrabase: 'mostrábase',
   tornabase: 'tornábase',
-  // Unambiguous `ñ` words (and `ni` misreads like `peldanio`)
+  regresaria: 'regresaría',
+  sumergiria: 'sumergiría',
+  pretendia: 'pretendía',
+  pretendian: 'pretendían',
+  resplandecia: 'resplandecía',
+  convendria: 'convendría',
+  ponia: 'ponía',
+  haria: 'haría',
+  pertenecia: 'pertenecía',
+  compartia: 'compartía',
+  compartian: 'compartían',
+  compartiria: 'compartiría',
+  hablaria: 'hablaría',
+  impulsaria: 'impulsaría',
+  contenia: 'contenía',
+  viviamos: 'vivíamos',
+  volvi: 'volví',
+  sabia: 'sabía',
+  sabias: 'sabías',
+  sabian: 'sabían',
+  alegrarias: 'alegrarías',
+  presentia: 'presentía',
+  hacian: 'hacían',
+  discurria: 'discurría',
+  leia: 'leía',
+  leian: 'leían',
+  obedecia: 'obedecía',
+  combatia: 'combatía',
+  renacia: 'renacía',
+  renacian: 'renacían',
+  fluia: 'fluía',
+  fluian: 'fluían',
+  cernia: 'cernía',
+  sonreia: 'sonreía',
+  sonreian: 'sonreían',
+  sonrien: 'sonríen',
+  sonreido: 'sonreído',
+  atraido: 'atraído',
+  reirse: 'reírse',
+  reirme: 'reírme',
+  reirte: 'reírte',
+  desconfio: 'desconfío',
+  todavia: 'todavía',
+  mercancia: 'mercancía',
+  mercancias: 'mercancías',
+  sombrio: 'sombrío',
+  sombria: 'sombría',
+  vias: 'vías',
+  jabali: 'jabalí',
+  jabalies: 'jabalíes',
+  increible: 'increíble',
+  increibles: 'increíbles',
+  univoco: 'unívoco',
+  univoca: 'unívoca',
+  metafora: 'metáfora',
+  metaforas: 'metáforas',
+  mascara: 'máscara',
+  mascaras: 'máscaras',
+  habito: 'hábito',
+  habitos: 'hábitos',
+  pacifico: 'pacífico',
+  pacifica: 'pacífica',
+  reciproco: 'recíproco',
+  reciproca: 'recíproca',
+  reciprocos: 'recíprocos',
+  reciprocas: 'recíprocas',
+  ridiculo: 'ridículo',
+  ridicula: 'ridícula',
+  dificilmente: 'difícilmente',
+  facilmente: 'fácilmente',
+  enigmatico: 'enigmático',
+  enigmatica: 'enigmática',
+  objecion: 'objeción',
+  atras: 'atrás',
+  fijate: 'fíjate',
+  cuidate: 'cuídate',
+  inclinate: 'inclínate',
+  permiteme: 'permíteme',
+  encontro: 'encontró',
+  constato: 'constató',
+  sopeso: 'sopesó',
+  demas: 'demás',
+  linea: 'línea',
+  lineas: 'líneas',
+  vinculo: 'vínculo',
+  vinculos: 'vínculos',
+  efimero: 'efímero',
+  efimera: 'efímera',
+  efimeros: 'efímeros',
+  efimeras: 'efímeras',
+  magnanimo: 'magnánimo',
+  magnanima: 'magnánima',
+  integro: 'íntegro',
+  integra: 'íntegra',
+  integros: 'íntegros',
+  integras: 'íntegras',
+  caracteristico: 'característico',
+  caracteristica: 'característica',
+  caracteristicos: 'característicos',
+  caracteristicas: 'características',
+  autntico: 'auténtico',
+  autntica: 'auténtica',
+  infimo: 'ínfimo',
+  infima: 'ínfima',
+  infimos: 'ínfimos',
+  infimas: 'ínfimas',
+  fantasia: 'fantasía',
+  fantasias: 'fantasías',
+  soberania: 'soberanía',
+  valia: 'valía',
+  cria: 'cría',
+  crian: 'crían',
+  naci: 'nací',
+  traido: 'traído',
+  traida: 'traída',
+  traidos: 'traídos',
+  traidas: 'traídas',
+  bailarin: 'bailarín',
+  despidete: 'despídete',
+  acuerdate: 'acuérdate',
+  recuerdate: 'recuérdate',
+  levantame: 'levántame',
+  tirame: 'tírame',
+  cinete: 'cíñete',
+  estan: 'están',
+  estare: 'estaré',
+  estaras: 'estarás',
+  estara: 'estará',
+  estaran: 'estarán',
+  extinguiria: 'extinguiría',
+  extinguirian: 'extinguirían',
+  amaria: 'amaría',
+  amarias: 'amarías',
+  amarian: 'amarían',
+  dejaria: 'dejaría',
+  dejarias: 'dejarías',
+  dejarian: 'dejarían',
+  desharia: 'desharía',
+  arrastraria: 'arrastraría',
+  sabria: 'sabría',
+  sabrias: 'sabrías',
+  sabrian: 'sabrían',
+  echarias: 'echarías',
+  echaria: 'echaría',
+  pasaria: 'pasaría',
+  daria: 'daría',
+  darian: 'darían',
+  envio: 'envío',
+  envios: 'envíos',
+  viveres: 'víveres',
+  vencera: 'vencerá',
+  venceran: 'vencerán',
+  vencia: 'vencía',
+  vencian: 'vencían',
+  librara: 'librará',
+  libraran: 'librarán',
+  correra: 'correrá',
+  correran: 'correrán',
+  ganara: 'ganará',
+  ganaran: 'ganarán',
+  perdera: 'perderá',
+  perderan: 'perderán',
+  hara: 'hará',
+  haran: 'harán',
+  tomara: 'tomará',
+  tomaran: 'tomarán',
+  metodo: 'método',
+  metodos: 'métodos',
+  plumon: 'plumón',
+  valentia: 'valentía',
+  inequivoco: 'inequívoco',
+  inequivoca: 'inequívoca',
+  inequivocos: 'inequívocos',
+  inequivocas: 'inequívocas',
+  espia: 'espía',
+  espias: 'espías',
+  tactica: 'táctica',
+  tacticas: 'tácticas',
+  estrategal: 'estratega',
+  interfierant: 'interfieran',
+  leys: 'ley',
+  guerrat: 'guerra',
+  militarys: 'militar',
+  // Unambiguous `ñ` words (auto-indexed for `n`, `f`, and `ni` OCR confusions below)
+  otonal: 'otoñal',
+  senuelo: 'señuelo',
+  senuelos: 'señuelos',
   ano: 'año',
   anos: 'años',
   sueno: 'sueño',
@@ -340,9 +532,10 @@ const EXACT_WORD_FIXES: Record<string, string> = {
   ninas: 'niñas',
   engano: 'engaño',
   enganos: 'engaños',
+  enganar: 'engañar',
+  enganarlo: 'engañarlo',
   enganarnos: 'engañarnos',
   peldano: 'peldaño',
-  peldanio: 'peldaño',
   peldanos: 'peldaños',
   montana: 'montaña',
   montanas: 'montañas',
@@ -357,10 +550,24 @@ const EXACT_WORD_FIXES: Record<string, string> = {
   dueno: 'dueño',
   duena: 'dueña',
   duenos: 'dueños',
+  aduena: 'adueña',
+  aduenan: 'adueñan',
+  aduenar: 'adueñar',
+  aduenarse: 'adueñarse',
+  aduenado: 'adueñado',
   otono: 'otoño',
   bano: 'baño',
   dano: 'daño',
   danos: 'daños',
+  danado: 'dañado',
+  danada: 'dañada',
+  danados: 'dañados',
+  danadas: 'dañadas',
+  danar: 'dañar',
+  danino: 'dañino',
+  danina: 'dañina',
+  daaina: 'dañina',
+  daáina: 'dañina',
   pano: 'paño',
   rebano: 'rebaño',
   tamano: 'tamaño',
@@ -369,31 +576,85 @@ const EXACT_WORD_FIXES: Record<string, string> = {
   companero: 'compañero',
   companera: 'compañera',
   companeros: 'compañeros',
+  acompanar: 'acompañar',
+  acompanado: 'acompañado',
+  acompanada: 'acompañada',
+  acompane: 'acompañe',
   ensenar: 'enseñar',
+  ensena: 'enseña',
+  ensenan: 'enseñan',
+  ensenado: 'enseñado',
   ensenando: 'enseñando',
+  ensenarte: 'enseñarte',
+  ensenarle: 'enseñarle',
+  ensenarla: 'enseñarla',
+  ensenarlo: 'enseñarlo',
   ensenanza: 'enseñanza',
   ensenanzas: 'enseñanzas',
   enseno: 'enseñó',
+  anadir: 'añadir',
+  anadas: 'añadas',
   manana: 'mañana',
   senor: 'señor',
   senora: 'señora',
   senal: 'señal',
+  senales: 'señales',
   espanol: 'español',
   espanola: 'española',
   arana: 'araña',
+  aranas: 'arañas',
+  aranazo: 'arañazo',
+  aranazos: 'arañazos',
   cabana: 'cabaña',
   campana: 'campaña',
   entranas: 'entrañas',
+  entranable: 'entrañable',
+  entranables: 'entrañables',
+  desentranar: 'desentrañar',
   hazana: 'hazaña',
   lena: 'leña',
   pestana: 'pestaña',
   pestanas: 'pestañas',
   carrona: 'carroña',
   puno: 'puño',
+  punal: 'puñal',
+  punales: 'puñales',
+  antano: 'antaño',
   empeno: 'empeño',
+  empenado: 'empeñado',
+  empenada: 'empeñada',
+  empenados: 'empeñados',
+  empenarias: 'empeñarías',
   ceno: 'ceño',
   diseno: 'diseño',
+  carino: 'cariño',
+  desdena: 'desdeña',
+  desdenar: 'desdeñar',
+  atane: 'atañe',
 };
+
+// Automatically index `f` and `ni` OCR misreads for every `ñ` word in the dictionary
+for (const [, target] of Object.entries(EXACT_WORD_FIXES)) {
+  if (target.includes('ñ')) {
+    const fKey = target
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase();
+    const withF = target
+      .toLowerCase()
+      .replace(/ñ/g, 'f')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '');
+    const withNi = target
+      .toLowerCase()
+      .replace(/ñ/g, 'ni')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '');
+    if (!(fKey in EXACT_WORD_FIXES)) EXACT_WORD_FIXES[fKey] = target;
+    if (!(withF in EXACT_WORD_FIXES)) EXACT_WORD_FIXES[withF] = target;
+    if (!(withNi in EXACT_WORD_FIXES)) EXACT_WORD_FIXES[withNi] = target;
+  }
+}
 
 const preserveCase = (orig: string, replacement: string): string => {
   if (orig === orig.toUpperCase()) return replacement.toUpperCase();
@@ -413,10 +674,11 @@ export const cleanOcr = (s: string): string =>
     .replace(/[êè]/g, 'é')
     .replace(/[âà]/g, 'á')
     .replace(/[ôò]/g, 'ó')
-    // In Spanish, `ü` only exists in `güe`/`güi`; anywhere else it is `ú`.
+    // In Spanish, `ü` only exists in `güe`/`güi`; anywhere else it is `ú`, and `gúe`/`gúi` before `n`/`d`/`r`/`ñ` is `güe`/`güi`.
     .replace(/ü(?![eiEI])/g, 'ú')
     .replace(/([^gG])ü/g, '$1ú')
     .replace(/^ü/g, 'ú')
+    .replace(/([gG])ú([eiEI](?:n|d|r|ñ))/g, '$1ü$2')
     .replace(/([a-záéíóúñ])6(?=[^0-9]|$)/g, '$1ó')
     .replace(/>/g, '»')
     .replace(/</g, '«')
@@ -444,84 +706,272 @@ export const cleanOcr = (s: string): string =>
  * words have been joined across lines and pages.
  */
 export const polishSpanishProse = (s: string): string => {
+  // Strip stray mid-word apostrophes (`ver'so` -> `verso`), inline footnote superscripts glued to words/punctuation (`levas20`, `población.21`, `venza.4s`, `potencia.6s`, `sirvientes;1*8`), and split glued `c`/`s` (`cpodrias` -> `¿podrias`) before word lookup
+  let out = s
+    .replace(/([A-Za-zÀ-ÿ])['’]([a-zà-ÿ])/g, '$1$2')
+    .replace(/\bse\s+destruye20\s+si\s+la\s+riqueza\b/g, 'se destruye; si la riqueza')
+    .replace(/\bun\s+dana:\s+de\b/g, 'un dàn de')
+    .replace(/\b(un|veinte)\s+dan\b/g, '$1 dàn')
+    .replace(/\bzh[oó]ng(?:\d+)?\b/g, 'zhōng')
+    .replace(/\bcultiva\s+el\s+dao\b/g, 'cultiva el dào')
+    .replace(/\bEl\s+maestro\s+Sun\s+dijo:/g, 'El maestro Sūn dijo:')
+    .replace(/\btampoco\s+es\s+lo\s+mejor\s+por\s+ello,/g, 'tampoco es lo mejor; por ello,')
+    .replace(/\bplum[oó]n\s+oto[ñn]al,\s*s\s+no\b/g, 'plumón otoñal, no')
+    .replace(/\bpreclaro\."\s*/g, 'preclaro.')
+    .replace(/\bQuien\s+no\s+sea\s+un\s+Santo(?:\d+)?\s+sabio\b/g, 'Quien no sea un Santo o sabio')
+    .replace(/\bSutileza!\s*\.?\s*Sutileza!,\s*sin\s+ella\s+no\s+se\s+puede\s+emplear\s+a\s+los\s+esp[ií]as!/g, '¡Sutileza! ¡Sutileza!, ¡sin ella no se puede emplear a los espías!')
+    .replace(/\bde\s+sus\s+cortesanos,\s*0\s+de\s+su\s+ordenanza,\s*\*{1,2}\s+de\s+sus\b/g, 'de sus cortesanos, de su ordenanza, de sus')
+    .replace(/\bhar[aá]\s+use\.?(?=\s)/g, 'hará uso')
+    .replace(/([A-Za-zÀ-ÿ]{2,})\d{1,3}[a-z]?(?=[,.;:?!»\s]|$)/g, '$1')
+    .replace(/([A-Za-zÀ-ÿ][,.;:])\d[\d*a-z]{0,2}\.?(?=[ \t]|$)/g, '$1')
+    .replace(
+      /\b[cs](?=(?:para|por|podr[ií]a|pued[ae]|qu[eé]|c[oó]mo|cu[aá]n|d[oó]nde|qui[eé]n)[a-zà-ÿ]*[^?!\n]*\?)/gi,
+      '¿',
+    );
+
   // Word-by-word dictionary restoration for unambiguous Spanish words first
-  let out = s.replace(/[A-Za-zÀ-ÿ]+/g, word => {
+  out = out.replace(/[A-Za-zÀ-ÿ]+/g, word => {
     const lower = word.toLowerCase();
     const fixed = EXACT_WORD_FIXES[lower];
     return fixed ? preserveCase(word, fixed) : word;
   });
 
+  // Universal Spanish enclitic gerund rule: every `-ando`/`-iendo`/`-yendo` + enclitic pronoun is esdrújula
+  out = out.replace(
+    /\b([A-Za-zÀ-ÿ]*?)(a|ie|ye)ndo(me|te|se|lo|la|le|nos|os|los|las|les)(?![A-Za-zÀ-ÿ])/gi,
+    (_, stem: string, vowel: string, pron: string) => {
+      const accented =
+        vowel.toLowerCase() === 'a'
+          ? vowel === 'A'
+            ? 'Á'
+            : 'á'
+          : vowel[0] + (vowel[1] === 'E' ? 'É' : 'é');
+      return `${stem}${accented}ndo${pron}`;
+    },
+  );
+
+  // Universal Spanish superlative `-ísimo` / `-ísima` / `-ísimamente` and abstract noun `-ción` / `-sión` rules
   out = out
-    // Leading dialogue line where `—` was misread as `S ` or `: ` across a multi-line paragraph
-    .replace(/(^|\n\n)[S:]\s+(?=[A-ZÀ-Þ][a-zà-ÿ]+\s*[-—]\s*le\s+dijo)/g, '$1—')
-    .replace(/(^|\n\n):\s*(?=[A-ZÀ-Þ][a-zà-ÿ]+[^?!\n]*!)/g, '$1—¡')
-    // Word-internal parenthetical em-dashes (`Govinda-preguntó`, `Si-pensó`, `aguas-replicó Siddhartha—`)
     .replace(
-      /([A-Za-zÀ-ÿ¡!¿?])\s*[-—]\s*((?:pens[oó]|dijo|replic[oó]|repuso|pregunt[oó]|contest[oó]|exclam[oó]|murmur[oó]|a[ñn]adi[oó]|grit[oó]|susurr[oó]|habl[oó]|le\s+dijo|y\s+a[uú]n|en\s+el\s+curso)(?![A-Za-zÀ-ÿ]))/gi,
+      /\b([A-Za-zÀ-ÿ]+?)isim([oa]s?(?:mente)?)(?![A-Za-zÀ-ÿ])/gi,
+      (_, stem: string, tail: string) => `${stem}ísim${tail}`,
+    )
+    .replace(
+      /\b([A-Za-zÀ-ÿ]{3,}?)([cs])ion(?![A-Za-zÀ-ÿ])/gi,
+      (_, stem: string, cs: string) => `${stem}${cs}ión`,
+    )
+    // Glued `-mente` adverb + verb (`comúnmentellamamos` -> `comúnmente llamamos`)
+    .replace(
+      /\b([A-Za-zÀ-ÿ]+mente)(llamamos|hablamos|decimos|hacemos|vemos|creemos|pensamos|sabemos|somos|estamos|son|es|est[aá]|est[aá]n)(?![A-Za-zÀ-ÿ])/gi,
+      '$1 $2',
+    )
+    // Duplicate single consonant produced by mid-line box split (`cumplir r como` -> `cumplir como`)
+    .replace(/\b([A-Za-zÀ-ÿ]{2,}([rlnsd]))\s+\2\s+(?=[a-zà-ÿ]{2,})/gi, '$1 ');
+
+  out = out
+    // Normalize 2-dot sequences `..` into 3-dot ellipsis `...`
+    .replace(/(?<!\.)\.\.(?!\.)/g, '...')
+    // Restore `;` after `...` when OCR drops `;` before lowercase adversative/negative clause (`... no para`, `... mas no`, `... pero`)
+    .replace(/\.{3,}[ \t]+(?=(?:no[ \t]+para|mas\b|pero\b|sino\b))/g, '...; ')
+    // Collapse accidental double periods separated by horizontal space on the same line (`. . También` -> `. También`)
+    .replace(/\.[ \t]+\.(?!\.)/g, '.')
+    // Remove stray periods between two glued lowercase words (`bondadosa.y` -> `bondadosa y`)
+    .replace(/([a-zà-ÿ])\.([a-zà-ÿ])/g, '$1 $2')
+    // Remove stray single period followed by lowercase continuation on the same line (`en. polvo`, `ilusión. al`, `sonar . siempre`, `tu .objetivo`)
+    // Exclude `[a-z][A-Z]` OCR prefix artifacts like `jA` (`¡A`)
+    .replace(/(?<![.\d\n])[ \t]*\.[ \t]+(?=[a-zà-ÿ](?:[a-zà-ÿ \t,.;:?!]|$))/g, ' ')
+    .replace(/[ \t]+\.(?=[a-zà-ÿ](?:[a-zà-ÿ \t,.;:?!]|$))/g, ' ')
+    // Remove stray single period after short prepositions/determiners before capitalized noun (`al. Venerable`)
+    .replace(
+      /\b(al|del|el|la|los|las|un|una|en|de|por|para|con|sin|mi|tu|su)\.[ \t]+(?=[A-ZÀ-Þ])/g,
+      '$1 ',
+    )
+    // Remove stray leading dot at paragraph start (`. —Me parece`, `. -; Escúchame`, `. También`)
+    .replace(/(^|\n\n)\.[ \t]*/g, '$1')
+    // Collapse doubled colons (`::` -> `:`)
+    .replace(/:{2,}/g, ':')
+    // Leading dialogue line where `—` was misread as `S `, `: `, `.--`, or `-;`
+    .replace(/(^|\n\n)[S:]\s+(?=[A-ZÀ-Þ][a-zà-ÿ]+\s*[-—]\s*le\s+dijo)/g, '$1—')
+    .replace(/(^|\n\n)\.?--+\s*(?=[¡¿«A-ZÀ-Þa-zà-ÿ])/g, '$1—')
+    .replace(/(^|\n\n):\s*(?=[A-ZÀ-Þ][a-zà-ÿ]+[^?!\n]*!)/g, '$1—¡')
+    .replace(/(^|\n\n)[-—]+\s*;\s*(?=[A-ZÀ-Þa-zà-ÿ][^?!\n]*!)/g, '$1—¡')
+    .replace(/(^|\n\n)[-—]+\s*[;:]\s*(?=[A-ZÀ-Þa-zà-ÿ][^?!\n]*\?)/g, '$1—¿')
+    // Restore missing leading `—` on dialogue paragraph after speaker colon (`A lo que Siddhartha respondió:\n\n—Siempre creí`)
+    .replace(
+      /((?:dijo|respondi[oó]|replic[oó]|repuso|contest[oó]|pregunt[oó]|exclam[oó]|murmur[oó]|ley[oó]|habl[oó]|prosigui[oó]|entonces|Siddhartha|Govinda):\n\n)(?=[A-ZÀ-Þ¡¿])/g,
+      '$1—',
+    )
+    // Restore missing leading `—` on paragraph that contains an internal `—preguntó` / `—dijo` / `—repuso` attribution
+    .replace(
+      /(^|\n\n)(?=[¡¿A-ZÀ-Þ][^\n]*?\s—(?:pregunt[oó]|dijo|repuso|replic[oó]|contest[oó]|exclam[oó]|respondi[oó])(?![A-Za-zÀ-ÿ]))/g,
+      '$1—',
+    )
+    // Convert internal `--` before word (`Así --y esto`) to `—`
+    .replace(/\s+--(?=[A-Za-zÀ-ÿ])/g, ' —')
+    // Word-internal parenthetical em-dashes (`Govinda-preguntó`, `Si-pensó`, `Lo sé-respondió`, `aguas-replicó Siddhartha—`)
+    .replace(
+      /([A-Za-zÀ-ÿ¡!¿?])\s*[-—]\s*((?:pens[oó]|dijo|replic[oó]|repuso|pregunt[oó]|contest[oó]|exclam[oó]|murmur[oó]|respondi[oó]|a[ñn]adi[oó]|grit[oó]|susurr[oó]|habl[oó]|continu[oó]|le\s+dijo|le\s+susurr[oó]|y\s+a[uú]n|en\s+el\s+curso)(?![A-Za-zÀ-ÿ]))/gi,
       '$1 —$2',
     )
-    .replace(/\b(Govinda|Siddhartha)(dijo|replic[oó]|repuso|pregunt[oó]|contest[oó]|exclam[oó]|murmur[oó])—/g, '$1 —$2—')
+    .replace(/\b(Govinda|Siddhartha)(dijo|replic[oó]|repuso|pregunt[oó]|contest[oó]|exclam[oó]|murmur[oó]|respondi[oó])—/g, '$1 —$2—')
     .replace(/([A-Za-zÀ-ÿ])—(?=[A-Za-zÀ-ÿ])/g, '$1 —')
-    // Fix `«Si —pensó` -> `«Sí —pensó` and `¡Si,` -> `¡Sí,` and `Pero si sé` -> `Pero sí sé`
-    .replace(/([«¡])\s*Si(?=\s*[-—,.;:!?\s])/g, '$1Sí')
+    // Parenthetical `- ... -` or `— ... -` in Spanish prose -> `—...—`
+    .replace(/\s+-(?=que\s+además\b[^-\n]+-\s)/g, ' —')
+    .replace(/(?<=que\s+además\b[^-\n]+)-\s+/g, '— ')
+    .replace(/([a-zà-ÿ])\s*[-—]\s*([a-zà-ÿ]+(?:\s+[a-zà-ÿ]+){1,4})\s*[-—]\s*(?=[a-zà-ÿ])/g, '$1 —$2— ')
+    .replace(/(—[A-Za-zÀ-ÿ]+(?:\s+[A-Za-zÀ-ÿ]+){0,4})-\s+(?=[a-zà-ÿ])/g, '$1— ')
+    .replace(/(\?\s+)(?=pregunt[oó]\s+[A-Za-zÀ-ÿ])/g, '$1—')
+    // Subjunctive `como si ... quedaran` vs future `quedarán`
+    .replace(/\b(como\s+si(?:\s+(?:te|le|les|nos|se|me))?\s+)quedarán\b/gi, '$1quedaran')
+    .replace(/\bte\s+bastaran\s+para\b/g, 'te bastarán para')
+    .replace(/\by\s+veras\s+que\b/g, 'y verás que')
+    .replace(/\bcon\s+unas\s+y\s+dientes\b/g, 'con uñas y dientes')
+    .replace(/\b(Las|las|Unas|unas)\s+criticas\b/g, '$1 críticas')
+    .replace(/\b(el|del)\s+calculo\b/gi, '$1 cálculo')
+    .replace(/\bpero\s+si\s+a\s+si\s+mismo\b/gi, 'pero sí a sí mismo')
+    .replace(/\b(puesto|poner|los|las|sus|mis|tus|sin)\s+limites\b/gi, '$1 límites')
+    .replace(/\bsi\s+que\s+(?=resulta|es\b|son\b|tiene|hay\b|está|están|puede)/gi, m =>
+      m[0] === 'S' ? 'Sí que ' : 'sí que ',
+    )
+    .replace(/;\s+cuantos\s+(?=[a-zà-ÿ]+,\s+tras\b)/g, '; cuántos ')
+    .replace(/\bayer,\s+mucosidad\s+mañana,\s+momia\b/g, 'ayer, mucosidad; mañana, momia')
+    .replace(/\bfugaz\s+intervalo\s+el\s+destino\b/g, 'fugaz intervalo; el destino')
+    .replace(
+      /\b(41\.\s+)(Eres\s+una\s+pobre\s+alma\s+con\s+un\s+cadáver\s+a\s+cuestas)(,\s+como\s+decía\s+Epicteto\.)/g,
+      '$1*$2*$3',
+    )
+    // Fix `[Aa]o tras año` -> `Año tras año`
+    .replace(/\b([Aa])o\s+tras\s+a[ñnf]o\b/g, (_, c: string) =>
+      c === 'A' ? 'Año tras año' : 'año tras año',
+    )
+    // Fix `año` where OCR misread `¿no` before a verb in a question (`Dime, amigo, año deberíamos ... ?`)
+    .replace(
+      /\baño\s+(?=(?:deber[ií]amos|es\b|son\b|est[aá]|hemos|has\b|habr|ser[aá]|ser[ií]a|crees|te\b|se\b|le\b|nos\b|podr|pued)[^?!\n]*\?)/gi,
+      '¿no ',
+    )
+    // Fix `«Si —pensó` -> `«Sí —pensó`, `¡Si,` -> `¡Sí,`, `—Si,` -> `—Sí,`, `; si,` -> `; sí,`, `puede que si` -> `puede que sí`, `pero si sé` -> `pero sí sé`
+    // Never turn conditional `Si yo`, `Si una`, or `Si, por ejemplo,` into `Sí`
+    .replace(
+      /([«¡—]|\.\s+|;\s*)\s*Si(?=\s*[-—,.;:!?»])(?!,\s+por\s+ejemplo\b)/g,
+      '$1Sí',
+    )
+    .replace(/(;\s*)si(?=,)/g, '$1sí')
+    .replace(/\b(He\s+tenido\s+ideas,\s+|puede\s+que\s+)si(?=[.,;:?!»\s])/gi, '$1sí')
     .replace(/\bPero\s+si\s+s[eé](?![A-Za-zÀ-ÿ])/g, 'Pero sí sé')
-    // Reflexive `sí mismo` and prepositional `de mí` / `a mí` / `en mí`
-    .replace(/\b(para|en|a|por|contra|sobre|de)\s+si\s+mism([oa]s?)\b/gi, '$1 sí mism$2')
-    .replace(/\b(burla|habla|piensa|dentro|cerca|lejos|detrás|delante|alrededor)\s+de\s+mi(?=[.,;:?!»\s])/gi, '$1 de mí')
-    .replace(/\b(en|a|para|por|contra|sin)\s+mi(?=[.,;:?!»])/gi, '$1 mí')
-    // Subject pronoun `tú` in unambiguous contexts
+    // Fix comma misread for period before capitalized sentence starter after vocative (`señor, Cuando` -> `señor. Cuando`)
+    .replace(
+      /\b(señor|amigo|Govinda|Siddhartha),\s+(?=(?:Cuando|Pero|Mas|No|En|El|La|Los|Las|Un|Una|Todo|Cada|Siempre|Nunca)\b)/g,
+      '$1. ',
+    )
+    // Fix `hacia esfuerzos` -> `hacía esfuerzos` and `burlona acaso, sabía, múltiple` -> `burlona acaso, sabia, múltiple`
+    .replace(
+      /\bhacia\s+(esfuerzos|falta|tiempo|mucho|poco|fr[ií]o|calor)\b/gi,
+      'hacía $1',
+    )
+    .replace(/\bburlona\s+acaso,\s+sabía,/g, 'burlona acaso, sabia,')
+    // Reflexive `sí mismo` / `en sí` / `entre sí` and prepositional `de mí` / `a mí` / `en mí` / `hacia mí` / `por mí`
+    .replace(/\b(para|en|a|por|contra|sobre|de|hacia|entre)\s+si\s+mism([oa]s?)\b/gi, '$1 sí mism$2')
+    .replace(/\bentre\s+si(?=[,.;:?!»\s])/g, 'entre sí')
+    .replace(/\b(lleva|contiene|encierra)\s+en\s+si\b/gi, '$1 en sí')
+    .replace(/\b(burla|habla|piensa|dentro|cerca|lejos|detrás|delante|alrededor|sepa|aprender)\s+de\s+mi(?=[.,;:?!»\s])/gi, '$1 de mí')
+    .replace(/\b(en|a|para|por|contra|sin|hacia)\s+mi(?=[.,;:?!»—\s]+\b(?:mismo|misma|le\s+|y\s+ahora\b)|[.,;:?!»—])/gi, '$1 mí')
+    // Subject pronoun `tú` and 3rd-person sacred `Él` in unambiguous contexts
     .replace(/\bcomo\s+tu\s+(dices|crees|piensas|sabes|quieres)\b/gi, 'como tú $1')
     .replace(/\by\s+tu\s+y\s+yo\b/gi, 'y tú y yo')
-    // Verb `está` + `en todas partes` / `en mí` / `allí` / `aquí`
-    .replace(/\bque\s+esta\s+en\b/g, 'que está en')
+    .replace(/\bmás\s+que\s+tu\s+y\s+que\s+yo\b/gi, 'más que tú y que yo')
+    .replace(/\bde\s+El,\s+el\b/g, 'de Él, el')
+    .replace(/\b(cree|también|También)\s+en\s+El(?=[,.;:?!»\s])/g, '$1 en Él')
+    .replace(/\bpodr[ií]a\s+El\s+ignorar\b/g, 'podría Él ignorar')
+    .replace(/(^|\n\n|[.!?]\s+)El,\s+que\s+supo\b/g, '$1Él, que supo')
+    .replace(/\bcomo\s+El\s+hab[ií]a\s+sonre[ií]do\b/g, 'como Él había sonreído')
+    // Verb `está` + adjective/adverb (`está perfectamente`, `ya está ahí`, `que está en`, `ya está muerto`, `no está en`)
+    .replace(
+      /\b(que\s+|ya\s+|no\s+|tambi[eé]n\s+|a[uú]n\s+|todav[ií]a\s+|siempre\s+)esta\s+(?=(?:en\b|ah[ií]|aqu[ií]|all[ií]|muerto|muerta|vivo|viva|bien|mal|presente|ausente|solo|sola|seguro|segura|dispuesto|dispuesta|obligado|obligada|motivado|motivada)(?![A-Za-zÀ-ÿ]))/g,
+      '$1está ',
+    )
+    .replace(/\besta\s+perfectamente\b/g, 'está perfectamente')
+    .replace(/\bcuando\s+ata[ñn]e\s+al\s+ser\s+humano\b/g, 'cuanto atañe al ser humano')
     // Preterite speech verbs after subject (`Govinda contestó:`, `Govinda replicó:`, `Siddhartha contestó`)
     .replace(/\b(Govinda|Siddhartha)\s+contesto(?![A-Za-zÀ-ÿ])/g, '$1 contestó')
     .replace(/\b(Govinda|Siddhartha)\s+replico(?![A-Za-zÀ-ÿ])/g, '$1 replicó')
     // Common OCR glued/truncated tokens
     .replace(/\balos\s+(?=[a-zà-ÿ])/g, 'a los ')
+    .replace(/\bdadoescuchar\b/g, 'dado escuchar')
     .replace(/\bun\s+feli\s+augurio\b/g, 'un feliz augurio')
-    .replace(/\bque\s+poco\s+sab[ií]a(?![A-Za-zÀ-ÿ])/g, 'qué poco sabía')
-    // Fix context-sensitive Spanish words (`las unas` -> `las uñas`, `aun lo sigo` -> `aún lo sigo`, etc.)
+    // Fix context-sensitive Spanish words (`las unas` -> `las uñas`, `aun lo sigo` -> `aún lo sigo`, `mas` -> `más`)
     .replace(/\blas\s+(?:unas|ufas)\b/gi, m => (m[0] === 'L' ? 'Las uñas' : 'las uñas'))
     .replace(/\by\s+aun\b/gi, 'y aún')
     .replace(
-      /\baun\s+(?=(?:lo|la|los|las|le|les|me|te|se|nos|os|sigo|sigue|queda|quedan|no|más|mas|así|asi|cuando)(?![A-Za-zÀ-ÿ]))/gi,
+      /\baun\s+(?=(?:lo|la|los|las|le|les|me|te|se|nos|os|sigo|sigue|queda|quedan|no|más|mas|cuando)(?![A-Za-zÀ-ÿ]))/gi,
       m => (m[0] === 'A' ? 'Aún ' : 'aún '),
     )
     .replace(
-      /\b(el|la|lo|los|las|nunca|nada|nadie|mucho|poco|algo|vez|por|no\s+ser|no\s+era|piensa|cuanto|tanto|a[uú]n|sin)\s+mas(?![A-Za-zÀ-ÿ])/gi,
+      /\b(el|la|lo|los|las|nunca|nada|nadie|mucho|poco|algo|vez|por|no\s+ser|no\s+era|piensa|cuanto|tanto|a[uú]n|sin|ser|al|pensamientos|parecen|a[ñn]os|d[ií]as|veces|horas|meses|siglos|asunto)\s+mas(?![A-Za-zÀ-ÿ])/gi,
       (_, prefix: string) => `${prefix} más`,
     )
     .replace(
-      /\bmas\s+(?=(?:de\s+lo|bien\b|vale\b|anciano|anciana|joven|jóvenes|all[aá]\b|tarde\b|f[aá]cil|dif[ií]cil|grande|peque[ñn]|alto|bajo|lejos|cerca|pronto|profund|íntimo|intimo|adelante|arriba|abajo|tiempo))/gi,
+      /\bmas\s+(?=(?:de\s+lo|bien\b|vale\b|anciano|anciana|joven|jóvenes|all[aá]\b|tarde\b|f[aá]cil|dif[ií]cil|grande|peque[ñn]|alto|bajo|lejos|cerca|pronto|profund|íntimo|intimo|adelante|arriba|abajo|tiempo|solo\b|posesionado|sagrado|importante|contradictorio|todav[ií]a|querid[oa]|generos[oa]|secret[oa]))/gi,
       m => (m[0] === 'M' ? 'Más ' : 'más '),
     )
     .replace(
-      /([¿¡]?Qu[eé]|qu[eé]|meta|eso|esto|no|todo)\s+seria(?![A-Za-zÀ-ÿ])/g,
+      /([¿¡]?Qu[eé]|qu[eé]|meta|eso|esto|no|todo|me|te|le|nos)\s+seria(?![A-Za-zÀ-ÿ])/g,
       (_, prefix: string) => `${prefix} sería`,
     )
     .replace(
-      /\bseria\s+(?=(?:de\s+la|entonces|llegar|un|una|el|la|mejor|peor|posible|imposible|inútil|cuerdo)(?![A-Za-zÀ-ÿ]))/gi,
+      /\bseria\s+(?=(?:de\s+la|entonces|tambi[eé]n|llegar|un|una|el|la|mejor|peor|posible|imposible|inútil|cuerdo|dif[ií]cil|f[aá]cil)(?![A-Za-zÀ-ÿ]))/gi,
       m => (m[0] === 'S' ? 'Sería ' : 'sería '),
-    )
-    .replace(/\bde\s+El,\s+el\b/g, 'de Él, el');
+    );
 
-  // Restore missing opening `¿` ONLY on the actual question clause (never crossing `.`, `;`, or `:`)
+  // Restore missing opening `¿` and fix misread `:`, `;`, `c`, `s` before questions
   out = out
+    // `—,: crees ... ?` or `—,: qué ... ?` or `, : a qué ... ?` — colon right after another punctuation mark before a question is ALWAYS `¿`
+    .replace(/([,;.?!—«])\s*:\s*(?=[A-ZÀ-Þa-zà-ÿ][^?!.\n]*\?)/g, '$1 ¿')
+    // `. ; En qué ... ?` or `? ; Entregarme ... ?` -> `. ¿En qué ... ?`
+    .replace(/([.!?…])\s*;\s*(?=[A-ZÀ-Þ][^?!.\n]*\?)/g, '$1 ¿')
+    // `Pero: no has ... ?`, `Entonces: por qué ... ?`, `pues: quién ... ?`, `Porque; cual ... ?`
+    .replace(/\b(Pero|Entonces|Pues|Porque|pues|pero|entonces|porque)\s*[:;]\s*(?=[a-zà-ÿ][^?!.\n]*\?)/g, '$1 ¿')
+    // `dime: qué es ... ?` or `pregunta: qué hay ... ?` or `inmortal: qué te ... ?` -> `: ¿qué ... ?`
+    .replace(/(\bdime:\s*)(?=[A-ZÀ-Þa-zà-ÿ][^?!.\n]*\?)/gi, '$1¿')
     .replace(
-      /([,;:—«])\s*:\s*(?=(?:qu[eé]|c[oó]mo|d[oó]nde|cu[aá]ndo|qui[eé]n|cu[aá]l|cu[aá]nt[oa]s?|por\s+qu[eé])\b[^.?!\n:;]*\?)/gi,
-      '$1 ¿',
+      /(:\s+)(?=(?:qu[eé]|c[oó]mo|d[oó]nde|cu[aá]ndo|qui[eé]n|cu[aá]l|cu[aá]nt[oa]s?|por\s+qu[eé]|para\s+qu[eé]|en\s+qu[eé]|de\s+qu[eé]|a\s+qu[eé])(?=\s)[^.?!\n]*\?)/gi,
+      '$1¿',
     )
+    // Leading `s` or `c` glued to question word (`spara qué` -> `¿para qué`, `cpodrías` -> `¿podrías`)
     .replace(
-      /(^|\n\n|[.!?…»]\s+|—\s*|«\s*|:\s+)(?=(?:Qu[eé]|C[oó]mo|D[oó]nde|Cu[aá]ndo|Qui[eé]n|Cu[aá]l|Cu[aá]nt[oa]s?|Por\s+qu[eé]|Crees\b|Podr[aá]\b|Estaremos\b|Alcanzaremos\b|No\s+seguiremos\b|No\s+deber[ií]amos\b|Y\s+no\s+me\s+dijiste\b)[^.?!\n:;]*\?)/gm,
+      /\b[cs](?=(?:para|por|podr[ií]a|pued[ae]|qu[eé]|c[oó]mo|cu[aá]n|d[oó]nde|qui[eé]n)[a-zà-ÿ]*[^?!.\n]*\?)/gi,
+      '¿',
+    )
+    // `«cosas»: es acaso ... ?` or `río: son en verdad realidades?` — colon before verb in a question where `¿` was misread as `:`
+    .replace(
+      /([»a-zà-ÿ])\s*:\s*(?=(?:es\b|son\b|est[aá]|puede|podr[aá]|habr[aá]|ser[aá]|tiene|hay|no\b|acaso\b)[^.?!\n]*\?)/g,
+      '$1, ¿',
+    )
+    // Single-sentence dialogue line ending in `?` (or `? —preguntó ...`) without internal `—` parenthetical before `?`
+    .replace(
+      /^(—\s*)(?=(?!Dime\b|Mira\b|Escucha\b|Oye\b)[A-ZÀ-Þ][a-zà-ÿ]+[^.?!\n:—]*\?)/gm,
+      '$1¿',
+    )
+    .replace(/^(—¿)Estas\s+bromeando\?/gm, '$1Estás bromeando?')
+    .replace(
+      /(^|\n\n|[.!?…»]\s+|—\s*|«\s*|:\s+)(?=(?:Qu[eé]|C[oó]mo|D[oó]nde|Cu[aá]ndo|Qui[eé]n|Cu[aá]l|Cu[aá]nt[oa]s?|Por\s+qu[eé]|Para\s+qu[eé]|En\s+qu[eé]|O\s+acaso\b|Acaso\b|Pretendes\b|Crees\b|Podr[aá]\b|Estaremos\b|Alcanzaremos\b|No\s+seguiremos\b|No\s+deber[ií]amos\b|Y\s+no\s+me\s+dijiste\b|Y\s+qué\s+es\b)[^.?!\n:;]*\?)/gm,
       '$1¿',
     )
     .replace(
-      /(—,\s*|,\s+)(?=(?:qu[eé]\s+(?:quedar[ií]a|ser[ií]a|edad|es\b|significa)|c[oó]mo\s+(?:saber|es\s+posible|habr[ií]as|la\s+doctrina)|no\s+deber[ií]amos|crees\s+que)\b[^.?!\n:;]*\?)/g,
+      /(^|\n\n)(\d{1,3}\.\s+)(?=[A-ZÀ-Þ][a-zà-ÿ]+[^.?!\n:—«»]*\?»)/gm,
+      '$1$2«¿',
+    )
+    .replace(
+      /(^|\n\n)(\d{1,3}\.\s+)(?=[A-ZÀ-Þ][a-zà-ÿ]+[^.?!\n:—«»]*\?)/gm,
+      '$1$2¿',
+    )
+    .replace(
+      /(—,\s*|,\s+)(?=(?:qu[eé]\s+(?:quedar[ií]a|ser[ií]a|edad|es\b|significa|idioma)|c[oó]mo\s+(?:saber|es\s+posible|habr[ií]as|la\s+doctrina)|no\s+deber[ií]amos|crees\s+que)\b[^.?!\n:;]*\?)/g,
       '$1¿',
     )
-    .replace(/(^|\n\n|[.!?]\s+|—\s*)Pero\s+(?=no\s+se\s+ha\s+despertado[^.?!\n:;]*\?)/gm, '$1Pero ¿')
+    .replace(/(^|\n\n|[.!?]\s+|—\s*)Pero\s+(?=no\s+(?:se\s+ha\s+despertado|has\s+encontrado)[^.?!\n:;]*\?)/gm, '$1Pero ¿')
     .replace(/([.?!]\s+)(?=De\s+modo,\s+querido\s+amigo,\s+que\s+ahora[^.?!\n:;]*\?)/g, '$1¿')
+    // Remove duplicate nested `¿` inside the same question (`¿Y crees tú, samana forastero, ¿crees que`)
+    .replace(/(¿[^?!\n]*?,\s*)¿(?=[a-zà-ÿ])/g, '$1')
     // Fix accented interrogative pronouns right after `¿` (both uppercase and lowercase)
     .replace(/¿(C|c)uanto(?=\s)/g, '¿$1uánto')
     .replace(/¿(C|c)uanta(?=\s)/g, '¿$1uánta')
@@ -533,17 +983,36 @@ export const polishSpanishProse = (s: string): string => {
     .replace(/¿(C|c)uando(?=\s)/g, '¿$1uándo')
     .replace(/¿(Q|q)uien(?=\s)/g, '¿$1uién')
     .replace(/¿(C|c)ual(?=\s)/g, '¿$1uál')
-    // Restore missing opening `¡` on exclamatory clauses ending in `!`
+    // Restore missing opening `¡` and fix `(`, `;`, `i`, `j`, `¿` before exclamations ending in `!`
+    .replace(/\(\s*(?=[^()\n!]*!)/g, '¡')
+    .replace(/([.!?:—])\s*;\s*(?=[A-ZÀ-Þ¡][^!?\n]*!)/g, '$1 ¡')
+    .replace(/¿(?=[^?!\n]*!)/g, '¡')
+    .replace(/¡Más\s+cu[ií]date\b/g, '¡Mas cuídate')
+    .replace(/(^|\n\n|—)\s*i(?=[A-ZÀ-Þ][a-zà-ÿ]*[^!\n]*!)/g, '$1¡')
+    .replace(
+      /\b[ij](?=(?:A\s+nadie|nada\s+hay|ya\s+no|hombre\s+perfecto|intentar[eé]|el\s+miedo|este\s+es\s+un\s+santo)[^!\n]*!)/g,
+      '¡',
+    )
     .replace(
       /(^|\n\n|[.!?…»]\s+|—\s*|«\s*)(?=(?:Oh\b|Ojal[aá]\b|S[ií],\s+Govinda|Gocemos\b)[^.!\n]*!)/gm,
       '$1¡',
     )
     .replace(/¡Si,/g, '¡Sí,')
-    // Restore leading dialogue dash `—` on paragraphs immediately following a speech-intro paragraph ending in `:`
-    .replace(/(:\n\n)(?=[¡¿A-ZÀ-Þ])/g, '$1—')
-    // Close missing `«` before `Upanishad»` or `Vedas»`
+    .replace(/»\s+(?=Solo\s+he\s+visto)/g, '»')
+    // Close missing `«` before `Upanishad»` or `Vedas»` and before capitalized quotes ending in `»`
     .replace(/\bun\s+(?=Upanishad»)/g, 'un «')
     .replace(/\bsagrados\s+(?=Vedas»)/g, 'sagrados «')
+    .replace(
+      /([.!?]\s+|:\s+)(?=(?:Soy\s+(?:un\s+)?(?:desdichad[oa]|dichos[oa])|Me\s+levanto\s+para|Te\s+matan,\s+te\s+despedazan)[^«»\n]*»)/g,
+      '$1«',
+    )
+    .replace(/«[ \t]+/g, '«')
+    .replace(/[ \t]+»/g, '»')
+    // Restore missing leading `—` on paragraph that contains an internal `—preguntó` / `—dijo` / `—repuso` attribution
+    .replace(
+      /(^|\n\n)(?=[¡¿A-ZÀ-Þ][^\n]*?[ \t]—(?:pregunt[oó]|dijo|repuso|replic[oó]|contest[oó]|exclam[oó]|respondi[oó])(?![A-Za-zÀ-ÿ]))/g,
+      '$1—',
+    )
     .replace(/¿+/g, '¿')
     .replace(/¡+/g, '¡');
 

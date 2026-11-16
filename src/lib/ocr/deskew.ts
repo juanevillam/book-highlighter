@@ -107,3 +107,37 @@ export function rotateRgba(img: Rgba, deg: number): Rgba {
   }
   return { data: out, width: w, height: h };
 }
+
+/** Rotate 90° clockwise (`width × height` → `height × width`) when a top-down photo was tagged landscape. */
+export function rotate90Cw(img: Rgba): Rgba {
+  const { width: w, height: h, data } = img;
+  const out = new Uint8ClampedArray(w * h * 4);
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const src = (y * w + x) * 4;
+      const dst = (x * h + (h - 1 - y)) * 4;
+      out[dst] = data[src];
+      out[dst + 1] = data[src + 1];
+      out[dst + 2] = data[src + 2];
+      out[dst + 3] = data[src + 3];
+    }
+  }
+  return { data: out, width: h, height: w };
+}
+
+/** Rotate 90° counter-clockwise (`width × height` → `height × width`). */
+export function rotate90Ccw(img: Rgba): Rgba {
+  const { width: w, height: h, data } = img;
+  const out = new Uint8ClampedArray(w * h * 4);
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const src = (y * w + x) * 4;
+      const dst = ((w - 1 - x) * h + y) * 4;
+      out[dst] = data[src];
+      out[dst + 1] = data[src + 1];
+      out[dst + 2] = data[src + 2];
+      out[dst + 3] = data[src + 3];
+    }
+  }
+  return { data: out, width: h, height: w };
+}

@@ -3,6 +3,7 @@ import { jsPDF } from 'jspdf';
 import { type Book, type BookBody } from '../books';
 import { formatYear } from './bookFields';
 import { genreLabel } from './genres';
+import { parseHighlightSegments } from './paginator';
 import {
   COVER_FETCH_WIDTH,
   readerSections,
@@ -494,25 +495,35 @@ const buildSingleBookPdf = async (
 
     if (section.kind === 'highlights' && section.highlights) {
       for (const hl of section.highlights) {
-        const quoted = `“${hl.text.trim()}”`;
-        const lines = splitPdfLines(
-          doc,
-          quoted,
-          CONTENT_W,
-          'times',
-          'normal',
-          bodySize,
-        );
-        for (const line of lines) {
-          ensureSpace(bodyStep);
-          drawTextLine(doc, line, MARGIN_SIDE, cursorY, {
-            font: 'times',
-            style: 'normal',
-            size: bodySize,
-            rgb: textRgb,
-            hex: palette.text,
-          });
-          cursorY += bodyStep;
+        const segments = parseHighlightSegments(hl.text);
+        for (let segIdx = 0; segIdx < segments.length; segIdx++) {
+          const seg = segments[segIdx];
+          if (segIdx > 0) {
+            cursorY += seg.tightWithPrev ? 2 * fontScale : 7 * fontScale;
+          }
+          const pdfStyle = seg.italic ? 'italic' : 'normal';
+          const lines = splitPdfLines(
+            doc,
+            seg.text,
+            CONTENT_W,
+            'times',
+            pdfStyle,
+            bodySize,
+          );
+          for (const line of lines) {
+            ensureSpace(bodyStep);
+            const drawX =
+              seg.align === 'right' ? PAGE_W - MARGIN_SIDE : MARGIN_SIDE;
+            drawTextLine(doc, line, drawX, cursorY, {
+              font: 'times',
+              style: pdfStyle,
+              size: bodySize,
+              rgb: textRgb,
+              hex: palette.text,
+              align: seg.align,
+            });
+            cursorY += bodyStep;
+          }
         }
 
         if (hl.page) {

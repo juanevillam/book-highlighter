@@ -317,7 +317,7 @@ describe('photoImport (clean, assemble, sticky span, TOC & 5-signal paragraphs)'
       pageNumber: 26,
       flags: [{ side: 'L', shape: 'bar', y: 215, lineIndex: 2 }],
       lines: [
-        { text: '—El puro de espíritu que, meditando, se sumerja', x1: 135, y1: 100, x2: 880, y2: 124 },
+        { text: 'El puro de espíritu que, meditando, se sumerja', x1: 135, y1: 100, x2: 880, y2: 124 },
         { text: '[en el Atmán,', x1: 680, y1: 135, x2: 890, y2: 159 }, // hanging right-aligned continuation
         { text: 'sentirá en su corazón una alegría inefable.', x1: 100, y1: 170, x2: 720, y2: 194 },
       ],
@@ -334,7 +334,11 @@ describe('photoImport (clean, assemble, sticky span, TOC & 5-signal paragraphs)'
       [
         'En el camino, Siddhartha regaló su túnica a un brahmán pobre. Una tortura era la vida.',
         'Solo una meta se perfilaba ante Siddhartha: quedarse vacío.',
-        '—El puro de espíritu que, meditando, se sumerja [en el Atmán, sentirá en su corazón una alegría inefable.',
+        [
+          '*El puro de espíritu que, meditando, se sumerja*',
+          '                                  *[en el Atmán,*',
+          '*sentirá en su corazón una alegría inefable.*',
+        ].join('\n'),
       ].join('\n\n'),
     );
   });

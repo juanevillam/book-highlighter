@@ -15,6 +15,9 @@ const appVersion = (
 export default defineConfig({
   plugins: [react()],
   define: { __APP_VERSION__: JSON.stringify(appVersion) },
+  optimizeDeps: {
+    include: ['onnxruntime-web/wasm'],
+  },
   server: {
     host: true,
     allowedHosts: true,

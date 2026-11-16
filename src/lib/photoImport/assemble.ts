@@ -47,7 +47,7 @@ export type DraftBook = {
 };
 
 const SENTENCE_END = /[.!?…:»”"]\s*$|[.!?…][»”"—.]*\s*$/;
-const HYPHEN_END = /[A-Za-zÀ-ÿ«][-‐‑\u00ad]$/;
+const HYPHEN_END = /[A-Za-zÀ-ÿ«][-‐‑\u00ad]["'”»]?\s*$/;
 const LOWER_START = /^[[«"“']?[a-zà-ÿ]/;
 
 let seq = 0;
@@ -70,9 +70,30 @@ const median = (xs: number[]) => {
   return s[Math.floor(s.length / 2)];
 };
 
-/** Fill missing numbers and fix misreads (`52` read as `2`, `27` read as `2`) from the neighbours. */
-export function repairPageNumbers(pages: PageAnalysis[]): (number | null)[] {
-  const nums = pages.map(p => (p.kind === 'page' ? p.pageNumber : null));
+const normHeading = (s: string) =>
+  s
+    .trim()
+    .toLowerCase()
+    .replace(/\b([ivxlcdm]*)[l|]([ivxlcdm]*)\b/g, (_, a, b) => `${a}i${b}`)
+    .replace(/\s+/g, ' ');
+
+/** Fill missing numbers and fix misreads (`52` read as `2`, `27` read as `2`) from the neighbours and TOC. */
+export function repairPageNumbers(pages: PageAnalysis[], toc?: TocEntry[]): (number | null)[] {
+  const tocList =
+    toc ??
+    pages
+      .filter(p => p.kind === 'index')
+      .flatMap(p => p.toc);
+  const nums = pages.map(p => {
+    if (p.kind !== 'page') return null;
+    if (p.pageNumber !== null) return p.pageNumber;
+    if (p.headingIndex !== null && p.lines[p.headingIndex]) {
+      const h = normHeading(p.lines[p.headingIndex].text);
+      const match = tocList.find(e => normHeading(e.title) === h);
+      if (match) return match.page;
+    }
+    return null;
+  });
   const isPage = pages.map(p => p.kind === 'page');
   const prevKnown = (i: number) => {
     for (let j = i - 1; j >= 0; j--) if (isPage[j]) return nums[j] === null ? null : nums[j]! + (i - j);
@@ -80,7 +101,7 @@ export function repairPageNumbers(pages: PageAnalysis[]): (number | null)[] {
   };
   const nextKnown = (i: number) => {
     for (let j = i + 1; j < pages.length; j++)
-      if (isPage[j] && pages[j].pageNumber !== null) return pages[j].pageNumber! - (j - i);
+      if (isPage[j] && nums[j] !== null) return nums[j]! - (j - i);
     return null;
   };
   for (let i = 0; i < pages.length; i++) {
@@ -89,7 +110,14 @@ export function repairPageNumbers(pages: PageAnalysis[]): (number | null)[] {
     const next = nextKnown(i);
     const cur = nums[i];
     if (cur === null) {
-      nums[i] = prev ?? next;
+      const fSides = new Set(pages[i].flags.map(f => f.side));
+      const fSide = fSides.size === 1 ? [...fSides][0] : null;
+      const matchesParity = (cand: number | null) =>
+        cand !== null && (fSide === null || (cand % 2 === 1 ? 'R' : 'L') === fSide);
+      const validPrev = matchesParity(prev) ? prev : null;
+      const validNext = matchesParity(next) ? next : null;
+      nums[i] =
+        pages[i].headingIndex !== null ? (validNext ?? validPrev) : (validPrev ?? validNext);
       continue;
     }
     const fitsPrev = prev !== null && cur === prev;
@@ -149,12 +177,23 @@ const endCut = (
     const t1 = lines[from + 1].text;
     const c1 = lineCut(t1, 0.25);
     if (c1 !== null) return { line: from + 1, cut: c1 };
-    return { line: from + 1, cut: null };
+    if ((SENTENCE_END.test(t1) && !HYPHEN_END.test(t1) && !nextLower(from + 1)) || from + 2 >= lines.length || !nextLower(from + 1)) {
+      return { line: from + 1, cut: null };
+    }
+    const t2 = lines[from + 2].text;
+    const c2 = lineCut(t2, 0.25);
+    return { line: from + 2, cut: c2 };
   }
   return { line: from, cut: null };
 };
 
-type Piece = { text: string; paraStart: boolean; endsShort: boolean };
+type Piece = {
+  text: string;
+  paraStart: boolean;
+  endsShort: boolean;
+  verse?: boolean;
+  verseAlign?: 'left' | 'right';
+};
 
 const pagePieces = (p: PageAnalysis, from: number, to: number): Piece[] => {
   const out: Piece[] = [];
@@ -170,49 +209,144 @@ const pagePieces = (p: PageAnalysis, from: number, to: number): Piece[] => {
   }
   const medPitch = median(pitches) || lh * 1.35;
 
+  const isHangingRight = (idx: number) => {
+    const l = p.lines[idx];
+    if (!l) return false;
+    return l.x1 - p.columnX1 > 0.38 * colW && /^[[(]\s*[A-Za-zÀ-ÿ]/.test(l.text);
+  };
+
+  const isHangingLeft = (idx: number) => {
+    const l = p.lines[idx];
+    if (!l) return false;
+    return /^\d{1,3}\.\s/.test(l.text) || p.columnX1 - l.x1 > 0.4 * lh;
+  };
+
+  // Detect verse stanzas (lines grouped around a right-aligned `[...` turnover line or stanza gap).
+  const verseLines = new Set<number>();
+  for (let i = 0; i < p.lines.length; i++) {
+    if (isHangingRight(i)) {
+      verseLines.add(i);
+      if (i > 0 && i - 1 !== p.headingIndex) verseLines.add(i - 1);
+      for (let j = i + 1; j < p.lines.length; j++) {
+        verseLines.add(j);
+        const next = p.lines[j + 1];
+        if (!next) break;
+        const dy = (next.y1 + next.y2) / 2 - (p.lines[j].y1 + p.lines[j].y2) / 2;
+        if (dy > 1.32 * medPitch || SENTENCE_END.test(p.lines[j].text)) break;
+      }
+    }
+  }
+
   for (let i = Math.max(0, from); i <= to && i < p.lines.length; i++) {
     if (i === p.headingIndex) continue;
     const l: PageLine = p.lines[i];
     const prev = i > 0 && i - 1 !== p.headingIndex ? p.lines[i - 1] : undefined;
 
-    // Right-aligned hanging poetic continuation (`[en el Atmán,`) is part of the same line/stanza.
-    const hangingRight = l.x1 - p.columnX1 > 0.42 * colW && /^[[(a-zà-ÿ]/.test(l.text);
-    const indented = !hangingRight && l.x1 - p.columnX1 > 0.65 * lh;
+    // Local column left/right margin in a sliding window so a 1–3° camera tilt never triggers false indents.
+    const winX1: number[] = [];
+    const winX2: number[] = [];
+    for (let w = Math.max(0, i - 4); w <= Math.min(p.lines.length - 1, i + 4); w++) {
+      if (w === p.headingIndex || isHangingRight(w) || isHangingLeft(w) || verseLines.has(w)) continue;
+      winX1.push(p.lines[w].x1);
+      if (p.lines[w].x2 - p.lines[w].x1 > 0.5 * colW) winX2.push(p.lines[w].x2);
+    }
+    winX1.sort((a, b) => a - b);
+    winX2.sort((a, b) => a - b);
+    const localX1 = winX1.length ? winX1[Math.floor(winX1.length * 0.2)] : p.columnX1;
+    const localX2 = winX2.length ? winX2[Math.floor(winX2.length * 0.8)] : p.columnX2;
+
+    const hangingRight = isHangingRight(i);
+    const verse = verseLines.has(i);
+    const indented = !hangingRight && !verse && l.x1 - localX1 > 0.72 * lh;
     const prevShort = prev
-      ? p.columnX2 - prev.x2 > 1.15 * lh && SENTENCE_END.test(prev.text)
+      ? localX2 - prev.x2 > 1.15 * lh && SENTENCE_END.test(prev.text)
       : false;
     const pitch = prev ? (l.y1 + l.y2) / 2 - (prev.y1 + prev.y2) / 2 : 0;
     const extraGap = prev ? pitch > 1.32 * medPitch : false;
     const dialogueStart = /^—/.test(l.text) && (prev ? SENTENCE_END.test(prev.text) : true);
-    const endsShort = p.columnX2 - l.x2 > 1.15 * lh && SENTENCE_END.test(l.text);
+    const sectionStart = /^\d{1,3}\.\s/.test(l.text);
+    const endsShort = !verse && localX2 - l.x2 > 1.15 * lh && SENTENCE_END.test(l.text);
 
     out.push({
       text: l.text,
-      paraStart: indented || prevShort || extraGap || dialogueStart,
-      endsShort,
+      paraStart:
+        indented ||
+        prevShort ||
+        extraGap ||
+        dialogueStart ||
+        sectionStart ||
+        (verse && !verseLines.has(i - 1)),
+      endsShort: endsShort || (verse && !verseLines.has(i + 1)),
+      verse,
+      verseAlign: hangingRight ? 'right' : 'left',
     });
   }
   return out;
 };
 
-export const joinPieces = (pieces: { text: string; paraStart: boolean; endsShort?: boolean }[]): string => {
+export const joinPieces = (
+  pieces: {
+    text: string;
+    paraStart: boolean;
+    endsShort?: boolean;
+    verse?: boolean;
+    verseAlign?: 'left' | 'right';
+  }[],
+): string => {
   let text = '';
   let prevEndedShort = false;
-  for (const { text: raw, paraStart, endsShort } of pieces) {
+  let prevVerse = false;
+  for (const { text: raw, paraStart, endsShort, verse, verseAlign } of pieces) {
     const t = raw.trim();
     if (!t) continue;
+    if (verse) {
+      const formattedVerse =
+        verseAlign === 'right' ? `                                  *${t}*` : `*${t}*`;
+      if (!text) {
+        text = formattedVerse;
+      } else if (prevVerse) {
+        text += `\n${formattedVerse}`;
+      } else {
+        text += `\n\n${formattedVerse}`;
+      }
+      prevEndedShort = Boolean(endsShort);
+      prevVerse = true;
+      continue;
+    }
+    const cleanTarget = t
+      .replace(/^\.\s*(?=[a-zà-ÿ])/, '')
+      .replace(/^[—–-]\s*(?=[a-zà-ÿ])/, '');
     if (!text) {
       text = t;
-    } else if (HYPHEN_END.test(text) && (LOWER_START.test(t) || /^[A-Za-zÀ-ÿ]+»/.test(t))) {
-      text = text.slice(0, -1) + t;
-    } else if ((paraStart || prevEndedShort) && SENTENCE_END.test(text)) {
+    } else if (prevVerse) {
+      text += `\n\n${t}`;
+    } else if (HYPHEN_END.test(text) && (LOWER_START.test(cleanTarget) || /^[A-Za-zÀ-ÿ]+»/.test(cleanTarget))) {
+      text = text.replace(/[-‐‑\u00ad]["'”»]?\s*$/, '') + cleanTarget;
+    } else if (
+      !prevEndedShort &&
+      /\b(?:desha|indi|em|in|im|sub|trans|pre|pro|anti|auto|contra|entre|sobre|super|ultra|vice|die)\.\s*$/i.test(
+        text,
+      ) &&
+      /^[a-zà-ÿ]/.test(cleanTarget)
+    ) {
+      text = text.replace(/\.\s*$/, '') + cleanTarget;
+    } else if (
+      !prevEndedShort &&
+      /[a-zà-ÿ]\.\s*$/.test(text) &&
+      /^(?:ron|cerse|ferente|virti[eé]ndol[oa]s?|plearl[oa]s?|mente|ci[oó]n|si[oó]n|ciones|siones|dad|dades|miento|mientos|ble|bles|ndo|ndose|ndole|ndoles|ndolo|ndola|ndolos|ndolas|ndome|ndote|ndonos|rse|rlo|rla|rlos|rlas|rle|rles|rme|rte|rnos)(?![a-zà-ÿ])/i.test(
+        cleanTarget,
+      )
+    ) {
+      text = text.replace(/\.\s*$/, '') + cleanTarget;
+    } else if ((paraStart || prevEndedShort) && SENTENCE_END.test(text) && !LOWER_START.test(t)) {
       text += `\n\n${t}`;
     } else {
       text += ` ${t}`;
     }
     prevEndedShort = Boolean(endsShort);
+    prevVerse = false;
   }
-  return polishSpanishProse(text.replace(/[ \t]{2,}/g, ' ').trim());
+  return polishSpanishProse(text.replace(/[ \t]{2,}/g, m => (m.length >= 16 ? m : ' ')).trim());
 };
 
 /**
@@ -241,10 +375,18 @@ const findParagraphEnd = (p: PageAnalysis, startLine: number): number => {
   const lh = p.lines.length
     ? p.lines.reduce((s, l) => s + (l.y2 - l.y1), 0) / p.lines.length
     : 20;
+  const bodyLines = p.lines.filter(l => !/^\d{1,3}\.\s/.test(l.text));
+  const bodyX1 = bodyLines.length ? median(bodyLines.map(l => l.x1)) : p.columnX1;
+  const isNumberedSection = /^\d{1,3}\.\s/.test(p.lines[startLine]?.text ?? '');
+
   for (let i = startLine; i < p.lines.length - 1; i++) {
     const cur = p.lines[i];
     const next = p.lines[i + 1];
-    const nextIndented = next.x1 - p.columnX1 > 0.65 * lh;
+    if (isNumberedSection) {
+      if (/^\d{1,3}\.\s/.test(next.text)) return i;
+      continue;
+    }
+    const nextIndented = next.x1 - bodyX1 > 0.65 * lh || /^\d{1,3}\.\s/.test(next.text);
     const curShort = p.columnX2 - cur.x2 > 1.15 * lh && SENTENCE_END.test(cur.text);
     if ((nextIndented || curShort) && SENTENCE_END.test(cur.text)) return i;
   }
@@ -288,7 +430,9 @@ export function findHighlightSpan(
       const startLine = snapStartLine(firstPage, uniqueLines[0]);
       const flag = flags[0];
       const endLine =
-        flag?.shape === 'L' ? findParagraphEnd(firstPage, startLine) : firstPage.lines.length - 1;
+        flag?.shape === 'L'
+          ? findParagraphEnd(firstPage, startLine)
+          : firstPage.lines.length - 1;
       return {
         start: { photo: firstIdx, line: startLine },
         end: { photo: firstIdx, line: endLine },
@@ -323,13 +467,113 @@ export function findHighlightSpan(
   };
 }
 
-/** The open/close marks across a batch of photos. */
+/** The open/close marks across a batch of photos (one or many highlights). */
 export function findMarks(
   pages: PageAnalysis[],
   nums: (number | null)[],
 ): { start: Mark; end: Mark }[] {
-  const span = findHighlightSpan(pages, nums);
-  return span ? [{ start: span.start, end: span.end }] : [];
+  const pageIdxs = pages
+    .map((p, i) => (p.kind === 'page' && p.lines.length > 0 ? i : -1))
+    .filter(i => i >= 0);
+  if (!pageIdxs.length) return [];
+
+  const marks: { start: Mark; end: Mark }[] = [];
+  const barPages = pages.map(p => ({ ...p, flags: [...p.flags] }));
+  const barPageIdxs: number[] = [];
+
+  for (let pos = 0; pos < pageIdxs.length; pos++) {
+    const pi = pageIdxs[pos];
+    const fl = outerFlags(pages[pi], nums[pi]);
+    const lFlags = fl.filter(f => f.shape === 'L');
+    const bFlags = fl.filter(f => f.shape !== 'L');
+
+    const prevPi = pos > 0 ? pageIdxs[pos - 1] : null;
+    const nextPi = pos + 1 < pageIdxs.length ? pageIdxs[pos + 1] : null;
+    const prevConsecutiveZero =
+      prevPi !== null &&
+      nums[prevPi] !== null &&
+      nums[pi] !== null &&
+      nums[pi] === nums[prevPi]! + 1 &&
+      outerFlags(pages[prevPi], nums[prevPi]).length === 0;
+    const nextConsecutiveZero =
+      nextPi !== null &&
+      nums[nextPi] !== null &&
+      nums[pi] !== null &&
+      nums[nextPi] === nums[pi]! + 1 &&
+      outerFlags(pages[nextPi], nums[nextPi]).length === 0;
+
+    // An L flag is a standalone single-unit highlight unless it is the sole flag on an endpoint of a 0-flag multi-page run.
+    const standaloneL =
+      lFlags.length >= 2 ||
+      (lFlags.length === 1 && bFlags.length >= 1) ||
+      (lFlags.length === 1 && !prevConsecutiveZero && !nextConsecutiveZero);
+
+    if (standaloneL) {
+      for (const lf of lFlags) {
+        const sLine = snapStartLine(pages[pi], lf.lineIndex);
+        const eLine = findParagraphEnd(pages[pi], sLine);
+        marks.push({
+          start: { photo: pi, line: sLine },
+          end: { photo: pi, line: eLine },
+        });
+      }
+      if (bFlags.length > 0) {
+        barPages[pi] = { ...pages[pi], flags: bFlags };
+        barPageIdxs.push(pi);
+      }
+    } else {
+      barPageIdxs.push(pi);
+    }
+  }
+
+  const slices: number[][] = [];
+  let current: number[] = [];
+
+  for (let pos = 0; pos < barPageIdxs.length; pos++) {
+    const idx = barPageIdxs[pos];
+    if (!current.length) {
+      current.push(idx);
+      continue;
+    }
+    const prevIdx = current[current.length - 1];
+    const prevNum = nums[prevIdx];
+    const curNum = nums[idx];
+    const pageGap =
+      prevNum !== null && curNum !== null && curNum !== prevNum + 1;
+
+    const firstFlags = outerFlags(barPages[current[0]], nums[current[0]]);
+    const prevFlags = outerFlags(barPages[prevIdx], nums[prevIdx]);
+    const curFlags = outerFlags(barPages[idx], curNum);
+    const closedMultiPage =
+      current.length >= 2 && prevFlags.length > 0;
+    const closedSinglePage =
+      current.length === 1 &&
+      new Set(firstFlags.map(f => f.lineIndex)).size >= 2;
+    const selfContainedCurrent =
+      new Set(curFlags.map(f => f.lineIndex)).size >= 2;
+
+    if (pageGap || closedMultiPage || closedSinglePage || selfContainedCurrent) {
+      slices.push(current);
+      current = [idx];
+    } else {
+      current.push(idx);
+    }
+  }
+  if (current.length) slices.push(current);
+
+  for (const slice of slices) {
+    const subPages = slice.map(i => barPages[i]);
+    const subNums = slice.map(i => nums[i]);
+    const span = findHighlightSpan(subPages, subNums);
+    if (span) {
+      marks.push({
+        start: { photo: slice[span.start.photo], line: span.start.line },
+        end: { photo: slice[span.end.photo], line: span.end.line },
+      });
+    }
+  }
+
+  return marks.sort((a, b) => a.start.photo - b.start.photo || a.start.line - b.start.line);
 }
 
 /** Cut the text between two marks. */
