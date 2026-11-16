@@ -9,7 +9,6 @@ import { useBodiesStore } from '../store/bodies';
 import { Artwork } from './Artwork';
 import { CalendarGlyph, GenreGlyph, genreTint, YEAR_TINT } from './genreGlyphs';
 import {
-  BookOpenGlyph,
   CloseGlyph,
   ContentsGlyph,
   PencilGlyph,
@@ -169,9 +168,6 @@ export function BookStage({
             className="pill is-primary book-read-btn"
             onClick={onRead}
           >
-            <span className="btn-glyph">
-              <BookOpenGlyph />
-            </span>
             <span>{t(book.readerAnchor ? 'book.continue' : 'book.read')}</span>
           </button>
         </div>

@@ -18,6 +18,7 @@ import {
 import { legalUrl } from '../lib/author';
 import { thumbUrl } from '../lib/thumbUrl';
 import { signOut } from '../session';
+import { useDevSettingsStore } from '../store/devSettings';
 
 import { ConfirmDialog } from './ConfirmDialog';
 import { ChevronRightGlyph } from './glyphs';
@@ -58,6 +59,8 @@ export function SettingsForm({
 }) {
   const [confirming, setConfirming] = useState(false);
   const theme = useTheme();
+  const stateLabBar = useDevSettingsStore(s => s.stateLabBar);
+  const setStateLabBar = useDevSettingsStore(s => s.setStateLabBar);
 
   return (
     <>
@@ -119,6 +122,24 @@ export function SettingsForm({
           </div>
         </div>
       </section>
+
+      {import.meta.env.DEV && (
+        <section>
+          <h3 className="section-head">Dev</h3>
+          <div className="card">
+            <label className="cell">
+              <span className="cell-name">State Lab</span>
+              <input
+                type="checkbox"
+                role="switch"
+                className="switch"
+                checked={stateLabBar}
+                onChange={e => setStateLabBar(e.target.checked)}
+              />
+            </label>
+          </div>
+        </section>
+      )}
 
       <section>
         <h3 className="section-head">{t('settings.legal.title')}</h3>

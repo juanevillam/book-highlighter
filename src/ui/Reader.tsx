@@ -9,11 +9,13 @@ import {
   type BookBody,
 } from '../books';
 import { t, useLocale } from '../i18n';
+import { UI_STATE_LAB, useUiStateLab } from '../dev/uiStateLab';
 import { formatYear } from '../lib/bookFields';
 import { genreLabel } from '../lib/genres';
 import {
   pageIndexForAnchor,
   paginateSections,
+  parseHighlightSegments,
   READER_SANS_STACK,
   READER_SERIF_STACK,
   type PaginatedPage,
@@ -281,30 +283,49 @@ function ScrollReaderBody({
                 </p>
               ))}
 
-              {section.highlights?.map((hl, idx) => (
-                <blockquote
-                  key={idx}
-                  className="reader-scroll-quote"
-                  style={{
-                    fontFamily: READER_SERIF_STACK,
-                    fontSize: Math.round(17.5 * fontScale),
-                    lineHeight: 1.56,
-                  }}
-                >
-                  <p>“{hl.text}”</p>
-                  {hl.page && (
-                    <footer
-                      style={{
-                        fontFamily: READER_SANS_STACK,
-                        fontSize: Math.round(12.5 * fontScale),
-                        color: palette.muted,
-                      }}
-                    >
-                      {hl.page}
-                    </footer>
-                  )}
-                </blockquote>
-              ))}
+              {section.highlights?.map((hl, idx) => {
+                const segments = parseHighlightSegments(hl.text);
+                return (
+                  <blockquote
+                    key={idx}
+                    className="reader-scroll-quote"
+                    style={{
+                      fontFamily: READER_SERIF_STACK,
+                      fontSize: Math.round(17.5 * fontScale),
+                      lineHeight: 1.56,
+                    }}
+                  >
+                    {segments.map((seg, segIdx) => (
+                      <p
+                        key={segIdx}
+                        style={{
+                          fontStyle: seg.italic ? 'italic' : 'normal',
+                          textAlign: seg.align,
+                          marginTop:
+                            segIdx === 0
+                              ? 0
+                              : seg.tightWithPrev
+                                ? 2
+                                : Math.round(10 * fontScale),
+                        }}
+                      >
+                        {seg.text}
+                      </p>
+                    ))}
+                    {hl.page && (
+                      <footer
+                        style={{
+                          fontFamily: READER_SANS_STACK,
+                          fontSize: Math.round(12.5 * fontScale),
+                          color: palette.muted,
+                        }}
+                      >
+                        {hl.page}
+                      </footer>
+                    )}
+                  </blockquote>
+                );
+              })}
             </section>
           );
         })}
@@ -407,9 +428,16 @@ export function Reader({
   }, []);
 
   const body: BookBody = bodyEntry?.body ?? EMPTY_BODY;
+  const readerLab = useUiStateLab(s => (UI_STATE_LAB ? s.reader : 'live'));
   const hasReadableContent =
-    Boolean(body.summary.trim()) ||
-    body.chapters.some(ch => ch.highlights.length > 0);
+    readerLab === 'empty'
+      ? false
+      : Boolean(body.summary.trim()) ||
+        body.chapters.some(ch => ch.highlights.length > 0);
+  const effectiveError =
+    readerLab === 'error' ? new Error('Lab error') : bodyEntry?.error;
+  const effectiveLoaded =
+    readerLab === 'skeleton' ? false : Boolean(bodyEntry?.loaded);
 
   const sections = useMemo(() => {
     const coverUrl = book.artUrl ? thumbUrl(book.artUrl, COVER_FETCH_WIDTH) : null;
@@ -801,16 +829,16 @@ export function Reader({
           setSlideOffsetPx(0);
         }}
       >
-        {bodyEntry?.error ? (
+        {effectiveError ? (
           <div className="side-empty is-full">
             <h3>{t('reader.error.title')}</h3>
             <p>{t('reader.error.subtitle')}</p>
           </div>
-        ) : !bodyEntry?.loaded ? (
+        ) : !effectiveLoaded ? (
           <div className="reader-loading">
             <span className="spinner" />
           </div>
-        ) : !hasReadableContent && !book.artUrl ? (
+        ) : (!hasReadableContent && !book.artUrl) || readerLab === 'empty' ? (
           <div className="side-empty is-full">
             <span className="side-empty-mark">
               <BookOpenGlyph />

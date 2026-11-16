@@ -12,6 +12,7 @@ import {
   TROPHY_TITLES,
 } from '../constants/trophies';
 import { t, useLocale } from '../i18n';
+import { UI_STATE_LAB, useUiStateLab } from '../dev/uiStateLab';
 import { useTrophyStore } from '../trophies/store';
 import { tierColor } from '../trophies/tierColors';
 import {
@@ -180,7 +181,9 @@ function Ring({ fraction, label }: { fraction: number; label: string }) {
 export function TrophiesForm() {
   const activeLocale = useLocale();
   const copy = useMemo(() => buildCopy(), [activeLocale]);
-  const { trophies, earned, total, hydrated } = useTrophies(copy);
+  const { trophies, earned, total, hydrated: realHydrated } = useTrophies(copy);
+  const trophiesLab = useUiStateLab(s => (UI_STATE_LAB ? s.trophies : 'live'));
+  const hydrated = trophiesLab === 'skeleton' ? false : realHydrated;
   const [open, setOpen] = useState<string | null>(null);
   const fraction = total > 0 ? earned / total : 0;
   const percent = new Intl.NumberFormat(activeLocale, {

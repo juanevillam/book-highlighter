@@ -4,6 +4,12 @@ import { flushSync } from 'react-dom';
 import { type User } from 'firebase/auth';
 
 import { type Book } from '../books';
+import { UiStateLabBar } from '../dev/UiStateLabBar';
+import {
+  UI_STATE_LAB,
+  useUiStateLab,
+  type LabScreen,
+} from '../dev/uiStateLab';
 import { t } from '../i18n';
 import { shelfEntries } from '../lib/shelf';
 import { useBodiesStore } from '../store/bodies';
@@ -98,15 +104,24 @@ export function Home({ user }: { user: User }) {
   const hasSettled = useBooksStore(state => state.hasSettled);
   const error = useBooksStore(state => state.error);
   const addTilePosition = useAddTilePosition(user.uid);
+  const homeLab = useUiStateLab(s => (UI_STATE_LAB ? s.home : 'live'));
 
   const shelf = useMemo(() => selectShelf({ books }), [books]);
   const entries = useMemo(() => shelfEntries(shelf), [shelf]);
+  const effectiveEntries = homeLab === 'empty' ? [] : entries;
+  const effectiveSettled = homeLab === 'skeleton' ? false : hasSettled;
+  const effectiveError =
+    homeLab === 'error' ? new Error('Lab error') : error;
 
   const [selectedBookId, setSelectedBookId] = useState<string | null>(null);
   const [mobileStageOpen, setMobileStageOpen] = useState(false);
   const [readingBookId, setReadingBookId] = useState<string | null>(null);
   const [toolLayers, setToolLayers] = useState<Layer<ToolEntry>[]>([]);
   const [modalLayers, setModalLayers] = useState<Layer<ModalEntry>[]>([]);
+  const [chaptersSubStack, setChaptersSubStack] = useState<{
+    chapterOpen: boolean;
+    scannerOpen: boolean;
+  }>({ chapterOpen: false, scannerOpen: false });
   const [, setProfileTick] = useState(0);
   const [coldLoad, setColdLoad] = useState(false);
   const hydrated = useRef(false);
@@ -337,6 +352,7 @@ export function Home({ user }: { user: User }) {
             depth={effectiveDepth}
             index={indexInGroup}
             book={book}
+            onSubStackChange={setChaptersSubStack}
             onClose={handleClose}
           />
         );
@@ -455,6 +471,22 @@ export function Home({ user }: { user: User }) {
     liveModals[0].entry.book !== null &&
     liveModals[0].entry.book.id === selectedBook?.id;
 
+  const labScreens: LabScreen[] = ['home'];
+  if (liveTools.some(l => l.entry.kind === 'chapters')) {
+    labScreens.push('chapters');
+    if (chaptersSubStack.chapterOpen) labScreens.push('chapter');
+    if (chaptersSubStack.scannerOpen) labScreens.push('scanner');
+  }
+  if (liveModals.some(l => l.entry.kind === 'account')) {
+    labScreens.push('account');
+  }
+  if (liveModals.some(l => l.entry.kind === 'trophies')) {
+    labScreens.push('trophies');
+  }
+  if (readingBook) {
+    labScreens.push('reader');
+  }
+
   return (
     <div className={className}>
       <Backdrop artUrl={selectedBook?.artUrl ?? ''} />
@@ -483,10 +515,10 @@ export function Home({ user }: { user: User }) {
         </h1>
 
         <LibraryGrid
-          entries={entries}
+          entries={effectiveEntries}
           addTilePosition={addTilePosition}
-          hasSettled={hasSettled}
-          error={error}
+          hasSettled={effectiveSettled}
+          error={effectiveError}
           selectedBookId={selectedBook?.id ?? null}
           onSelectBook={book => {
             setSelectedBookId(book.id);
@@ -548,6 +580,7 @@ export function Home({ user }: { user: User }) {
 
       <Toast />
       <TrophyBanner onOpen={() => openModal({ kind: 'trophies' })} />
+      <UiStateLabBar screens={labScreens} />
     </div>
   );
 }

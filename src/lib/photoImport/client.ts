@@ -18,6 +18,8 @@ export type PhotoImportProgress = {
   modelProgress: number;
   done: number;
   total: number;
+  /** Unified 0..100 percentage across model init and page reading. */
+  percent: number;
   items: PhotoImportItem[];
 };
 
@@ -64,17 +66,42 @@ export function runPhotoImport(
   const total = files.length;
   const items: PhotoImportItem[] = [];
   if (total === 0) {
-    onProgress({ phase: 'done', modelProgress: 1, done: 0, total: 0, items });
+    onProgress({
+      phase: 'done',
+      modelProgress: 1,
+      done: 0,
+      total: 0,
+      percent: 100,
+      items,
+    });
     return Promise.resolve(items);
   }
 
+  const hadModels = workerReady;
   let modelProgress = workerReady ? 1 : 0;
+  let activePageFrac = 0;
+
+  const computePercent = (phase: PhotoImportProgress['phase']): number => {
+    if (phase === 'done') return 100;
+    if (phase === 'queued') return 6;
+    const modelWeight = hadModels ? 0 : 0.28;
+    const pageWeight = 1 - modelWeight;
+    if (phase === 'models') {
+      return Math.max(8, Math.min(28, Math.round(modelProgress * 28)));
+    }
+    const pageProgress =
+      total > 0 ? Math.min(1, (items.length + activePageFrac) / total) : 0;
+    const raw = (modelWeight + pageWeight * pageProgress) * 100;
+    return Math.max(hadModels ? 10 : 28, Math.min(96, Math.round(raw)));
+  };
+
   const emit = (phase: PhotoImportProgress['phase']) => {
     onProgress({
       phase,
       modelProgress,
       done: items.length,
       total,
+      percent: computePercent(phase),
       items: [...items],
     });
   };
@@ -119,37 +146,50 @@ export function runPhotoImport(
 
     for (let i = 0; i < files.length; i++) {
       if (signal?.aborted) throw new DOMException('Aborted', 'AbortError');
+      activePageFrac = 0.12;
       emit('reading');
+      const tickTimer = setInterval(() => {
+        activePageFrac = Math.min(0.88, activePageFrac + (0.9 - activePageFrac) * 0.22);
+        emit('reading');
+      }, 140);
       const file = files[i];
-      const bitmap = await createImageBitmap(file);
-      const reqId = (nextReqId += 1);
-      const res = await new Promise<{ page: PageAnalysis; preview: Blob }>(
-        (resolve, reject) => {
-          const onAbort = () => {
-            resetWorker();
-            reject(new DOMException('Aborted', 'AbortError'));
-          };
-          signal?.addEventListener('abort', onAbort, { once: true });
-          const handler = (event: MessageEvent<WorkerResponse>) => {
-            const msg = event.data;
-            if (msg.type === 'result' && msg.id === reqId) {
-              worker.removeEventListener('message', handler);
-              signal?.removeEventListener('abort', onAbort);
-              resolve({ page: msg.page, preview: msg.preview });
-            } else if (msg.type === 'error' && (msg.id === reqId || msg.id === null)) {
-              worker.removeEventListener('message', handler);
-              signal?.removeEventListener('abort', onAbort);
-              reject(new Error(msg.message));
-            }
-          };
-          worker.addEventListener('message', handler);
-          const req: WorkerRequest = { type: 'process', id: reqId, bitmap };
-          worker.postMessage(req, [bitmap]);
-        },
-      );
-      const previewUrl = URL.createObjectURL(res.preview);
-      items.push({ file, previewUrl, page: res.page });
-      emit('reading');
+      try {
+        const bitmap = await createImageBitmap(file);
+        const reqId = (nextReqId += 1);
+        const res = await new Promise<{ page: PageAnalysis; preview: Blob }>(
+          (resolve, reject) => {
+            const onAbort = () => {
+              resetWorker();
+              reject(new DOMException('Aborted', 'AbortError'));
+            };
+            signal?.addEventListener('abort', onAbort, { once: true });
+            const handler = (event: MessageEvent<WorkerResponse>) => {
+              const msg = event.data;
+              if (msg.type === 'result' && msg.id === reqId) {
+                worker.removeEventListener('message', handler);
+                signal?.removeEventListener('abort', onAbort);
+                resolve({ page: msg.page, preview: msg.preview });
+              } else if (
+                msg.type === 'error' &&
+                (msg.id === reqId || msg.id === null)
+              ) {
+                worker.removeEventListener('message', handler);
+                signal?.removeEventListener('abort', onAbort);
+                reject(new Error(msg.message));
+              }
+            };
+            worker.addEventListener('message', handler);
+            const req: WorkerRequest = { type: 'process', id: reqId, bitmap };
+            worker.postMessage(req, [bitmap]);
+          },
+        );
+        const previewUrl = URL.createObjectURL(res.preview);
+        items.push({ file, previewUrl, page: res.page });
+        activePageFrac = 0;
+        emit('reading');
+      } finally {
+        clearInterval(tickTimer);
+      }
     }
 
     emit('done');
