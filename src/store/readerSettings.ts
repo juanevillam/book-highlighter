@@ -19,7 +19,7 @@ type StoredReaderSettings = {
 
 const DEFAULT_SETTINGS: StoredReaderSettings = {
   theme: null,
-  pageTurn: 'curl',
+  pageTurn: 'slide',
   scaleIndex: DEFAULT_TEXT_SCALE_INDEX,
 };
 
@@ -38,7 +38,7 @@ const readSettings = (): StoredReaderSettings => {
       typeof parsed.pageTurn === 'string' &&
       (PAGE_TURNS as readonly string[]).includes(parsed.pageTurn)
         ? (parsed.pageTurn as PageTurn)
-        : 'curl';
+        : 'slide';
     const scaleIndex =
       typeof parsed.scaleIndex === 'number' &&
       Number.isInteger(parsed.scaleIndex) &&

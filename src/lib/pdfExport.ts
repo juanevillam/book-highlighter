@@ -12,16 +12,30 @@ import {
 import { type ReaderPalette } from './readerThemes';
 import { thumbUrl } from './thumbUrl';
 
-// 6 × 9 in trade paperback in points (72 pt/in).
-const PAGE_W = 432;
-const PAGE_H = 648;
+// Standard book & document trim sizes in points (72 pt/in).
+export type PdfFormatId = 'trade' | 'digest' | 'a5' | 'letter';
+
+export const PDF_FORMATS: Record<
+  PdfFormatId,
+  { widthPt: number; heightPt: number; aspect: string }
+> = {
+  trade: { widthPt: 432, heightPt: 648, aspect: '2 / 3' },
+  digest: { widthPt: 396, heightPt: 612, aspect: '11 / 17' },
+  a5: { widthPt: 420, heightPt: 595, aspect: '148 / 210' },
+  letter: { widthPt: 612, heightPt: 792, aspect: '8.5 / 11' },
+};
+
+export const PDF_FORMAT_IDS: readonly PdfFormatId[] = [
+  'trade',
+  'digest',
+  'a5',
+  'letter',
+];
+
 const BLEED = 8;
 const MARGIN_SIDE = 48;
 const MARGIN_TOP = 60;
 const MARGIN_BOTTOM = 64;
-const FOOTER_Y = PAGE_H - 30;
-const CONTENT_W = PAGE_W - MARGIN_SIDE * 2;
-const CONTENT_BOTTOM = PAGE_H - MARGIN_BOTTOM;
 
 const CJK_RE = /[\u3000-\u9fff\uff00-\uffef]/;
 
@@ -214,6 +228,7 @@ export type PdfStrings = {
   pageOf: (page: number, total: number) => string;
   summary: string;
   untitledChapter: string;
+  contents?: string;
   translate: (key: string) => string;
   bcYear: (year: number) => string;
 };
@@ -223,6 +238,24 @@ export type GeneratedPdfFile = {
   blob: Blob;
 };
 
+const drawPdfOrnament = (
+  doc: jsPDF,
+  cx: number,
+  cy: number,
+  rgb1: [number, number, number],
+  rgb2: [number, number, number],
+) => {
+  doc.setDrawColor(rgb1[0], rgb1[1], rgb1[2]);
+  doc.setLineWidth(0.75);
+  doc.line(cx - 42, cy, cx - 14, cy);
+  doc.line(cx + 14, cy, cx + 42, cy);
+  doc.setFillColor(rgb1[0], rgb1[1], rgb1[2]);
+  doc.circle(cx, cy, 2.2, 'F');
+  doc.setFillColor(rgb2[0], rgb2[1], rgb2[2]);
+  doc.circle(cx - 8, cy, 1.2, 'F');
+  doc.circle(cx + 8, cy, 1.2, 'F');
+};
+
 const buildSingleBookPdf = async (
   book: Book,
   body: BookBody,
@@ -230,7 +263,13 @@ const buildSingleBookPdf = async (
   fontScale: number,
   strings: PdfStrings,
   usedNames: Set<string>,
+  format: PdfFormatId = 'trade',
 ): Promise<GeneratedPdfFile> => {
+  const { widthPt: PAGE_W, heightPt: PAGE_H } = PDF_FORMATS[format];
+  const FOOTER_Y = PAGE_H - 30;
+  const CONTENT_W = PAGE_W - MARGIN_SIDE * 2;
+  const CONTENT_BOTTOM = PAGE_H - MARGIN_BOTTOM;
+
   const coverAsset = book.artUrl ? await loadCoverDataUrl(book.artUrl) : null;
 
   const sections: ReaderSection[] = readerSections(
@@ -241,6 +280,7 @@ const buildSingleBookPdf = async (
       page: strings.page,
       summary: strings.summary,
       untitledChapter: strings.untitledChapter,
+      contents: strings.contents,
       genre: g => genreLabel(strings.translate, g),
       year: y => formatYear(y, strings.bcYear),
     },
@@ -263,6 +303,10 @@ const buildSingleBookPdf = async (
   const pageRgb = hexToRgb(palette.page);
   const textRgb = hexToRgb(palette.text);
   const mutedRgb = hexToRgb(palette.muted);
+  const accentRgb = palette.accent ? hexToRgb(palette.accent) : mutedRgb;
+  const accent2Rgb = palette.accentSecondary
+    ? hexToRgb(palette.accentSecondary)
+    : accentRgb;
 
   const paintPageGround = () => {
     doc.setFillColor(pageRgb[0], pageRgb[1], pageRgb[2]);
@@ -273,6 +317,11 @@ const buildSingleBookPdf = async (
       PAGE_H + BLEED * 2,
       'F',
     );
+    if (palette.ornament) {
+      doc.setDrawColor(accentRgb[0], accentRgb[1], accentRgb[2]);
+      doc.setLineWidth(0.5);
+      doc.rect(18, 18, PAGE_W - 36, PAGE_H - 36, 'S');
+    }
   };
 
   let firstPageUsed = false;
@@ -346,15 +395,42 @@ const buildSingleBookPdf = async (
         doc.outline.add(null, section.heading, { pageNumber: pageNum });
       }
 
+      const coverMaxH = coverAsset ? Math.min(200, PAGE_H * 0.32) : 0;
+      const coverMaxW = coverAsset ? Math.min(136, CONTENT_W * 0.45) : 0;
+      const coverRatio = coverAsset
+        ? Math.min(
+            coverMaxW / Math.max(1, coverAsset.width),
+            coverMaxH / Math.max(1, coverAsset.height),
+          )
+        : 0;
+      const coverDrawW = coverAsset ? coverAsset.width * coverRatio : 0;
+      const coverDrawH = coverAsset ? coverAsset.height * coverRatio : 0;
+
       const titleStep = titleSize * 1.24;
       const authorStep = authorSize * 1.35;
       const metaStep = metaSize * 1.4;
       const blockH =
+        (coverDrawH > 0 ? coverDrawH + 22 : 0) +
         titleLines.length * titleStep +
         (authorLines.length > 0 ? 14 + authorLines.length * authorStep : 0) +
+        (palette.ornament ? 22 : 0) +
         (metaLines.length > 0 ? 16 + metaLines.length * metaStep : 0);
 
-      let cursorY = Math.max(MARGIN_TOP + titleSize, (PAGE_H - blockH) * 0.42);
+      let cursorY = Math.max(MARGIN_TOP, (PAGE_H - blockH) * 0.44);
+      if (coverAsset && coverDrawH > 0) {
+        doc.addImage(
+          coverAsset.dataUrl,
+          coverAsset.format,
+          (PAGE_W - coverDrawW) / 2,
+          cursorY,
+          coverDrawW,
+          coverDrawH,
+        );
+        cursorY += coverDrawH + 22 + titleSize * 0.8;
+      } else {
+        cursorY += titleSize;
+      }
+
       for (const line of titleLines) {
         drawTextLine(doc, line, PAGE_W / 2, cursorY, {
           font: 'times',
@@ -382,8 +458,14 @@ const buildSingleBookPdf = async (
         }
       }
 
+      if (palette.ornament) {
+        cursorY += 6;
+        drawPdfOrnament(doc, PAGE_W / 2, cursorY, accentRgb, accent2Rgb);
+        cursorY += 16;
+      }
+
       if (metaLines.length > 0) {
-        cursorY += 12;
+        cursorY += 8;
         for (const line of metaLines) {
           drawTextLine(doc, line, PAGE_W / 2, cursorY, {
             font: 'helvetica',
@@ -395,6 +477,70 @@ const buildSingleBookPdf = async (
           });
           cursorY += metaStep;
         }
+      }
+      continue;
+    }
+
+    if (section.kind === 'bookIndex' && section.indexEntries) {
+      const startPage = startFreshPage(true);
+      if (doc.outline && section.heading) {
+        doc.outline.add(null, section.heading, { pageNumber: startPage });
+      }
+      const headingSize = Math.round(20 * fontScale * 10) / 10;
+      const rowSize = Math.round(12 * fontScale * 10) / 10;
+      const rowStep = rowSize * 1.85;
+      let cursorY = MARGIN_TOP;
+
+      if (palette.ornament) {
+        drawPdfOrnament(doc, PAGE_W / 2, cursorY, accentRgb, accent2Rgb);
+        cursorY += 20;
+      }
+      cursorY += headingSize;
+      drawTextLine(
+        doc,
+        section.heading ?? 'Contents',
+        PAGE_W / 2,
+        cursorY,
+        {
+          font: 'times',
+          style: 'bold',
+          size: headingSize,
+          rgb: textRgb,
+          hex: palette.text,
+          align: 'center',
+        },
+      );
+      cursorY += headingSize * 1.4;
+
+      for (const entry of section.indexEntries) {
+        if (cursorY + rowStep > CONTENT_BOTTOM) {
+          startFreshPage(true);
+          cursorY = MARGIN_TOP + rowSize;
+        }
+        drawTextLine(doc, entry.title, MARGIN_SIDE, cursorY, {
+          font: 'times',
+          style: 'normal',
+          size: rowSize,
+          rgb: textRgb,
+          hex: palette.text,
+        });
+        if (entry.pages) {
+          drawTextLine(
+            doc,
+            entry.pages,
+            PAGE_W - MARGIN_SIDE,
+            cursorY,
+            {
+              font: 'helvetica',
+              style: 'normal',
+              size: 10,
+              rgb: mutedRgb,
+              hex: palette.muted,
+              align: 'right',
+            },
+          );
+        }
+        cursorY += rowStep;
       }
       continue;
     }
@@ -412,7 +558,12 @@ const buildSingleBookPdf = async (
     const bodyStep = bodySize * 1.52;
     const metaStep = metaSize * 1.4;
 
-    let cursorY = MARGIN_TOP + headingSize;
+    let cursorY = MARGIN_TOP;
+    if (palette.ornament) {
+      drawPdfOrnament(doc, PAGE_W / 2, cursorY, accentRgb, accent2Rgb);
+      cursorY += 18;
+    }
+    cursorY += headingSize;
 
     const ensureSpace = (neededPt: number) => {
       if (cursorY + neededPt > CONTENT_BOTTOM) {
@@ -566,23 +717,25 @@ const buildSingleBookPdf = async (
 };
 
 export const generateBookPdfs = async (
-  items: Array<{ book: Book; body: BookBody }>,
+  items: Array<{ book: Book; body: BookBody; palette?: ReaderPalette }>,
   palette: ReaderPalette,
   fontScale: number,
   strings: PdfStrings,
+  format: PdfFormatId = 'trade',
 ): Promise<GeneratedPdfFile[]> => {
   const usedNames = new Set<string>();
   const results: GeneratedPdfFile[] = [];
 
-  for (const { book, body } of items) {
+  for (const { book, body, palette: bookPalette } of items) {
     results.push(
       await buildSingleBookPdf(
         book,
         body,
-        palette,
+        bookPalette ?? palette,
         fontScale,
         strings,
         usedNames,
+        format,
       ),
     );
   }

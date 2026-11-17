@@ -2,13 +2,21 @@ import { type Book, type BookBody } from '../books';
 
 export type ReaderHighlight = { text: string; page?: string | null };
 
+export type BookIndexItem = {
+  chapterId: string;
+  title: string;
+  pages: string | null;
+  hasHighlights: boolean;
+};
+
 export type ReaderSection = {
   id: string;
-  kind: 'cover' | 'title' | 'prose' | 'quote' | 'highlights';
+  kind: 'cover' | 'title' | 'bookIndex' | 'prose' | 'quote' | 'highlights';
   heading?: string | null;
   subheading?: string | null;
   paragraphs?: string[];
   highlights?: ReaderHighlight[];
+  indexEntries?: BookIndexItem[];
   imageUrl?: string | null;
 };
 
@@ -17,6 +25,7 @@ export type ReaderStrings = {
   page: (page: string | number) => string;
   summary: string;
   untitledChapter: string;
+  contents?: string;
   genre: (genre: string) => string;
   year: (year: number) => string;
 };
@@ -24,6 +33,8 @@ export type ReaderStrings = {
 export const COVER_FETCH_WIDTH = 1200;
 export const TITLE_SECTION_ID = 'title';
 export const COVER_SECTION_ID = 'cover';
+export const BOOK_INDEX_SECTION_ID = 'book-index';
+export const EMPTY_HIGHLIGHTS_SECTION_ID = 'empty-highlights';
 
 export const readerSections = (
   book: Pick<Book, 'artUrl' | 'author' | 'genres' | 'name' | 'year'>,
@@ -31,12 +42,6 @@ export const readerSections = (
   strings: ReaderStrings,
   coverUrl: string | null,
 ): ReaderSection[] => {
-  const paragraphs = (text: string) =>
-    text
-      .split(/\n+/)
-      .map(line => line.trim())
-      .filter(Boolean);
-
   const meta = [
     book.year ? strings.year(book.year) : '',
     book.genres.map(strings.genre).join(', '),
@@ -45,25 +50,33 @@ export const readerSections = (
     .join(' · ');
 
   const sections: ReaderSection[] = [
-    ...(coverUrl
-      ? [{ id: COVER_SECTION_ID, kind: 'cover' as const, imageUrl: coverUrl }]
-      : []),
     {
       id: TITLE_SECTION_ID,
       kind: 'title',
+      imageUrl: coverUrl,
       heading: book.name,
       subheading: book.author ? strings.by(book.author) : null,
       paragraphs: meta ? [meta] : [],
     },
   ];
 
-  if (body.summary.trim())
+  if (body.chapters.length > 0 && strings.contents) {
     sections.push({
-      id: 'summary',
-      kind: 'prose',
-      heading: strings.summary,
-      paragraphs: paragraphs(body.summary),
+      id: BOOK_INDEX_SECTION_ID,
+      kind: 'bookIndex',
+      heading: strings.contents,
+      indexEntries: body.chapters.map(chapter => ({
+        chapterId: chapter.id,
+        title: chapter.name || strings.untitledChapter,
+        pages: chapter.pages
+          ? /^loc\./i.test(chapter.pages)
+            ? chapter.pages
+            : strings.page(chapter.pages)
+          : null,
+        hasHighlights: chapter.highlights.length > 0,
+      })),
     });
+  }
 
   for (const chapter of body.chapters) {
     if (chapter.highlights.length === 0) continue;

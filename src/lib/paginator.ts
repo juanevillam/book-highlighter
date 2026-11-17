@@ -1,7 +1,10 @@
 import { type ReaderAnchor } from '../books';
 import {
+  BOOK_INDEX_SECTION_ID,
   COVER_SECTION_ID,
+  EMPTY_HIGHLIGHTS_SECTION_ID,
   TITLE_SECTION_ID,
+  type BookIndexItem,
   type ReaderSection,
 } from './readerSections';
 
@@ -37,7 +40,7 @@ export type PaginatedPage = {
   /** 0-based page index. */
   index: number;
   sectionId: string;
-  kind: 'cover' | 'title' | 'content';
+  kind: 'cover' | 'title' | 'bookIndex' | 'empty' | 'content';
   imageUrl?: string;
   titleCard?: {
     heading: string;
@@ -47,13 +50,19 @@ export type PaginatedPage = {
     authorSize: number;
     metaSize: number;
   };
+  indexCard?: {
+    heading: string;
+    entries: BookIndexItem[];
+    headingSize: number;
+    rowSize: number;
+  };
   items: PageFlowItem[];
   anchor: ReaderAnchor;
 };
 
 export type TocEntry = {
   id: string;
-  kind: ReaderSection['kind'];
+  kind: ReaderSection['kind'] | 'empty';
   label: string;
   /** 1-based page number. */
   page: number;
@@ -72,6 +81,8 @@ export type PaginatorOptions = {
   fontScale: number;
   coverLabel?: string;
   titleLabel?: string;
+  includeEmptyHighlightsPage?: boolean;
+  emptyHighlightsLabel?: string;
 };
 
 type TextMeasurer = (
@@ -442,6 +453,8 @@ export const paginateSections = (
     fontScale,
     coverLabel = 'Cover',
     titleLabel = 'Title Page',
+    includeEmptyHighlightsPage = false,
+    emptyHighlightsLabel = 'Highlights',
   }: PaginatorOptions,
 ): PaginationResult => {
   const safeW = Math.max(280, width);
@@ -477,8 +490,8 @@ export const paginateSections = (
     }
 
     if (section.kind === 'title') {
-      const titleSize = Math.round(32 * fontScale * 10) / 10;
-      const authorSize = Math.round(19.5 * fontScale * 10) / 10;
+      const titleSize = Math.round(28 * fontScale * 10) / 10;
+      const authorSize = Math.round(18 * fontScale * 10) / 10;
       toc.push({
         id: section.id || TITLE_SECTION_ID,
         kind: 'title',
@@ -489,6 +502,7 @@ export const paginateSections = (
         index: pages.length,
         sectionId: section.id,
         kind: 'title',
+        imageUrl: section.imageUrl ?? undefined,
         titleCard: {
           heading: section.heading ?? '',
           subheading: section.subheading ?? null,
@@ -496,6 +510,31 @@ export const paginateSections = (
           titleSize,
           authorSize,
           metaSize: 13.5,
+        },
+        items: [],
+        anchor: { blockId: section.id, offset: 0 },
+      });
+      continue;
+    }
+
+    if (section.kind === 'bookIndex' && section.indexEntries) {
+      const headingSize = Math.round(24 * fontScale * 10) / 10;
+      const rowSize = Math.round(15.5 * fontScale * 10) / 10;
+      toc.push({
+        id: section.id || BOOK_INDEX_SECTION_ID,
+        kind: 'bookIndex',
+        label: section.heading || 'Contents',
+        page: startPageNumber,
+      });
+      pages.push({
+        index: pages.length,
+        sectionId: section.id,
+        kind: 'bookIndex',
+        indexCard: {
+          heading: section.heading ?? 'Contents',
+          entries: section.indexEntries,
+          headingSize,
+          rowSize,
         },
         items: [],
         anchor: { blockId: section.id, offset: 0 },
@@ -636,6 +675,23 @@ export const paginateSections = (
     }
 
     flushPage();
+  }
+
+  if (includeEmptyHighlightsPage) {
+    const startPageNumber = pages.length + 1;
+    toc.push({
+      id: EMPTY_HIGHLIGHTS_SECTION_ID,
+      kind: 'empty',
+      label: emptyHighlightsLabel,
+      page: startPageNumber,
+    });
+    pages.push({
+      index: pages.length,
+      sectionId: EMPTY_HIGHLIGHTS_SECTION_ID,
+      kind: 'empty',
+      items: [],
+      anchor: { blockId: EMPTY_HIGHLIGHTS_SECTION_ID, offset: 0 },
+    });
   }
 
   return {

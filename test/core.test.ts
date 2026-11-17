@@ -39,6 +39,10 @@ import {
   repairPageNumbers,
   textBetween,
 } from '../src/lib/photoImport/assemble';
+import {
+  extractPaletteFromRgba,
+  interpolatePaletteColor,
+} from '../src/lib/coverPalette';
 import { type PageAnalysis } from '../src/lib/photoImport/analyze';
 import { cleanOcr, polishSpanishProse } from '../src/lib/photoImport/clean';
 import { shelfEntries } from '../src/lib/shelf';
@@ -191,6 +195,7 @@ describe('readerThemes, readerSections & paginator reflow anchor stability', () 
     expect(effectiveTheme('sepia', 'dark')).toBe('sepia');
     expect(readerPalette('dark').page).toBe('#000000');
     expect(TEXT_SCALES[nearestScaleIndex(1.12)]).toBe(1.1);
+    expect(TEXT_SCALES).toHaveLength(7);
   });
 
   it('paginates highlights and restores exact readerAnchor across fontScale reflows', () => {
@@ -238,13 +243,14 @@ describe('readerThemes, readerSections & paginator reflow anchor stability', () 
       height: 520,
       fontScale: 1,
     });
-    expect(normal.pages.length).toBeGreaterThan(4);
+    expect(normal.pages.length).toBeGreaterThan(3);
     expect(normal.toc.map(t => t.id)).toEqual([
-      'cover',
       'title',
-      'summary',
       'chapter:bk2',
     ]);
+    expect(normal.pages[0]?.imageUrl).toBe(
+      'https://res.cloudinary.com/demo/image/upload/sample.jpg',
+    );
 
     const midPage = normal.pages[Math.floor(normal.pages.length * 0.6)];
     const savedAnchor = midPage.anchor;
@@ -357,5 +363,24 @@ describe('photoImport (clean, assemble, sticky span, TOC & 5-signal paragraphs)'
       { name: 'Con los samanas', pages: '23–40' },
       { name: 'Gotama', pages: '41' },
     ]);
+  });
+
+  it('extracts two distinct high-visibility highlighter colors from book cover pixels and interpolates smoothly', () => {
+    // 2 pixels of dark crimson + 2 pixels of deep gold + 2 pixels of near-black background
+    const rgba = new Uint8ClampedArray([
+      195, 38, 42, 255,
+      190, 42, 45, 255,
+      218, 165, 32, 255,
+      224, 170, 38, 255,
+      12, 12, 14, 255,
+      250, 250, 250, 255,
+    ]);
+    const palette = extractPaletteFromRgba(rgba, 'siddhartha');
+    expect(palette.start.s).toBeGreaterThanOrEqual(74);
+    expect(palette.end.s).toBeGreaterThanOrEqual(74);
+    expect(palette.start.l).toBeGreaterThanOrEqual(54);
+    expect(palette.end.l).toBeGreaterThanOrEqual(54);
+    const mid = interpolatePaletteColor(palette, 0.5);
+    expect(mid.h).toBeCloseTo(palette.mid.h, 0);
   });
 });
