@@ -83,16 +83,16 @@ export function runPhotoImport(
 
   const computePercent = (phase: PhotoImportProgress['phase']): number => {
     if (phase === 'done') return 100;
-    if (phase === 'queued') return 6;
-    const modelWeight = hadModels ? 0 : 0.28;
+    if (phase === 'queued') return 0;
+    const modelWeight = hadModels ? 0 : 0.14;
     const pageWeight = 1 - modelWeight;
     if (phase === 'models') {
-      return Math.max(8, Math.min(28, Math.round(modelProgress * 28)));
+      return Math.max(0, Math.min(14, Math.round(modelProgress * 14)));
     }
     const pageProgress =
       total > 0 ? Math.min(1, (items.length + activePageFrac) / total) : 0;
     const raw = (modelWeight + pageWeight * pageProgress) * 100;
-    return Math.max(hadModels ? 10 : 28, Math.min(96, Math.round(raw)));
+    return Math.max(0, Math.min(98, Math.round(raw)));
   };
 
   const emit = (phase: PhotoImportProgress['phase']) => {
@@ -146,12 +146,15 @@ export function runPhotoImport(
 
     for (let i = 0; i < files.length; i++) {
       if (signal?.aborted) throw new DOMException('Aborted', 'AbortError');
-      activePageFrac = 0.12;
+      activePageFrac = 0;
       emit('reading');
       const tickTimer = setInterval(() => {
-        activePageFrac = Math.min(0.88, activePageFrac + (0.9 - activePageFrac) * 0.22);
+        activePageFrac = Math.min(
+          0.86,
+          activePageFrac + (0.9 - activePageFrac) * 0.18,
+        );
         emit('reading');
-      }, 140);
+      }, 160);
       const file = files[i];
       try {
         const bitmap = await createImageBitmap(file);

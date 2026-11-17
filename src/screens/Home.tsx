@@ -3,7 +3,7 @@ import { flushSync } from 'react-dom';
 
 import { type User } from 'firebase/auth';
 
-import { type Book } from '../books';
+import { markBookRead, type Book } from '../books';
 import { UiStateLabBar } from '../dev/UiStateLabBar';
 import {
   UI_STATE_LAB,
@@ -11,6 +11,7 @@ import {
   type LabScreen,
 } from '../dev/uiStateLab';
 import { t } from '../i18n';
+import { loadCoverPalette } from '../lib/coverPalette';
 import { shelfEntries } from '../lib/shelf';
 import { useBodiesStore } from '../store/bodies';
 import {
@@ -75,7 +76,7 @@ const useLargeTitle = (active: boolean) => {
 };
 
 type ToolEntry =
-  | { kind: 'chapters'; bookId: string }
+  | { kind: 'chapters'; bookId: string; openFirstChapter?: boolean }
   | { kind: 'export'; book: Book };
 
 type ModalEntry =
@@ -160,6 +161,14 @@ export function Home({ user }: { user: User }) {
       setSelectedBookId(shelf[0].id);
     }
   }, [hasSettled, selectedBookId, shelf]);
+
+  useEffect(() => {
+    if (!selectedBook?.artUrl) return;
+    void loadCoverPalette(
+      selectedBook.artUrl,
+      `${selectedBook.id}:${selectedBook.name}`,
+    );
+  }, [selectedBook?.id, selectedBook?.artUrl, selectedBook?.name]);
 
   const readingBook = useMemo(
     () => shelf.find(b => b.id === readingBookId) ?? null,
@@ -352,6 +361,13 @@ export function Home({ user }: { user: User }) {
             depth={effectiveDepth}
             index={indexInGroup}
             book={book}
+            initialOpenFirstChapter={Boolean(entry.openFirstChapter)}
+            onReadChapter={chapterId => {
+              void markBookRead(book.id, {
+                anchor: { blockId: `chapter:${chapterId}`, offset: 0 },
+              });
+              setReadingBookId(book.id);
+            }}
             onSubStackChange={setChaptersSubStack}
             onClose={handleClose}
           />
@@ -575,7 +591,22 @@ export function Home({ user }: { user: User }) {
       </div>
 
       {readingBook && (
-        <Reader book={readingBook} onClose={() => setReadingBookId(null)} />
+        <Reader
+          book={readingBook}
+          onOpenFirstChapterHighlight={() => {
+            const targetBookId = readingBook.id;
+            setReadingBookId(null);
+            setSelectedBookId(targetBookId);
+            setMobileStageOpen(true);
+            closeTools();
+            pushTool({
+              kind: 'chapters',
+              bookId: targetBookId,
+              openFirstChapter: true,
+            });
+          }}
+          onClose={() => setReadingBookId(null)}
+        />
       )}
 
       <Toast />

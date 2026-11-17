@@ -28,6 +28,13 @@ import {
 } from '../lib/bodyEdits';
 import { parsePageRef } from '../lib/bookFields';
 import {
+  DEFAULT_COVER_PALETTE,
+  hslToCss,
+  interpolatePaletteColor,
+  useBookCoverPalette,
+  type CoverPalette,
+} from '../lib/coverPalette';
+import {
   extractChaptersFromToc,
   findHighlightSpan,
   findMarks,
@@ -36,7 +43,10 @@ import {
   textBetween,
   type Mark,
 } from '../lib/photoImport/assemble';
-import { type TocEntry } from '../lib/photoImport/analyze';
+import {
+   type PageAnalysis,
+  type TocEntry,
+} from '../lib/photoImport/analyze';
 import {
   runPhotoImport,
   type PhotoImportItem,
@@ -52,6 +62,7 @@ import {
   ChevronRightGlyph,
   CloseGlyph,
   ContentsGlyph,
+  PencilGlyph,
   TrashGlyph,
   UploadGlyph,
 } from './glyphs';
@@ -95,6 +106,22 @@ const formatChapterPages = (raw?: string | null): string => {
     : t('chapters.pageSingle', { page: clean });
 };
 
+/**
+ * Verifies that an analyzed image is an actual book prose page rather than a
+ * random non-book photo (shoe, desk, blank wall) or a table of contents.
+ */
+const isValidBookPage = (p: PageAnalysis): boolean => {
+  if (p.kind !== 'page' || p.lines.length < 3) return false;
+  let alphaChars = 0;
+  let wideLines = 0;
+  for (const line of p.lines) {
+    const letters = line.text.match(/[A-Za-zÀ-ÿ]/g);
+    alphaChars += letters ? letters.length : 0;
+    if (line.x2 - line.x1 >= 0.2 * p.width) wideLines += 1;
+  }
+  return alphaChars >= 40 && wideLines >= 2;
+};
+
 const RING = 92;
 const RING_STROKE = 8.5;
 
@@ -107,7 +134,7 @@ function ScanProgressRing({ percent }: { percent: number }) {
   const c = RING / 2;
   const r = (RING - RING_STROKE) / 2;
   const length = 2 * Math.PI * r;
-  const clamped = Math.max(0.04, Math.min(1, percent / 100));
+  const clamped = Math.max(0, Math.min(1, percent / 100));
   const label = `${Math.max(0, Math.min(100, Math.round(percent)))}%`;
 
   return (
@@ -138,149 +165,331 @@ function ScanProgressRing({ percent }: { percent: number }) {
   );
 }
 
-const DEMO_TOC_ROWS = [
-  { title: 'I. El hijo del brahmán', page: '11', range: '11–24' },
-  { title: 'II. Con los samaná', page: '25', range: '25–38' },
-  { title: 'III. Gotama', page: '39', range: '39–52' },
-  { title: 'IV. Despertar', page: '53', range: '53–68' },
-] as const;
+const LAB_SCAN_PCTS = [24, 58, 86] as const;
 
-function IndexHowStage() {
-  const [stepIdx, setStepIdx] = useState(0);
+function ScanPhaseStatus({
+  kind,
+  percent,
+  isLab = false,
+}: {
+  kind: 'index' | 'highlight';
+  percent: number;
+  isLab?: boolean;
+}) {
+  const [labStep, setLabStep] = useState(0);
 
   useEffect(() => {
+    if (!isLab) return;
     const id = window.setInterval(() => {
-      setStepIdx(prev => (prev + 1) % DEMO_TOC_ROWS.length);
-    }, 1850);
+      setLabStep(prev => (prev + 1) % LAB_SCAN_PCTS.length);
+    }, 1600);
     return () => window.clearInterval(id);
-  }, []);
+  }, [isLab]);
 
-  const current = DEMO_TOC_ROWS[stepIdx] ?? DEMO_TOC_ROWS[0];
+  const effectivePct = isLab ? LAB_SCAN_PCTS[labStep]! : percent;
+  const phaseIdx = effectivePct < 36 ? 0 : effectivePct < 74 ? 1 : 2;
+  const label =
+    kind === 'index'
+      ? phaseIdx === 0
+        ? t('chapters.scanningTocPhase1')
+        : phaseIdx === 1
+          ? t('chapters.scanningTocPhase2')
+          : t('chapters.scanningTocPhase3')
+      : phaseIdx === 0
+        ? t('highlightEdit.readingPagesPhase1')
+        : phaseIdx === 1
+          ? t('highlightEdit.readingPagesPhase2')
+          : t('highlightEdit.readingPagesPhase3');
 
   return (
-    <div className="card how-stage-card" aria-hidden="true">
-      <div className="how-book-sheet">
-        <div className="how-book-kicker">{t('reader.contents')}</div>
-        <div className="how-toc-list">
-          <div
-            className="how-toc-focus"
-            style={{ '--row': stepIdx } as CSSProperties}
-          />
-          {DEMO_TOC_ROWS.map((row, idx) => (
-            <div
-              key={row.page}
-              className={
-                idx === stepIdx ? 'how-toc-row is-active' : 'how-toc-row'
-              }
-            >
-              <span className="how-toc-name">{row.title}</span>
-              <span className="how-toc-dots" />
-              <span className="how-toc-page">{row.page}</span>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <div className="how-extracted-bar">
-        <span className="how-extracted-title">{current.title}</span>
-        <span className="how-extracted-badge">
-          {formatChapterPages(current.range)}
-        </span>
-      </div>
+    <div className="side-empty is-full" role="status" aria-live="polite">
+      <ScanProgressRing percent={effectivePct} />
+      <h3 key={label} className="scan-phase-title">
+        {label}
+      </h3>
     </div>
   );
 }
 
-const DEMO_PROSE_LINES = [
-  'El arte de la guerra se basa en el engaño.',
-  'Por lo tanto, cuando seas capaz de atacar,',
-  'aparenta incapacidad; cuando uses tus fuerzas,',
-  'aparenta inactividad; cuando estés cerca,',
-  'haz creer al enemigo que estás lejos.',
+const DEMO_TOC_SPANS = [
+  { key: 'chapters.howItWorks.demo1', page: '7', range: '7–20' },
+  { key: 'chapters.howItWorks.demo2', page: '21', range: '21–34' },
+  { key: 'chapters.howItWorks.demo3', page: '35', range: '35–48' },
+  { key: 'chapters.howItWorks.demo4', page: '49', range: '49–64' },
+  { key: 'chapters.howItWorks.demo5', page: '65', range: '65–82' },
 ] as const;
 
-function HighlightHowStage() {
-  const [mode, setMode] = useState<'pair' | 'l-note'>('pair');
+const INDEX_BEAT_PCTS = [
+  0, 0, 0, 14, 42, 72, 95, 100, 100, 100, 100, 100, 100,
+] as const;
+
+function IndexTheaterStage() {
+  const [beat, setBeat] = useState(0);
 
   useEffect(() => {
     const id = window.setInterval(() => {
-      setMode(prev => (prev === 'pair' ? 'l-note' : 'pair'));
-    }, 2800);
+      setBeat(prev => (prev + 1) % 13);
+    }, 860);
     return () => window.clearInterval(id);
   }, []);
 
+  const isSelecting = beat === 0 || beat === 1;
+  const isUploading = beat === 2;
+  const isFraming = beat <= 2;
+  const isScanning = beat >= 3 && beat <= 6;
+  const isExtracted = beat >= 7;
+  const extractedCount = isExtracted ? Math.min(5, beat - 6) : 0;
+  const scanPct = INDEX_BEAT_PCTS[beat] ?? 64;
+  const scanPhaseLabel =
+    beat <= 3
+      ? t('chapters.scanningTocPhase1')
+      : beat === 4
+        ? t('chapters.scanningTocPhase2')
+        : t('chapters.scanningTocPhase3');
+
   return (
-    <div className="card how-stage-card" aria-hidden="true">
-      <div className="how-book-sheet is-prose">
-        <div className="how-prose-lines">
-          {DEMO_PROSE_LINES.map((line, idx) => {
-            const inRange = idx >= 1 && idx <= 3;
-            const isStart = idx === 1;
-            const isEnd = idx === 3;
+    <div className="how-book-viewport" aria-hidden="true">
+      <div
+        className={[
+          'how-open-page',
+          isFraming ? 'is-framing' : '',
+          isUploading ? 'is-uploading' : '',
+          isScanning ? 'is-scanning' : '',
+          isExtracted ? 'is-extracted' : '',
+        ]
+          .filter(Boolean)
+          .join(' ')}
+      >
+        <span className="how-page-spine" aria-hidden="true" />
+        <span className="how-corner is-tl" />
+        <span className="how-corner is-tr" />
+        <span className="how-corner is-bl" />
+        <span className="how-corner is-br" />
+
+        <div className="how-mini-kicker">{t('reader.contents')}</div>
+
+        <div className="how-mini-toc-scan">
+          {DEMO_TOC_SPANS.map((row, idx) => {
+            const rowExtracted = isExtracted && idx < extractedCount;
             const cls = [
-              'how-prose-line',
-              inRange ? 'is-in-range' : '',
-              isStart ? 'is-start' : '',
-              isEnd ? 'is-end' : '',
+              'how-mini-toc-line',
+              rowExtracted ? 'is-scanned' : '',
             ]
               .filter(Boolean)
               .join(' ');
-
             return (
-              <div key={idx} className={cls}>
-                {isStart && (
-                  <span
-                    className={
-                      mode === 'l-note'
-                        ? 'how-sticky-note is-l-shape'
-                        : 'how-sticky-note is-start'
-                    }
-                  />
-                )}
-                {isEnd && mode === 'pair' && (
-                  <span className="how-sticky-note is-end" />
-                )}
-                <span className="how-prose-text">{line}</span>
-                {isStart && (
-                  <span className="scanner-line-tag is-start">
-                    {t('highlightEdit.startTag')}
+              <div key={row.page} className={cls}>
+                <span className="how-toc-name">{t(row.key)}</span>
+                <span className="how-toc-trail">
+                  <span className="how-toc-unscanned">
+                    <span className="how-toc-dots" />
+                    <span className="how-toc-page">{row.page}</span>
                   </span>
-                )}
-                {isEnd && (
-                  <span className="scanner-line-tag is-end">
-                    {t('highlightEdit.endTag')}
+                  <span className="how-extracted-badge is-active">
+                    {formatChapterPages(row.range)}
                   </span>
-                )}
+                </span>
               </div>
             );
           })}
         </div>
-        <div className="how-book-folio">183</div>
-      </div>
 
-      <div className="how-extracted-bar">
-        <span className="how-extracted-title">
-          {mode === 'pair'
-            ? `${t('highlightEdit.startTag')} + ${t('highlightEdit.endTag')}`
-            : 'Sticky L'}
-        </span>
-        <span className="how-extracted-badge">{formatChapterPages('183')}</span>
+        <div className="how-page-folio">7</div>
+
+        <div
+          className={[
+            'how-index-picker-bar',
+            isSelecting || isUploading ? 'is-visible' : '',
+            isUploading ? 'is-pressed' : '',
+          ]
+            .filter(Boolean)
+            .join(' ')}
+        >
+          <span className="how-picker-pill">
+            <span>{t('chapters.scanToc')}</span>
+          </span>
+        </div>
+
+        <div
+          className={
+            isScanning
+              ? 'how-index-scan-overlay is-active'
+              : 'how-index-scan-overlay'
+          }
+        >
+          <ScanProgressRing percent={scanPct} />
+          <span key={scanPhaseLabel} className="how-index-scan-label">
+            {scanPhaseLabel}
+          </span>
+        </div>
       </div>
     </div>
   );
 }
 
+const MINI_PROSE = [
+  'Mirar al cielo nocturno invita a detenerse.',
+  'El espacio siempre me ha fascinado:',
+  'al ver lo vasto e infinito que es,',
+  'nuestros problemas se vuelven pequeños y la',
+  'vida pasa a ser algo para disfrutar y compartir.',
+  'Cada estrella guarda su propia historia.',
+] as const;
+
+const MINI_L_PROSE = [
+  'Cada estrella guarda su propia historia.',
+  'Mirar hacia arriba también me despierta',
+  'curiosidad por cómo funcionan las cosas y por',
+  'todo lo que todavía nos falta por descubrir.',
+  'En esta sección comparto algunas de mis imágenes…',
+] as const;
+
+function HighlightTheaterStage({ scene }: { scene: number }) {
+  if (scene === 0) {
+    return (
+      <div className="how-book-viewport" aria-hidden="true">
+        <div className="how-open-page is-prose-sheet">
+          <span className="how-page-spine" aria-hidden="true" />
+          <div className="how-callout-row is-top">
+            <span className="how-Diagram-pill is-start">
+              {t('highlightEdit.howItWorks.twoNoteStart')}
+            </span>
+          </div>
+
+          <div className="how-mini-prose">
+            {MINI_PROSE.map((line, idx) => {
+              const inRange = idx >= 1 && idx <= 4;
+              const isStart = idx === 1;
+              const isMid = idx === 2 || idx === 3;
+              const isEnd = idx === 4;
+              const isOutside = !inRange;
+              const cls = [
+                'how-prose-line',
+                inRange ? 'is-in-range' : '',
+                isStart ? 'is-start' : '',
+                isMid ? 'is-mid' : '',
+                isEnd ? 'is-end' : '',
+                isOutside ? 'is-outside' : '',
+              ]
+                .filter(Boolean)
+                .join(' ');
+              return (
+                <div key={idx} className={cls}>
+                  {isStart && (
+                    <span
+                      className="how-sticky-flag is-start"
+                      aria-hidden="true"
+                    >
+                      <span className="how-sticky-arrow">→</span>
+                    </span>
+                  )}
+                  {isEnd && (
+                    <span className="how-sticky-flag is-end" aria-hidden="true">
+                      <span className="how-sticky-arrow">→</span>
+                    </span>
+                  )}
+                  <span className="how-prose-text">{line}</span>
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="how-callout-row is-bottom">
+            <span className="how-Diagram-pill is-end">
+              {t('highlightEdit.howItWorks.twoNoteEnd')}
+            </span>
+          </div>
+
+          <div className="how-page-folio">47</div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="how-book-viewport" aria-hidden="true">
+      <div className="how-open-page is-prose-sheet">
+        <span className="how-page-spine" aria-hidden="true" />
+        <div className="how-callout-row is-top">
+          <span className="how-Diagram-pill is-start">
+            {t('highlightEdit.howItWorks.lArmCallout')}
+          </span>
+        </div>
+
+        <div className="how-mini-prose">
+          {MINI_L_PROSE.map((line, idx) => {
+            const inRange = idx >= 1 && idx <= 3;
+            const isStart = idx === 1;
+            const isMid = idx === 2;
+            const isEnd = idx === 3;
+            const isOutside = !inRange;
+            const cls = [
+              'how-prose-line',
+              inRange ? 'is-in-range' : '',
+              isStart ? 'is-start' : '',
+              isMid ? 'is-mid' : '',
+              isEnd ? 'is-end' : '',
+              isOutside ? 'is-outside' : '',
+            ]
+              .filter(Boolean)
+              .join(' ');
+            return (
+              <div key={idx} className={cls}>
+                {isStart && (
+                  <>
+                    <span
+                      className="how-sticky-flag is-end is-l-vert"
+                      aria-hidden="true"
+                    />
+                    <span
+                      className="how-sticky-flag is-start is-l-horiz"
+                      aria-hidden="true"
+                    >
+                      <span className="how-sticky-arrow">→</span>
+                    </span>
+                  </>
+                )}
+                <span className="how-prose-text">{line}</span>
+              </div>
+            );
+          })}
+        </div>
+
+        <div className="how-callout-row is-bottom">
+          <span className="how-Diagram-pill is-end">
+            {t('highlightEdit.howItWorks.lAutoCutCallout')}
+          </span>
+        </div>
+
+        <div className="how-page-folio">48</div>
+      </div>
+    </div>
+  );
+}
+
+function paletteToCssVars(palette: CoverPalette): CSSProperties {
+  return {
+    '--span-start': palette.startCss,
+    '--span-mid': palette.midCss,
+    '--span-end': palette.endCss,
+    '--span-start-ink': palette.startInk,
+    '--span-end-ink': palette.endInk,
+  } as CSSProperties;
+}
+
 /**
  * Stacked `SidePanel` explaining how Index or Highlight photo upload works,
- * carrying the exact same `.side-grabber` drag bar, leading close button, and
- * trailing upload button as `ChapterDetailPanel`.
+ * featuring one tall multi-scene animation stage on physical book paper and
+ * one interactive guide card below it.
  */
 function HowItWorksPanel({
   open,
   index,
   kind,
   title,
+  scenes,
   steps,
+  palette,
   actionLabel,
   onAction,
   onClose,
@@ -289,11 +498,35 @@ function HowItWorksPanel({
   index: number;
   kind: 'index' | 'highlight';
   title: string;
+  scenes: readonly string[];
   steps: readonly { title: string; body: string }[];
+  palette: CoverPalette;
   actionLabel: string;
   onAction: () => void;
   onClose: () => void;
 }) {
+  const [scene, setScene] = useState(0);
+  const [pausedUntil, setPausedUntil] = useState(0);
+  const sceneCount = scenes.length;
+
+  useEffect(() => {
+    if (!open || sceneCount <= 1) {
+      setScene(0);
+      setPausedUntil(0);
+      return;
+    }
+    const id = window.setInterval(() => {
+      if (Date.now() < pausedUntil) return;
+      setScene(prev => (prev + 1) % sceneCount);
+    }, 11500);
+    return () => window.clearInterval(id);
+  }, [open, pausedUntil, sceneCount]);
+
+  const pickScene = (idx: number) => {
+    setScene(idx);
+    setPausedUntil(Date.now() + 24000);
+  };
+
   return (
     <SidePanel
       open={open}
@@ -321,33 +554,53 @@ function HowItWorksPanel({
       }
       onClose={onClose}
     >
-      {kind === 'index' ? <IndexHowStage /> : <HighlightHowStage />}
+      <div className="how-tutorial-layout" style={paletteToCssVars(palette)}>
+        {sceneCount > 1 && (
+          <div className="segmented how-scene-tabs" role="tablist">
+            {scenes.map((label, idx) => (
+              <button
+                key={label}
+                type="button"
+                role="tab"
+                aria-selected={scene === idx}
+                className={scene === idx ? 'is-active' : ''}
+                onClick={() => pickScene(idx)}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        )}
 
-      <div className="card how-steps-card">
-        <ol className="how-steps">
-          {steps.map((step, i) => (
-            <li key={i} className="cell how-step">
-              <span className="how-step-num">{i + 1}</span>
-              <span className="how-step-copy">
-                <strong>{step.title}</strong>
-                <span>{step.body}</span>
-              </span>
-            </li>
-          ))}
-        </ol>
-      </div>
+        {steps[scene] && (
+          <div key={scene} className="how-step-header">
+            <strong className="how-step-title">{steps[scene].title}</strong>
+            <p className="how-step-body">{steps[scene].body}</p>
+          </div>
+        )}
 
-      <div className="how-panel-actions">
-        <button
-          type="button"
-          className="pill is-primary"
-          onClick={() => {
-            onClose();
-            onAction();
-          }}
-        >
-          <span>{actionLabel}</span>
-        </button>
+        {kind === 'index' ? (
+          <IndexTheaterStage />
+        ) : (
+          <>
+            <HighlightTheaterStage scene={scene} />
+            <div className="how-bulk-callout">
+              <p>{t('highlightEdit.howItWorks.bulkNote')}</p>
+            </div>
+            <div className="how-panel-actions">
+              <button
+                type="button"
+                className="pill is-primary"
+                onClick={() => {
+                  onClose();
+                  onAction();
+                }}
+              >
+                <span>{actionLabel}</span>
+              </button>
+            </div>
+          </>
+        )}
       </div>
     </SidePanel>
   );
@@ -358,10 +611,12 @@ const ROW_SLOP_PX = 8;
 
 function SortableCardList<T extends { id: string }>({
   items,
+  animateEntrance = false,
   onMove,
   renderRow,
 }: {
   items: T[];
+  animateEntrance?: boolean;
   onMove?: (from: number, to: number) => void;
   onPressItem?: (item: T) => void;
   renderRow: (item: T) => ReactNode;
@@ -594,12 +849,19 @@ function SortableCardList<T extends { id: string }>({
     drag.current = d;
   };
 
+  const listCls = [
+    'card',
+    'reorder-list',
+    lifted ? 'is-sorting' : '',
+    animateEntrance ? 'is-entering' : '',
+  ]
+    .filter(Boolean)
+    .join(' ');
+
   return (
     <ul
       ref={list}
-      className={
-        lifted ? 'card reorder-list is-sorting' : 'card reorder-list'
-      }
+      className={listCls}
       onClickCapture={e => {
         if (!swallowClick.current) return;
         swallowClick.current = false;
@@ -614,7 +876,11 @@ function SortableCardList<T extends { id: string }>({
           <li
             key={id}
             data-id={id}
-            style={{ '--i': Math.min(idx, 18) } as CSSProperties}
+            style={
+              animateEntrance
+                ? ({ '--i': Math.min(idx, 18) } as CSSProperties)
+                : undefined
+            }
             className={
               lifted === id ? 'cell reorder-item is-lifted' : 'cell reorder-item'
             }
@@ -634,6 +900,8 @@ export function ChaptersPanel({
   depth = 0,
   index = 0,
   book,
+  initialOpenFirstChapter = false,
+  onReadChapter,
   onSubStackChange,
   onClose,
 }: {
@@ -642,6 +910,8 @@ export function ChaptersPanel({
   depth?: number;
   index?: number;
   book: Book;
+  initialOpenFirstChapter?: boolean;
+  onReadChapter?: (chapterId: string) => void;
   onSubStackChange?: (state: {
     chapterOpen: boolean;
     scannerOpen: boolean;
@@ -652,22 +922,31 @@ export function ChaptersPanel({
   const saveBody = useBodiesStore(state => state.save);
   const entry = useBodiesStore(state => state.entries[book.id]);
   const chaptersLab = useUiStateLab(s => (UI_STATE_LAB ? s.chapters : 'live'));
+  const palette = useBookCoverPalette(book.artUrl, `${book.id}:${book.name}`);
 
   const [activeChapterId, setActiveChapterId] = useState<string | null>(null);
   const [editingHighlight, setEditingHighlight] = useState<
-    | { mode: 'new'; chapterId: string; autoPickPhotos?: boolean }
+    | { mode: 'new'; chapterId: string; initialFiles?: File[] }
     | { mode: 'edit'; chapterId: string; highlight: Highlight }
     | null
   >(null);
+  const [routedBanner, setRoutedBanner] = useState<{
+    chapterId: string;
+    message: string;
+  } | null>(null);
   const [confirmDeleteChapterId, setConfirmDeleteChapterId] = useState<
     string | null
   >(null);
   const [confirmDeleteAll, setConfirmDeleteAll] = useState(false);
   const [tocHowOpen, setTocHowOpen] = useState(false);
+  const [justScanned, setJustScanned] = useState(false);
+  const [justAddedHighlight, setJustAddedHighlight] = useState(false);
   const [tocProgress, setTocProgress] = useState<PhotoImportProgress | null>(
     null,
   );
   const tocInputRef = useRef<HTMLInputElement | null>(null);
+  const prevChaptersLab = useRef(chaptersLab);
+  const appliedInitialFirstRef = useRef(false);
 
   useEffect(() => {
     void ensureBody(book.id).catch(() => {});
@@ -677,12 +956,50 @@ export function ChaptersPanel({
     if (!open) {
       setActiveChapterId(null);
       setEditingHighlight(null);
+      setRoutedBanner(null);
       setConfirmDeleteChapterId(null);
       setConfirmDeleteAll(false);
       setTocHowOpen(false);
+      setJustScanned(false);
+      setJustAddedHighlight(false);
       setTocProgress(null);
+      appliedInitialFirstRef.current = false;
     }
   }, [open, book.id]);
+
+  useEffect(() => {
+    if (
+      open &&
+      initialOpenFirstChapter &&
+      !appliedInitialFirstRef.current &&
+      entry?.loaded
+    ) {
+      appliedInitialFirstRef.current = true;
+      const first = entry.body.chapters[0];
+      if (first) {
+        setActiveChapterId(first.id);
+      }
+    }
+  }, [open, initialOpenFirstChapter, entry?.loaded, entry?.body.chapters]);
+
+  useEffect(() => {
+    if (prevChaptersLab.current === 'scanning' && chaptersLab === 'live') {
+      setJustScanned(true);
+    }
+    prevChaptersLab.current = chaptersLab;
+  }, [chaptersLab]);
+
+  useEffect(() => {
+    if (!justScanned) return;
+    const id = window.setTimeout(() => setJustScanned(false), 950);
+    return () => window.clearTimeout(id);
+  }, [justScanned]);
+
+  useEffect(() => {
+    if (!justAddedHighlight) return;
+    const id = window.setTimeout(() => setJustAddedHighlight(false), 850);
+    return () => window.clearTimeout(id);
+  }, [justAddedHighlight]);
 
   const body: BookBody = entry?.body ?? EMPTY_BODY;
   const activeChapter: Chapter | null =
@@ -717,6 +1034,31 @@ export function ChaptersPanel({
       scannerOpen: editingHighlight !== null,
     });
   }, [activeChapter, editingHighlight, onSubStackChange]);
+
+  const resolveTargetChapterId = (
+    pageStr: string | null | undefined,
+    fallbackChapterId: string,
+  ): string => {
+    const clean = (pageStr ?? '').trim();
+    const mPage = /^(\d{1,4})/.exec(clean);
+    if (!mPage || body.chapters.length === 0) return fallbackChapterId;
+    const startNum = Number(mPage[1]);
+    for (const ch of body.chapters) {
+      const mSpan = /^(\d{1,4})\s*[–\-]\s*(\d{1,4})/.exec(
+        (ch.pages ?? '').trim(),
+      );
+      if (mSpan) {
+        const a = Number(mSpan[1]);
+        const b = Number(mSpan[2]);
+        if (startNum >= a && startNum <= b) return ch.id;
+      }
+    }
+    const matched = [...body.chapters].reverse().find(c => {
+      const mStart = /^(\d{1,4})/.exec((c.pages ?? '').trim());
+      return mStart ? Number(mStart[1]) <= startNum : false;
+    });
+    return matched ? matched.id : fallbackChapterId;
+  };
 
   const persist = async (nextBody: BookBody) => {
     try {
@@ -777,11 +1119,16 @@ export function ChaptersPanel({
         addedChapters += 1;
       }
 
-      // If the selection also includes content pages with highlights (or non-TOC pages),
-      // extract all highlights and route each one to its matching chapter by page number.
-      const contentPages = allPages.filter(p => p.kind === 'page');
+      // If the user selected the index photo together with sticky-flagged book pages in one batch,
+      // route each marked highlight to its matching chapter by page number.
+      // Never extract unflagged or non-book pages here (e.g. a random photo of a shoe).
+      const contentPages = allPages.filter(p => isValidBookPage(p));
       let addedHighlights = 0;
-      if (contentPages.length > 0 && (hasFlaggedPages || detected.length === 0)) {
+      if (
+        contentPages.length > 0 &&
+        hasFlaggedPages &&
+        (detected.length > 0 || body.chapters.length > 0)
+      ) {
         const chapterToc: TocEntry[] = nextBody.chapters
           .map(c => {
             const m = /^(\d{1,4})/.exec((c.pages ?? '').trim());
@@ -808,20 +1155,11 @@ export function ChaptersPanel({
             });
             if (matched) targetChapterId = matched.id;
           }
-          if (!targetChapterId) {
-            if (nextBody.chapters.length > 0) {
-              targetChapterId =
-                nextBody.chapters[nextBody.chapters.length - 1].id;
-            } else {
-              const id = makeId();
-              nextBody = addChapter(nextBody, {
-                id,
-                name: t('chapters.untitled'),
-              });
-              targetChapterId = id;
-              addedChapters += 1;
-            }
+          if (!targetChapterId && nextBody.chapters.length > 0) {
+            targetChapterId =
+              nextBody.chapters[nextBody.chapters.length - 1].id;
           }
+          if (!targetChapterId) continue;
 
           nextBody = addHighlight(nextBody, targetChapterId, {
             id: makeId(),
@@ -843,10 +1181,12 @@ export function ChaptersPanel({
         if (detected.length > 0) {
           showToast(t('snackbar.toc-already-loaded'));
         } else {
-          showToast(t('snackbar.scan-empty'));
+          showToast(t('snackbar.not-an-index'));
         }
         return;
       }
+      if (addedChapters > 0) setJustScanned(true);
+      if (addedHighlights > 0) setJustAddedHighlight(true);
       await persist(nextBody);
       showToast(
         addedHighlights > 0 && addedChapters === 0
@@ -961,10 +1301,11 @@ export function ChaptersPanel({
         />
 
         {tocBusy && effectiveTocProgress ? (
-          <div className="side-empty is-full" role="status" aria-live="polite">
-            <ScanProgressRing percent={tocPct} />
-            <h3>{t('chapters.scanningToc')}</h3>
-          </div>
+          <ScanPhaseStatus
+            kind="index"
+            percent={tocPct}
+            isLab={chaptersLab === 'scanning'}
+          />
         ) : showChaptersSkeleton ? (
           <div className="card">
             <div className="cell">
@@ -998,57 +1339,80 @@ export function ChaptersPanel({
             </button>
           </div>
         ) : (
-          <SortableCardList
-            items={displayedChapters}
-            onMove={(from, to) => void persist(moveChapter(body, from, to))}
-            onPressItem={chapter => setActiveChapterId(chapter.id)}
-            renderRow={chapter => {
-              const count = chapter.highlights.length;
-              const hlText =
-                count > 0
-                  ? plural('book.highlightCount', count)
-                  : t('chapters.noHighlightsYet');
-              const pagesText = formatChapterPages(chapter.pages);
-
-              return (
+          <div className="chapters-populated-stack">
+            {routedBanner && (
+              <div className="chapter-routed-banner" role="status">
+                <span className="chapter-routed-icon" aria-hidden="true">
+                  <ContentsGlyph />
+                </span>
+                <p className="chapter-routed-text">{routedBanner.message}</p>
                 <button
                   type="button"
-                  className="reorder-row-btn"
-                  onClick={() => setActiveChapterId(chapter.id)}
+                  className="round chapter-routed-dismiss"
+                  onClick={() => setRoutedBanner(null)}
                 >
-                  <span className="reorder-main">
-                    <span className="reorder-title">
-                      {chapter.name || t('chapters.untitled')}
-                    </span>
-                    <span className="reorder-sub">
-                      <span
-                        className={
-                          count > 0
-                            ? 'chapter-hl-status is-populated'
-                            : 'chapter-hl-status is-empty'
-                        }
-                      >
-                        {hlText}
+                  <CloseGlyph />
+                  <span className="sr">{t('common.close')}</span>
+                </button>
+              </div>
+            )}
+
+            {displayedChapters.every(ch => ch.highlights.length === 0) && (
+              <div className="card chapters-empty-hl-callout">
+                <p className="chapters-callout-text">
+                  {t('chapters.noHighlightsCallout')}
+                </p>
+                <button
+                  type="button"
+                  className="pill is-primary"
+                  onClick={() => {
+                    const first = displayedChapters[0];
+                    if (first) setActiveChapterId(first.id);
+                  }}
+                >
+                  <span>{t('chapters.noHighlightsAction')}</span>
+                </button>
+              </div>
+            )}
+
+            <SortableCardList
+              items={displayedChapters}
+              animateEntrance={justScanned}
+              onMove={(from, to) => void persist(moveChapter(body, from, to))}
+              onPressItem={chapter => setActiveChapterId(chapter.id)}
+              renderRow={chapter => {
+                const count = chapter.highlights.length;
+                const pagesText = formatChapterPages(chapter.pages);
+
+                return (
+                  <button
+                    type="button"
+                    className="reorder-row-btn"
+                    onClick={() => setActiveChapterId(chapter.id)}
+                  >
+                    <span className="reorder-main">
+                      <span className="reorder-title">
+                        {chapter.name || t('chapters.untitled')}
                       </span>
                       {pagesText && (
-                        <span className="chapter-pages-meta">
-                          {` · ${pagesText}`}
-                        </span>
+                        <span className="reorder-sub">{pagesText}</span>
                       )}
                     </span>
-                  </span>
-                  <span className="chapter-row-trail">
-                    {count > 0 && (
-                      <span className="chapter-count-pill">{count}</span>
-                    )}
-                    <span className="chevron">
-                      <ChevronRightGlyph />
+                    <span className="chapter-row-trail">
+                      {count > 0 && (
+                        <span className="chapter-count-pill">
+                          {plural('book.highlightCount', count)}
+                        </span>
+                      )}
+                      <span className="chevron">
+                        <ChevronRightGlyph />
+                      </span>
                     </span>
-                  </span>
-                </button>
-              );
-            }}
-          />
+                  </button>
+                );
+              }}
+            />
+          </div>
         )}
       </SidePanel>
 
@@ -1058,20 +1422,14 @@ export function ChaptersPanel({
           index={index + 1}
           kind="index"
           title={t('chapters.howItWorks.title')}
+          scenes={[]}
           steps={[
             {
               title: t('chapters.howItWorks.step1Title'),
               body: t('chapters.howItWorks.step1Body'),
             },
-            {
-              title: t('chapters.howItWorks.step2Title'),
-              body: t('chapters.howItWorks.step2Body'),
-            },
-            {
-              title: t('chapters.howItWorks.step3Title'),
-              body: t('chapters.howItWorks.step3Body'),
-            },
           ]}
+          palette={DEFAULT_COVER_PALETTE}
           actionLabel={t('chapters.scanToc')}
           onAction={() => tocInputRef.current?.click()}
           onClose={() => setTocHowOpen(false)}
@@ -1084,11 +1442,18 @@ export function ChaptersPanel({
           index={index + 1}
           depth={depth + (editingHighlight ? 1 : 0)}
           chapter={viewChapter}
-          onAddHighlight={autoPickPhotos =>
+          palette={palette}
+          animateEntrance={justAddedHighlight}
+          routedNotice={routedBanner ? routedBanner.message : null}
+          onDismissRoutedNotice={() => setRoutedBanner(null)}
+          onReadChapter={
+            onReadChapter ? () => onReadChapter(viewChapter.id) : undefined
+          }
+          onAddHighlight={initialFiles =>
             setEditingHighlight({
               mode: 'new',
               chapterId: viewChapter.id,
-              autoPickPhotos,
+              initialFiles,
             })
           }
           onEditHighlight={hl =>
@@ -1101,7 +1466,9 @@ export function ChaptersPanel({
           onMoveHighlight={(from, to) =>
             void persist(moveHighlight(body, viewChapter.id, from, to))
           }
-          onClose={() => setActiveChapterId(null)}
+          onClose={() => {
+            setActiveChapterId(null);
+          }}
         />
       )}
 
@@ -1109,16 +1476,58 @@ export function ChaptersPanel({
         <HighlightEditorPanel
           open={open && editingHighlight !== null}
           index={index + 2}
+          palette={palette}
           initial={
             viewHighlight.mode === 'edit' ? viewHighlight.highlight : null
           }
-          autoPickPhotos={
-            viewHighlight.mode === 'new' && Boolean(viewHighlight.autoPickPhotos)
+          initialFiles={
+            viewHighlight.mode === 'new'
+              ? viewHighlight.initialFiles
+              : undefined
           }
           onSave={({ text, page }) => {
             if (viewHighlight.mode === 'new') {
+              const targetChapterId = resolveTargetChapterId(
+                page,
+                viewHighlight.chapterId,
+              );
+              setJustAddedHighlight(true);
+              if (targetChapterId !== viewHighlight.chapterId) {
+                const fromCh = body.chapters.find(
+                  c => c.id === viewHighlight.chapterId,
+                );
+                const targetCh = body.chapters.find(
+                  c => c.id === targetChapterId,
+                );
+                setActiveChapterId(targetChapterId);
+                if (targetCh) {
+                  const fromLabel = fromCh?.name || t('chapters.untitled');
+                  const toLabel = targetCh.name || t('chapters.untitled');
+                  const cleanText = text.trim().replace(/\s+/g, ' ');
+                  const snippet =
+                    cleanText.length > 44
+                      ? `${cleanText.slice(0, 44)}…`
+                      : cleanText;
+                  setRoutedBanner({
+                    chapterId: targetChapterId,
+                    message: t('chapter.routedNotice', {
+                      snippet,
+                      from: fromLabel,
+                      to: toLabel,
+                    }),
+                  });
+                  showToast(
+                    t('snackbar.highlight-routed', {
+                      from: fromLabel,
+                      chapter: toLabel,
+                    }),
+                  );
+                }
+              } else {
+                setRoutedBanner(null);
+              }
               void persist(
-                addHighlight(body, viewHighlight.chapterId, {
+                addHighlight(body, targetChapterId, {
                   id: makeId(),
                   text,
                   page,
@@ -1138,13 +1547,74 @@ export function ChaptersPanel({
           onSaveBatch={
             viewHighlight.mode === 'new'
               ? batch => {
+                  setJustAddedHighlight(true);
                   let nextBody = body;
+                  let lastTargetId = viewHighlight.chapterId;
+                  const countsByChapterId = new Map<string, number>();
                   for (const item of batch) {
-                    nextBody = addHighlight(nextBody, viewHighlight.chapterId, {
+                    const targetChapterId = resolveTargetChapterId(
+                      item.page,
+                      viewHighlight.chapterId,
+                    );
+                    lastTargetId = targetChapterId;
+                    countsByChapterId.set(
+                      targetChapterId,
+                      (countsByChapterId.get(targetChapterId) ?? 0) + 1,
+                    );
+                    nextBody = addHighlight(nextBody, targetChapterId, {
                       id: makeId(),
                       text: item.text,
                       page: item.page,
                     });
+                  }
+                  const routedElsewhere =
+                    countsByChapterId.size > 1 ||
+                    !countsByChapterId.has(viewHighlight.chapterId);
+                  if (routedElsewhere) {
+                    const fromCh = body.chapters.find(
+                      c => c.id === viewHighlight.chapterId,
+                    );
+                    const fromLabel = fromCh?.name || t('chapters.untitled');
+                    const summaryParts: string[] = [];
+                    for (const [chId, count] of countsByChapterId.entries()) {
+                      const ch = body.chapters.find(c => c.id === chId);
+                      const chName = ch?.name || t('chapters.untitled');
+                      summaryParts.push(
+                        t('chapter.routedBatchItem', {
+                          count,
+                          chapter: chName,
+                        }),
+                      );
+                    }
+                    const summary = summaryParts.join(', ');
+                    setActiveChapterId(lastTargetId);
+                    setRoutedBanner({
+                      chapterId: lastTargetId,
+                      message:
+                        batch.length === 1
+                          ? t('chapter.routedNotice', {
+                              snippet:
+                                batch[0].text.trim().length > 44
+                                  ? `${batch[0].text.trim().slice(0, 44)}…`
+                                  : batch[0].text.trim(),
+                              from: fromLabel,
+                              to:
+                                body.chapters.find(c => c.id === lastTargetId)
+                                  ?.name || t('chapters.untitled'),
+                            })
+                          : t('chapter.routedBatchNotice', {
+                              from: fromLabel,
+                              summary,
+                            }),
+                    });
+                    showToast(
+                      t('chapter.routedBatchNotice', {
+                        from: fromLabel,
+                        summary,
+                      }),
+                    );
+                  } else {
+                    setRoutedBanner(null);
                   }
                   void persist(nextBody);
                   setEditingHighlight(null);
@@ -1221,6 +1691,11 @@ function ChapterDetailPanel({
   index,
   depth,
   chapter,
+  palette,
+  animateEntrance = false,
+  routedNotice,
+  onDismissRoutedNotice,
+  onReadChapter,
   onAddHighlight,
   onEditHighlight,
   onMoveHighlight,
@@ -1230,7 +1705,12 @@ function ChapterDetailPanel({
   index: number;
   depth: number;
   chapter: Chapter;
-  onAddHighlight: (autoPickPhotos?: boolean) => void;
+  palette: CoverPalette;
+  animateEntrance?: boolean;
+  routedNotice?: string | null;
+  onDismissRoutedNotice?: () => void;
+  onReadChapter?: () => void;
+  onAddHighlight: (initialFiles?: File[]) => void;
   onEditHighlight: (highlight: Highlight) => void;
   onMoveHighlight: (from: number, to: number) => void;
   onClose: () => void;
@@ -1238,8 +1718,10 @@ function ChapterDetailPanel({
   const chapterLab = useUiStateLab(s => (UI_STATE_LAB ? s.chapter : 'live'));
   const displayedHighlights =
     chapterLab === 'empty' ? [] : chapter.highlights;
+  const hasHighlights = displayedHighlights.length > 0;
   const [howOpen, setHowOpen] = useState(false);
   const [leavingHow, setLeavingHow] = useState(false);
+  const photoInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     if (!open) setHowOpen(false);
@@ -1269,19 +1751,57 @@ function ChapterDetailPanel({
           </button>
         }
         trailing={
-          <button
-            type="button"
-            className="round"
-            title={t('chapter.scan')}
-            onClick={() => onAddHighlight(true)}
-          >
-            <UploadGlyph />
-            <span className="sr">{t('chapter.scan')}</span>
-          </button>
+          hasHighlights && onReadChapter ? (
+            <span className="glass-pill">
+              <button
+                type="button"
+                title={t('chapter.readChapter')}
+                onClick={onReadChapter}
+              >
+                <BookOpenGlyph />
+                <span className="sr">{t('chapter.readChapter')}</span>
+              </button>
+              <button
+                type="button"
+                title={t('chapter.scan')}
+                onClick={() => photoInputRef.current?.click()}
+              >
+                <UploadGlyph />
+                <span className="sr">{t('chapter.scan')}</span>
+              </button>
+            </span>
+          ) : (
+            <button
+              type="button"
+              className="round"
+              title={t('chapter.scan')}
+              onClick={() => photoInputRef.current?.click()}
+            >
+              <UploadGlyph />
+              <span className="sr">{t('chapter.scan')}</span>
+            </button>
+          )
         }
         onClose={onClose}
       >
-        {displayedHighlights.length === 0 ? (
+        <input
+          ref={photoInputRef}
+          type="file"
+          accept="image/*"
+          multiple
+          hidden
+          onChange={e => {
+            const files = e.target.files ? Array.from(e.target.files) : [];
+            e.target.value = '';
+            if (files.length > 0) {
+              onAddHighlight(files);
+            }
+          }}
+        />
+
+        {chapterLab === 'scanning' ? (
+          <ScanPhaseStatus kind="highlight" percent={64} isLab />
+        ) : displayedHighlights.length === 0 ? (
           <div className="side-empty is-full">
             <span className="side-empty-mark">
               <BookOpenGlyph />
@@ -1298,31 +1818,66 @@ function ChapterDetailPanel({
             <button
               type="button"
               className="pill is-primary"
-              onClick={() => onAddHighlight(true)}
+              onClick={() => photoInputRef.current?.click()}
             >
               <span>{t('chapter.scan')}</span>
             </button>
           </div>
         ) : (
-          <SortableCardList
-            items={displayedHighlights}
-            onMove={onMoveHighlight}
-            onPressItem={onEditHighlight}
-            renderRow={hl => (
-              <button
-                type="button"
-                className="highlight-body-btn"
-                onClick={() => onEditHighlight(hl)}
-              >
-                <span className="highlight-quote">“{hl.text}”</span>
-                {hl.page && (
-                  <span className="highlight-page">
-                    {formatChapterPages(hl.page)}
-                  </span>
+          <div className="chapters-populated-stack">
+            {routedNotice && (
+              <div className="chapter-routed-banner" role="status">
+                <span className="chapter-routed-icon" aria-hidden="true">
+                  <ContentsGlyph />
+                </span>
+                <p className="chapter-routed-text">{routedNotice}</p>
+                {onDismissRoutedNotice && (
+                  <button
+                    type="button"
+                    className="round chapter-routed-dismiss"
+                    onClick={onDismissRoutedNotice}
+                  >
+                    <CloseGlyph />
+                    <span className="sr">{t('common.close')}</span>
+                  </button>
                 )}
-              </button>
+              </div>
             )}
-          />
+
+            <SortableCardList
+              items={displayedHighlights}
+              animateEntrance={animateEntrance}
+              onMove={onMoveHighlight}
+              onPressItem={onEditHighlight}
+              renderRow={hl => (
+                <button
+                  type="button"
+                  className="highlight-body-btn"
+                  onClick={() => onEditHighlight(hl)}
+                >
+                  <span className="highlight-quote">“{hl.text}”</span>
+                  {hl.page && (
+                    <span className="highlight-page">
+                      {formatChapterPages(hl.page)}
+                    </span>
+                  )}
+                </button>
+              )}
+            />
+
+            {onReadChapter && (
+              <div className="chapter-read-actions">
+                <button
+                  type="button"
+                  className="pill is-primary chapter-read-pill"
+                  onClick={onReadChapter}
+                >
+                  <BookOpenGlyph />
+                  <span>{t('chapter.readChapter')}</span>
+                </button>
+              </div>
+            )}
+          </div>
         )}
       </SidePanel>
 
@@ -1332,6 +1887,10 @@ function ChapterDetailPanel({
           index={index + 1}
           kind="highlight"
           title={t('highlightEdit.howItWorks.title')}
+          scenes={[
+            t('highlightEdit.howItWorks.scene1'),
+            t('highlightEdit.howItWorks.scene2'),
+          ]}
           steps={[
             {
               title: t('highlightEdit.howItWorks.step1Title'),
@@ -1341,13 +1900,10 @@ function ChapterDetailPanel({
               title: t('highlightEdit.howItWorks.step2Title'),
               body: t('highlightEdit.howItWorks.step2Body'),
             },
-            {
-              title: t('highlightEdit.howItWorks.step3Title'),
-              body: t('highlightEdit.howItWorks.step3Body'),
-            },
           ]}
+          palette={palette}
           actionLabel={t('chapter.scan')}
-          onAction={() => onAddHighlight(true)}
+          onAction={() => photoInputRef.current?.click()}
           onClose={() => setHowOpen(false)}
         />
       )}
@@ -1358,8 +1914,9 @@ function ChapterDetailPanel({
 function HighlightEditorPanel({
   open,
   index,
+  palette,
   initial,
-  autoPickPhotos = false,
+  initialFiles,
   onSave,
   onSaveBatch,
   onDelete,
@@ -1367,8 +1924,9 @@ function HighlightEditorPanel({
 }: {
   open: boolean;
   index: number;
+  palette: CoverPalette;
   initial: Highlight | null;
-  autoPickPhotos?: boolean;
+  initialFiles?: File[];
   onSave: (value: { text: string; page: string | null }) => void;
   onSaveBatch?: (values: { text: string; page: string | null }[]) => void;
   onDelete?: () => void;
@@ -1387,14 +1945,50 @@ function HighlightEditorPanel({
   const [activePhotoIdx, setActivePhotoIdx] = useState(0);
   const [tapTarget, setTapTarget] = useState<'start' | 'end'>('start');
   const [progress, setProgress] = useState<PhotoImportProgress | null>(null);
+  const [justLoadedScan, setJustLoadedScan] = useState(false);
+  const [isEditingText, setIsEditingText] = useState(false);
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const [dragOver, setDragOver] = useState(false);
   const [howOpen, setHowOpen] = useState(false);
   const [leavingHow, setLeavingHow] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const marksStripRef = useRef<HTMLDivElement | null>(null);
+  const photoStripRef = useRef<HTMLDivElement | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   const itemsRef = useRef<PhotoImportItem[]>([]);
   itemsRef.current = items;
+
+  useEffect(() => {
+    const strip = photoStripRef.current;
+    if (!strip) return;
+    const activeBtn = strip.children[activePhotoIdx] as HTMLElement | undefined;
+    activeBtn?.scrollIntoView({
+      behavior: 'smooth',
+      inline: 'center',
+      block: 'nearest',
+    });
+  }, [activePhotoIdx, items.length]);
+
+  useEffect(() => {
+    const strip = marksStripRef.current;
+    if (!strip) return;
+    const activeBtn = strip.children[activeMarkIdx] as HTMLElement | undefined;
+    activeBtn?.scrollIntoView({
+      behavior: 'smooth',
+      inline: 'center',
+      block: 'nearest',
+    });
+  }, [activeMarkIdx, allMarks.length]);
+
+  useLayoutEffect(() => {
+    if (!isEditingText) return;
+    const el = textareaRef.current;
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = `${Math.max(120, el.scrollHeight)}px`;
+  }, [isEditingText, text]);
 
   useEffect(() => {
     if (!open) {
@@ -1408,12 +2002,17 @@ function HighlightEditorPanel({
       setAutoMarks([]);
       setActiveMarkIdx(0);
       setProgress(null);
+      setJustLoadedScan(false);
+      setIsEditingText(false);
+      setConfirmDeleteOpen(false);
       setDragOver(false);
       setHowOpen(false);
       return;
     }
     setText(initial?.text ?? '');
     setPage(initial?.page ?? '');
+    setIsEditingText(false);
+    setConfirmDeleteOpen(false);
   }, [open, initial?.id, initial?.text, initial?.page]);
 
   useEffect(() => {
@@ -1427,13 +2026,11 @@ function HighlightEditorPanel({
   const showHow = howOpen || leavingHow;
 
   useEffect(() => {
-    if (open && autoPickPhotos && !initial) {
-      const id = window.setTimeout(() => {
-        fileInputRef.current?.click();
-      }, 180);
-      return () => window.clearTimeout(id);
+    if (open && initialFiles && initialFiles.length > 0 && !initial) {
+      void handlePhotoFiles(initialFiles);
     }
-  }, [open, autoPickPhotos, initial]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, initialFiles]);
 
   useEffect(
     () => () => {
@@ -1480,7 +2077,21 @@ function HighlightEditorPanel({
         revokeUrls(result);
         return;
       }
-      const pages = result.map(it => it.page);
+      const validItems = result.filter(it => isValidBookPage(it.page));
+      const rejectedItems = result.filter(it => !isValidBookPage(it.page));
+      revokeUrls(rejectedItems);
+
+      if (validItems.length === 0) {
+        setProgress(null);
+        const hadIndex = result.some(it => it.page.kind === 'index');
+        showToast(
+          t(hadIndex ? 'snackbar.index-in-highlight' : 'snackbar.not-a-book-page'),
+        );
+        if (!initial) onClose();
+        return;
+      }
+
+      const pages = validItems.map(it => it.page);
       const nums = repairPageNumbers(pages);
       const marks = findMarks(pages, nums);
       const span =
@@ -1493,7 +2104,7 @@ function HighlightEditorPanel({
           : span
             ? [{ start: { ...span.start }, end: { ...span.end } }]
             : [];
-      setItems(result);
+      setItems(validItems);
       setPageNums(nums);
       setAllMarks(initialMarks);
       setAutoMarks(
@@ -1501,12 +2112,14 @@ function HighlightEditorPanel({
       );
       setActiveMarkIdx(0);
       setProgress(null);
+      setJustLoadedScan(true);
       if (span) {
-        applyRange(result, nums, { start: span.start, end: span.end });
+        applyRange(validItems, nums, { start: span.start, end: span.end });
         setActivePhotoIdx(span.start.photo);
-        setTapTarget(result.length > 1 ? 'end' : 'start');
+        setTapTarget('start');
       } else {
-        showToast(t('snackbar.scan-empty'));
+        showToast(t('snackbar.not-a-book-page'));
+        if (!initial) onClose();
       }
     } catch (error) {
       if ((error as Error)?.name === 'AbortError') return;
@@ -1578,6 +2191,40 @@ function HighlightEditorPanel({
     .split('\n\n')
     .map(p => p.trim())
     .filter(Boolean);
+  const isReadView = Boolean(initial && items.length === 0 && !isEditingText);
+
+  const commitSave = () => {
+    if (onSaveBatch && allMarks.length > 1 && items.length > 0) {
+      const pages = items.map(it => it.page);
+      const batch = allMarks
+        .map((m, idx) => {
+          if (idx === activeMarkIdx) {
+            return {
+              text: text.trim(),
+              page: parsePageRef(page),
+            };
+          }
+          const extracted = textBetween(pages, m.start, m.end).trim();
+          const label = formatPageSpan(
+            pageNums[m.start.photo] ?? null,
+            pageNums[m.end.photo] ?? null,
+          );
+          return {
+            text: extracted,
+            page: parsePageRef(label),
+          };
+        })
+        .filter(b => b.text.length > 0);
+      if (batch.length > 0) {
+        onSaveBatch(batch);
+        return;
+      }
+    }
+    onSave({
+      text: text.trim(),
+      page: parsePageRef(page),
+    });
+  };
 
   return (
     <>
@@ -1585,56 +2232,66 @@ function HighlightEditorPanel({
         open={open}
         depth={howOpen ? 1 : 0}
         index={index}
-        title={t(initial ? 'highlightEdit.title' : 'highlightEdit.titleNew')}
+        title={t(
+          initial
+            ? isEditingText
+              ? 'highlightEdit.titleEdit'
+              : 'highlightEdit.title'
+            : 'highlightEdit.titleNew',
+        )}
         action={
-          <button type="button" className="round" onClick={onClose}>
+          <button
+            type="button"
+            className="round"
+            onClick={() => {
+              if (initial && isEditingText) {
+                setText(initial.text);
+                setPage(initial.page ?? '');
+                setIsEditingText(false);
+                return;
+              }
+              onClose();
+            }}
+          >
             <CloseGlyph />
             <span className="sr">{t('common.cancel')}</span>
           </button>
         }
         trailing={
-          <button
-            type="button"
-            className="round is-commit"
-            disabled={!valid}
-            onClick={() => {
-              if (onSaveBatch && allMarks.length > 1) {
-                const pages = items.map(it => it.page);
-                const batch = allMarks
-                  .map((m, idx) => {
-                    if (idx === activeMarkIdx) {
-                      return {
-                        text: text.trim(),
-                        page: parsePageRef(page),
-                      };
-                    }
-                    const extracted = textBetween(pages, m.start, m.end).trim();
-                    const label = formatPageSpan(
-                      pageNums[m.start.photo] ?? null,
-                      pageNums[m.end.photo] ?? null,
-                    );
-                    return {
-                      text: extracted,
-                      page: parsePageRef(label),
-                    };
-                  })
-                  .filter(b => b.text.length > 0);
-                if (batch.length > 0) {
-                  onSaveBatch(batch);
-                  return;
-                }
-              }
-              onSave({
-                text: text.trim(),
-                page: parsePageRef(page),
-              });
-            }}
-          >
-            <CheckGlyph />
-            <span className="sr">
-              {t(initial ? 'highlightEdit.saveExisting' : 'highlightEdit.save')}
+          isReadView ? (
+            <span className="glass-pill">
+              {onDelete && (
+                <button
+                  type="button"
+                  title={t('highlightEdit.delete')}
+                  onClick={() => setConfirmDeleteOpen(true)}
+                >
+                  <TrashGlyph />
+                  <span className="sr">{t('highlightEdit.delete')}</span>
+                </button>
+              )}
+              <button
+                type="button"
+                title={t('common.edit')}
+                onClick={() => setIsEditingText(true)}
+              >
+                <PencilGlyph />
+                <span className="sr">{t('common.edit')}</span>
+              </button>
             </span>
-          </button>
+          ) : (
+            <button
+              type="button"
+              className="round is-commit"
+              disabled={!valid}
+              onClick={commitSave}
+            >
+              <CheckGlyph />
+              <span className="sr">
+                {t(initial ? 'highlightEdit.saveExisting' : 'highlightEdit.save')}
+              </span>
+            </button>
+          )
         }
         onClose={onClose}
       >
@@ -1651,10 +2308,11 @@ function HighlightEditorPanel({
         />
 
         {scanning && effectiveProgress ? (
-          <div className="side-empty is-full" role="status" aria-live="polite">
-            <ScanProgressRing percent={pct} />
-            <h3>{t('highlightEdit.readingPages')}</h3>
-          </div>
+          <ScanPhaseStatus
+            kind="highlight"
+            percent={pct}
+            isLab={scannerLab === 'scanning'}
+          />
         ) : items.length === 0 && !initial ? (
           <div
             className={
@@ -1696,20 +2354,19 @@ function HighlightEditorPanel({
         ) : (
           <>
             {items.length > 0 && (
-              <section>
-                <div className="section-head split">
-                  <span>{t('highlightEdit.scanTitle')}</span>
-                  <button
-                    type="button"
-                    className="text-action"
-                    onClick={() => fileInputRef.current?.click()}
-                  >
-                    {t('highlightEdit.rescanPhotos')}
-                  </button>
-                </div>
-
+              <section
+                className={
+                  justLoadedScan
+                    ? 'scanner-section is-entering'
+                    : 'scanner-section'
+                }
+                style={paletteToCssVars(palette)}
+              >
                 {allMarks.length > 1 && (
-                  <div className="scanner-photo-strip">
+                  <div
+                    ref={marksStripRef}
+                    className="scanner-photo-strip is-marks"
+                  >
                     {allMarks.map((m, mIdx) => {
                       const pSpan = formatPageSpan(
                         pageNums[m.start.photo] ?? null,
@@ -1720,7 +2377,9 @@ function HighlightEditorPanel({
                           key={`mark-${mIdx}`}
                           type="button"
                           className={
-                            activeMarkIdx === mIdx ? 'pill is-primary' : 'pill'
+                            activeMarkIdx === mIdx
+                              ? 'pill is-primary scanner-mark-pill'
+                              : 'pill scanner-mark-pill'
                           }
                           onClick={() => {
                             setActiveMarkIdx(mIdx);
@@ -1739,17 +2398,54 @@ function HighlightEditorPanel({
                 )}
 
                 {items.length > 1 && (
-                  <div className="scanner-photo-strip">
+                  <div ref={photoStripRef} className="scanner-photo-strip">
                     {items.map((it, idx) => {
                       const pNum = pageNums[idx];
-                      const isMarked =
+                      const inSpan =
                         markRange !== null &&
-                        (markRange.start.photo === idx ||
-                          markRange.end.photo === idx ||
-                          it.page.flags.length > 0);
+                        idx >= markRange.start.photo &&
+                        idx <= markRange.end.photo;
+                      const isStartPage =
+                        markRange !== null && idx === markRange.start.photo;
+                      const isEndPage =
+                        markRange !== null && idx === markRange.end.photo;
+                      const ownerMarkIdx =
+                        !inSpan && allMarks.length > 1
+                          ? allMarks.findIndex(
+                              m =>
+                                idx >= m.start.photo && idx <= m.end.photo,
+                            )
+                          : -1;
+                      const spanCls =
+                        isStartPage && isEndPage
+                          ? 'is-span-both'
+                          : isStartPage
+                            ? 'is-span-start'
+                            : isEndPage
+                              ? 'is-span-end'
+                              : inSpan
+                                ? 'is-span-mid'
+                                : ownerMarkIdx !== -1
+                                  ? 'is-other-mark'
+                                  : '';
+                      const spanPages =
+                        markRange !== null
+                          ? markRange.end.photo - markRange.start.photo
+                          : 0;
+                      const tPage =
+                        inSpan && markRange !== null && spanPages > 0
+                          ? (idx - markRange.start.photo) / spanPages
+                          : 0.5;
+                      const thumbColor = inSpan
+                        ? hslToCss(interpolatePaletteColor(palette, tPage))
+                        : undefined;
+                      const thumbStyle: CSSProperties = {
+                        '--i': idx,
+                        ...(thumbColor ? { '--thumb-edge': thumbColor } : {}),
+                      } as CSSProperties;
                       const cls = [
                         'scanner-thumb',
-                        isMarked ? 'is-marked' : '',
+                        spanCls,
                         activePhotoIdx === idx ? 'is-active' : '',
                       ]
                         .filter(Boolean)
@@ -1759,9 +2455,28 @@ function HighlightEditorPanel({
                           key={`${it.file.name}-${idx}`}
                           type="button"
                           className={cls}
-                          onClick={() => setActivePhotoIdx(idx)}
+                          style={thumbStyle}
+                          onClick={() => {
+                            if (
+                              !inSpan &&
+                              ownerMarkIdx !== -1 &&
+                              allMarks[ownerMarkIdx]
+                            ) {
+                              const nextM = allMarks[ownerMarkIdx]!;
+                              setActiveMarkIdx(ownerMarkIdx);
+                              applyRange(items, pageNums, nextM);
+                            }
+                            setActivePhotoIdx(idx);
+                          }}
                         >
                           <img src={it.previewUrl} alt="" />
+                          {allMarks.length > 1 &&
+                            (inSpan || ownerMarkIdx !== -1) && (
+                              <span className="scanner-thumb-mark-tag">
+                                #
+                                {(inSpan ? activeMarkIdx : ownerMarkIdx) + 1}
+                              </span>
+                            )}
                           <span className="scanner-thumb-badge">
                             {pNum !== null
                               ? t('highlightEdit.photoBadgePage', { page: pNum })
@@ -1776,6 +2491,42 @@ function HighlightEditorPanel({
                 {activeItem && (
                   <div className="card scanner-inspector-card">
                     <div className="scanner-inspector-bar">
+                      <div className="segmented scanner-mode-picker">
+                        <button
+                          type="button"
+                          className={
+                            tapTarget === 'start'
+                              ? 'is-active is-start-mode'
+                              : 'is-start-mode'
+                          }
+                          onClick={() => {
+                            setTapTarget('start');
+                            if (markRange) {
+                              setActivePhotoIdx(markRange.start.photo);
+                            }
+                          }}
+                        >
+                          <span className="scanner-mode-dot is-start" />
+                          <span>{t('highlightEdit.tapModeStart')}</span>
+                        </button>
+                        <button
+                          type="button"
+                          className={
+                            tapTarget === 'end'
+                              ? 'is-active is-end-mode'
+                              : 'is-end-mode'
+                          }
+                          onClick={() => {
+                            setTapTarget('end');
+                            if (markRange) {
+                              setActivePhotoIdx(markRange.end.photo);
+                            }
+                          }}
+                        >
+                          <span className="scanner-mode-dot is-end" />
+                          <span>{t('highlightEdit.tapModeEnd')}</span>
+                        </button>
+                      </div>
                       <div className="scanner-inspector-meta">
                         <span className="scanner-inspector-title">
                           {pageNums[activePhotoIdx] !== null
@@ -1786,30 +2537,18 @@ function HighlightEditorPanel({
                                 index: activePhotoIdx + 1,
                               })}
                         </span>
-                        {isModifiedFromAuto && (
-                          <button
-                            type="button"
-                            className="scanner-reset-auto"
-                            onClick={handleResetAuto}
-                          >
-                            {t('highlightEdit.resetAuto')}
-                          </button>
-                        )}
-                      </div>
-                      <div className="segmented">
                         <button
                           type="button"
-                          className={tapTarget === 'start' ? 'is-active' : ''}
-                          onClick={() => setTapTarget('start')}
+                          className={
+                            isModifiedFromAuto
+                              ? 'scanner-reset-auto is-shown'
+                              : 'scanner-reset-auto'
+                          }
+                          tabIndex={isModifiedFromAuto ? 0 : -1}
+                          aria-hidden={!isModifiedFromAuto}
+                          onClick={handleResetAuto}
                         >
-                          {t('highlightEdit.tapModeStart')}
-                        </button>
-                        <button
-                          type="button"
-                          className={tapTarget === 'end' ? 'is-active' : ''}
-                          onClick={() => setTapTarget('end')}
-                        >
-                          {t('highlightEdit.tapModeEnd')}
+                          {t('highlightEdit.resetAuto')}
                         </button>
                       </div>
                     </div>
@@ -1826,55 +2565,118 @@ function HighlightEditorPanel({
                         alt=""
                       />
                       <div className="scanner-stage-lines">
-                        {activeItem.page.lines.map((line, lIdx) => {
-                          const cur: Mark = { photo: activePhotoIdx, line: lIdx };
-                          const inRange =
-                            markRange !== null &&
-                            compareMarks(cur, markRange.start) >= 0 &&
-                            compareMarks(cur, markRange.end) <= 0;
-                          const isStart =
-                            markRange !== null &&
-                            markRange.start.photo === activePhotoIdx &&
-                            markRange.start.line === lIdx;
-                          const isEnd =
-                            markRange !== null &&
-                            markRange.end.photo === activePhotoIdx &&
-                            markRange.end.line === lIdx;
-                          const boxCls = [
-                            'scanner-line-box',
-                            inRange ? 'is-in-range' : '',
-                            isStart ? 'is-start' : '',
-                            isEnd ? 'is-end' : '',
-                          ]
-                            .filter(Boolean)
-                            .join(' ');
-                          return (
-                            <button
-                              key={lIdx}
-                              type="button"
-                              className={boxCls}
-                              title={line.text}
-                              style={{
-                                left: `${(line.x1 / activeItem.page.width) * 100}%`,
-                                top: `${(line.y1 / activeItem.page.height) * 100}%`,
-                                width: `${((line.x2 - line.x1) / activeItem.page.width) * 100}%`,
-                                height: `${((line.y2 - line.y1) / activeItem.page.height) * 100}%`,
-                              }}
-                              onClick={() => handleTapLine(activePhotoIdx, lIdx)}
-                            >
-                              {isStart && (
-                                <span className="scanner-line-tag is-start">
-                                  {t('highlightEdit.startTag')}
-                                </span>
-                              )}
-                              {isEnd && (
-                                <span className="scanner-line-tag is-end">
-                                  {t('highlightEdit.endTag')}
-                                </span>
-                              )}
-                            </button>
-                          );
-                        })}
+                        {(() => {
+                          // Count total lines across the entire highlight span so tLine ∈ [0, 1]
+                          // transitions smoothly from Start color to End color across 1, 2, or N pages.
+                          let totalSpanLines = 0;
+                          let offsetBeforeActive = 0;
+                          if (markRange) {
+                            for (
+                              let p = markRange.start.photo;
+                              p <= markRange.end.photo;
+                              p += 1
+                            ) {
+                              const pLines = items[p]?.page.lines.length ?? 0;
+                              const firstL =
+                                p === markRange.start.photo
+                                  ? markRange.start.line
+                                  : 0;
+                              const lastL =
+                                p === markRange.end.photo
+                                  ? markRange.end.line
+                                  : Math.max(0, pLines - 1);
+                              const count = Math.max(0, lastL - firstL + 1);
+                              if (p < activePhotoIdx) {
+                                offsetBeforeActive += count;
+                              }
+                              totalSpanLines += count;
+                            }
+                          }
+
+                          return activeItem.page.lines.map((line, lIdx) => {
+                            const cur: Mark = {
+                              photo: activePhotoIdx,
+                              line: lIdx,
+                            };
+                            const inRange =
+                              markRange !== null &&
+                              compareMarks(cur, markRange.start) >= 0 &&
+                              compareMarks(cur, markRange.end) <= 0;
+                            const isStart =
+                              markRange !== null &&
+                              markRange.start.photo === activePhotoIdx &&
+                              markRange.start.line === lIdx;
+                            const isEnd =
+                              markRange !== null &&
+                              markRange.end.photo === activePhotoIdx &&
+                              markRange.end.line === lIdx;
+                            const isMid = inRange && !isStart && !isEnd;
+
+                            let lineVars: CSSProperties | undefined;
+                            if (inRange && markRange) {
+                              const firstLOnActive =
+                                activePhotoIdx === markRange.start.photo
+                                  ? markRange.start.line
+                                  : 0;
+                              const globalPos =
+                                offsetBeforeActive + (lIdx - firstLOnActive);
+                              const tLine =
+                                totalSpanLines <= 1
+                                  ? isStart
+                                    ? 0
+                                    : 1
+                                  : globalPos / (totalSpanLines - 1);
+                              const hsl = interpolatePaletteColor(
+                                palette,
+                                tLine,
+                              );
+                              lineVars = {
+                                '--line-fill': hslToCss(hsl, 0.24),
+                                '--line-fill-hover': hslToCss(hsl, 0.36),
+                                '--line-edge': hslToCss(hsl, 0.52),
+                              } as CSSProperties;
+                            }
+
+                            const boxCls = [
+                              'scanner-line-box',
+                              inRange ? 'is-in-range' : '',
+                              isStart ? 'is-start' : '',
+                              isMid ? 'is-mid' : '',
+                              isEnd ? 'is-end' : '',
+                            ]
+                              .filter(Boolean)
+                              .join(' ');
+                            return (
+                              <button
+                                key={lIdx}
+                                type="button"
+                                className={boxCls}
+                                title={line.text}
+                                style={{
+                                  left: `${(line.x1 / activeItem.page.width) * 100}%`,
+                                  top: `${(line.y1 / activeItem.page.height) * 100}%`,
+                                  width: `${((line.x2 - line.x1) / activeItem.page.width) * 100}%`,
+                                  height: `${((line.y2 - line.y1) / activeItem.page.height) * 100}%`,
+                                  ...lineVars,
+                                }}
+                                onClick={() =>
+                                  handleTapLine(activePhotoIdx, lIdx)
+                                }
+                              >
+                                {isStart && (
+                                  <span className="scanner-line-tag is-start">
+                                    {t('highlightEdit.startTag')}
+                                  </span>
+                                )}
+                                {isEnd && (
+                                  <span className="scanner-line-tag is-end">
+                                    {t('highlightEdit.endTag')}
+                                  </span>
+                                )}
+                              </button>
+                            );
+                          });
+                        })()}
                       </div>
                     </div>
                     <p className="scanner-tap-hint">
@@ -1885,24 +2687,13 @@ function HighlightEditorPanel({
               </section>
             )}
 
-            {(paragraphs.length > 0 || initial) && (
+            {initial && items.length === 0 && !isEditingText && (
               <section>
-                <div className="section-head split">
-                  <span>{t('highlightEdit.text')}</span>
-                  <div className="highlight-preview-actions">
-                    {page && (
-                      <span className="head-value">{formatChapterPages(page)}</span>
-                    )}
-                    {initial && items.length === 0 && (
-                      <button
-                        type="button"
-                        className="text-action"
-                        onClick={() => fileInputRef.current?.click()}
-                      >
-                        {t('highlightEdit.rescanPhotos')}
-                      </button>
-                    )}
-                  </div>
+                <div className="section-head">
+                  <span>
+                    {t('highlightEdit.text')}
+                    {page ? ` · ${formatChapterPages(page)}` : ''}
+                  </span>
                 </div>
                 <div className="card highlight-preview-card">
                   {paragraphs.map((para, pIdx) => (
@@ -1914,20 +2705,56 @@ function HighlightEditorPanel({
               </section>
             )}
 
-            {onDelete && (
-              <div className="card">
-                <button
-                  type="button"
-                  className="cell destructive-row"
-                  onClick={onDelete}
-                >
-                  {t('highlightEdit.delete')}
-                </button>
-              </div>
+            {initial && items.length === 0 && isEditingText && (
+              <>
+                <div className="card">
+                  <label className="cell field">
+                    <span className="cell-name">{t('highlightEdit.page')}</span>
+                    <input
+                      type="text"
+                      value={page}
+                      placeholder={t('highlightEdit.pagePlaceholder')}
+                      onChange={e => setPage(e.target.value)}
+                    />
+                  </label>
+                </div>
+
+                <section>
+                  <div className="section-head">
+                    <span>{t('highlightEdit.text')}</span>
+                  </div>
+                  <div className="card">
+                    <label className="cell textarea-cell is-autosize">
+                      <textarea
+                        ref={textareaRef}
+                        value={text}
+                        rows={4}
+                        placeholder={t('highlightEdit.textPlaceholder')}
+                        onChange={e => setText(e.target.value)}
+                      />
+                    </label>
+                  </div>
+                </section>
+              </>
             )}
           </>
         )}
       </SidePanel>
+
+      {onDelete && (
+        <ConfirmDialog
+          open={confirmDeleteOpen}
+          title={t('highlightEdit.deleteConfirm.title')}
+          message={t('highlightEdit.deleteConfirm.message')}
+          cancel={t('highlightEdit.deleteConfirm.cancel')}
+          confirm={t('highlightEdit.deleteConfirm.confirm')}
+          onConfirm={() => {
+            setConfirmDeleteOpen(false);
+            onDelete();
+          }}
+          onClose={() => setConfirmDeleteOpen(false)}
+        />
+      )}
 
       {showHow && (
         <HowItWorksPanel
@@ -1935,6 +2762,10 @@ function HighlightEditorPanel({
           index={index + 1}
           kind="highlight"
           title={t('highlightEdit.howItWorks.title')}
+          scenes={[
+            t('highlightEdit.howItWorks.scene1'),
+            t('highlightEdit.howItWorks.scene2'),
+          ]}
           steps={[
             {
               title: t('highlightEdit.howItWorks.step1Title'),
@@ -1944,11 +2775,8 @@ function HighlightEditorPanel({
               title: t('highlightEdit.howItWorks.step2Title'),
               body: t('highlightEdit.howItWorks.step2Body'),
             },
-            {
-              title: t('highlightEdit.howItWorks.step3Title'),
-              body: t('highlightEdit.howItWorks.step3Body'),
-            },
           ]}
+          palette={palette}
           actionLabel={t('highlightEdit.choosePhotos')}
           onAction={() => fileInputRef.current?.click()}
           onClose={() => setHowOpen(false)}

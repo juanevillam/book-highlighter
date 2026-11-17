@@ -149,23 +149,28 @@ export const translations = {
       add: 'Add Chapter',
       scanToc: 'Upload Index Photo',
       scanningToc: 'Reading index…',
+      scanningTocPhase1: 'Reading index…',
+      scanningTocPhase2: 'Detecting chapters…',
+      scanningTocPhase3: 'Extracting page ranges…',
       scanningIndexHint: 'Extracting chapters and page ranges from the photo.',
       howItWorks: {
         action: 'How it works',
         title: 'Index Upload',
-        step1Title: 'Photograph the table of contents',
+        step1Title: 'Photograph the book’s index',
         step1Body:
-          'Frame the full index page clearly under even light so chapter titles and page numbers are legible.',
-        step2Title: 'Upload one or more index photos',
-        step2Body:
-          'Every chapter and its page range are extracted automatically in reading order.',
-        step3Title: 'Re-upload anytime to add missing pages',
-        step3Body:
-          'Uploading another index page appends only new chapters without duplicating existing ones.',
+          'Upload one or more clear photos of the table of contents. Every chapter title and its page span (e.g. pp. 7–20) are extracted automatically in reading order, without duplicates. If you also include page photos with sticky notes in the same upload, each highlight is routed directly to its chapter.',
+        demo1: 'I. Gazing at the Night Sky',
+        demo2: 'II. Vast and Infinite Space',
+        demo3: 'III. Every Star Holds a Story',
+        demo4: 'IV. How the Universe Works',
+        demo5: 'V. What Remains Undiscovered',
       },
       newPlaceholder: 'Chapter title',
       untitled: 'Untitled Chapter',
       noHighlightsYet: 'No highlights yet',
+      noHighlightsCallout:
+        'You currently have no highlights created. Create one in a chapter.',
+      noHighlightsAction: 'Upload Highlight',
       pageSingle: 'p. {page}',
       pageRange: 'pp. {pages}',
       empty: {
@@ -197,6 +202,12 @@ export const translations = {
       highlights: 'Highlights',
       add: 'Add Highlight',
       scan: 'Upload Page Photos',
+      readChapter: 'Read in Reader',
+      routedNotice:
+        'Uploaded “{snippet}” in “{from}” — moved automatically to “{to}” by page number.',
+      routedBatchNotice:
+        'Uploaded in “{from}” — routed automatically by page number: {summary}.',
+      routedBatchItem: '{count} in “{chapter}”',
       emptyTitle: 'No Highlights Yet',
       empty:
         'Upload a page photo with sticky notes to extract your highlights.',
@@ -205,6 +216,7 @@ export const translations = {
     highlightEdit: {
       titleNew: 'Upload Highlight',
       title: 'Highlight',
+      titleEdit: 'Edit Highlight',
       scanTitle: 'Upload Page Photos',
       scanSubtitle:
         'Upload one or more page photos in reading order to extract the marked passage.',
@@ -213,6 +225,9 @@ export const translations = {
       queued: 'Reading pages…',
       loadingModels: 'Reading pages…',
       readingPages: 'Reading pages…',
+      readingPagesPhase1: 'Reading pages…',
+      readingPagesPhase2: 'Detecting sticky notes…',
+      readingPagesPhase3: 'Extracting highlight text…',
       scanningHintSingle:
         'Detecting sticky notes and reconstructing paragraphs.',
       scanningHintMulti:
@@ -221,15 +236,20 @@ export const translations = {
       howItWorks: {
         action: 'How it works',
         title: 'Highlight Upload',
-        step1Title: 'Mark the passage in the margin',
+        scene1: 'Option A · 2 Notes',
+        scene2: 'Option B · 2 Notes in L',
+        twoNoteStart: '1st note → Start line',
+        twoNoteEnd: '2nd note → End line',
+        lArmCallout: '1st horizontal + 2nd vertical',
+        lAutoCutCallout: 'Paragraph end → Auto-cuts here',
+        step1Title: 'Option A · Two horizontal sticky notes (Start & End)',
         step1Body:
-          'Place a sticky note on the first and last line of the highlight, or an L-shaped note for a single block.',
-        step2Title: 'Upload page photos in order',
+          'Point the 1st sticky note at the line where the highlight starts and the 2nd note at the line where it ends (on the same page or a later page; middle pages are included in full).',
+        step2Title: 'Option B · Two notes forming an L (Single paragraph)',
         step2Body:
-          'If a passage spans multiple pages, select all photos in reading order.',
-        step3Title: 'Adjust lines or reset to auto',
-        step3Body:
-          'Tap any line on the photo to fine-tune the start or end cut, or tap Reset Auto to restore the detected bounds.',
+          'Place one horizontal sticky note pointing at the first line and a second vertical note right below it forming an L: the app automatically stops at the end of that paragraph.',
+        bulkNote:
+          'Bulk upload: Select as many page photos with sticky notes as you want at once (even across different chapters) — every highlight is extracted and routed to its chapter automatically.',
       },
       tutorialStep1:
         'Place a sticky note at the start & end line (or an L-note for one unit).',
@@ -240,8 +260,7 @@ export const translations = {
       endTag: 'End',
       tapModeStart: 'Start line',
       tapModeEnd: 'End line',
-      tapHint:
-        'Tap any line on the page to move the start or end mark.',
+      tapHint: 'Tap any line to adjust the start or end.',
       photoBadgePage: 'p. {page}',
       photoBadgeIndex: 'Photo {index}',
       text: 'Extracted Highlight',
@@ -251,6 +270,12 @@ export const translations = {
       save: 'Add',
       saveExisting: 'Save',
       delete: 'Delete Highlight',
+      deleteConfirm: {
+        title: 'Delete This Highlight?',
+        message: 'This highlight will be deleted from the chapter.',
+        confirm: 'Delete',
+        cancel: 'Cancel',
+      },
     },
     reader: {
       contents: 'Contents',
@@ -269,6 +294,7 @@ export const translations = {
           dark: 'Dark',
           sepia: 'Sepia',
           paper: 'Paper',
+          book: 'Illustrated',
         },
       },
       pageOf: '{page} of {total}',
@@ -278,19 +304,33 @@ export const translations = {
         subtitle: 'Check your connection and try again.',
       },
       empty: {
-        title: 'Nothing to Read Yet',
-        subtitle: 'Add a summary or a highlight to this book.',
+        title: 'No Highlights Yet',
+        subtitle: 'Upload a highlight in the first chapter to start reading.',
+        action: 'Upload Highlight',
+        actionIndex: 'Upload Index Photo',
       },
     },
     export: {
       title: 'Export PDF',
       titleAll: 'Export All Books',
       scope: { label: 'Books', book: 'This Book', all: 'All Books' },
+      format: 'Page Format',
+      formats: {
+        trade: '6 × 9 in',
+        digest: '5.5 × 8.5 in',
+        a5: 'A5',
+        letter: 'Letter',
+      },
+      preview: 'Preview',
       action: 'Export',
       footer:
-        'The PDF is set on 6 × 9 in trade paper like the book in the reader: its cover, its summary, then every highlight.',
+        'The PDF is set on 6 × 9 in trade paper like the book in the reader: its cover, its index, and every highlight.',
       footerAll:
-        'Each book is saved as its own 6 × 9 in PDF: its cover, its summary, then every highlight.',
+        'Each book is saved as its own 6 × 9 in PDF: its cover, its index, and every highlight.',
+      footerFormat:
+        'The PDF is set on {format} paper like the book in the reader: its cover, its index, and every highlight.',
+      footerAllFormat:
+        'Each book is saved as its own {format} PDF: its cover, its index, and every highlight.',
     },
     genres: {
       fiction: 'Fiction',
@@ -440,6 +480,7 @@ export const translations = {
       'book-deleted': 'Book deleted',
       'book-delete-failed': "Couldn't delete the book. Try again.",
       'highlight-deleted': 'Highlight deleted',
+      'highlight-routed': 'Moved from {from} to {chapter}',
       'notes-save-failed': "Couldn't save your changes. Try again.",
       'reorder-failed': "Couldn't reorder your books. Try again.",
       'scan-saved': 'Scanned highlights saved',
@@ -447,6 +488,10 @@ export const translations = {
       'toc-already-loaded': 'Index already loaded — no duplicate chapters added',
       'chapters-cleared': 'All chapters deleted',
       'scan-empty': 'No text detected in the selected photos.',
+      'not-an-index': 'No book index detected in the selected photo.',
+      'not-a-book-page': 'No book page detected in the selected photo.',
+      'index-in-highlight':
+        'That photo is an index page. Upload book pages with sticky notes here.',
       'scan-failed': "Couldn't process page. Try again.",
       'picture-too-large': 'Cover image must be under 5 MB.',
       'library-full': 'Storage limit reached.',
@@ -608,23 +653,28 @@ export const translations = {
       add: 'Añadir capítulo',
       scanToc: 'Subir foto del índice',
       scanningToc: 'Leyendo índice…',
+      scanningTocPhase1: 'Leyendo índice…',
+      scanningTocPhase2: 'Detectando capítulos…',
+      scanningTocPhase3: 'Extrayendo páginas…',
       scanningIndexHint: 'Extrayendo capítulos y páginas de la foto.',
       howItWorks: {
         action: 'Cómo funciona',
         title: 'Subir el índice',
-        step1Title: 'Fotografía la página del índice',
+        step1Title: 'Fotografía el índice del libro',
         step1Body:
-          'Encuadra la página completa con buena luz para que los títulos y números de página se lean con claridad.',
-        step2Title: 'Sube una o varias fotos del índice',
-        step2Body:
-          'Todos los capítulos y sus rangos de páginas se extraen automáticamente en orden.',
-        step3Title: 'Vuelve a subir si el índice ocupa más páginas',
-        step3Body:
-          'Si subes otra página del índice, solo se agregan los capítulos nuevos sin duplicar los anteriores.',
+          'Sube una o más fotos claras del índice del libro. Cada capítulo y su rango de páginas (p. ej. págs. 7–20) se extraen automáticamente en orden y sin duplicar. Si además incluyes fotos de páginas con post-its en la misma subida, cada resaltado se guarda directo en su capítulo.',
+        demo1: 'I. Mirar al cielo nocturno',
+        demo2: 'II. Lo vasto e infinito del espacio',
+        demo3: 'III. La historia de cada estrella',
+        demo4: 'IV. Cómo funciona el universo',
+        demo5: 'V. Lo que falta por descubrir',
       },
       newPlaceholder: 'Título del capítulo',
       untitled: 'Capítulo sin título',
       noHighlightsYet: 'Sin resaltados aún',
+      noHighlightsCallout:
+        'Actualmente no tienes resaltados creados. Crea uno en un capítulo.',
+      noHighlightsAction: 'Subir resaltado',
       pageSingle: 'pág. {page}',
       pageRange: 'págs. {pages}',
       empty: {
@@ -656,6 +706,12 @@ export const translations = {
       highlights: 'Resaltados',
       add: 'Añadir resaltado',
       scan: 'Subir fotos de páginas',
+      readChapter: 'Leer en el lector',
+      routedNotice:
+        'Subiste “{snippet}” en “{from}” — se movió automáticamente a “{to}” por su página.',
+      routedBatchNotice:
+        'Subiste resaltados desde “{from}” — se organizaron por página: {summary}.',
+      routedBatchItem: '{count} en “{chapter}”',
       emptyTitle: 'Sin resaltados aún',
       empty:
         'Sube una foto de la página con post-its para extraer el resaltado.',
@@ -664,6 +720,7 @@ export const translations = {
     highlightEdit: {
       titleNew: 'Subir resaltado',
       title: 'Resaltado',
+      titleEdit: 'Editar resaltado',
       scanTitle: 'Subir fotos de páginas',
       scanSubtitle:
         'Sube una o más fotos de las páginas en orden para extraer el pasaje marcado.',
@@ -672,6 +729,9 @@ export const translations = {
       queued: 'Leyendo páginas…',
       loadingModels: 'Leyendo páginas…',
       readingPages: 'Leyendo páginas…',
+      readingPagesPhase1: 'Leyendo páginas…',
+      readingPagesPhase2: 'Detectando marcas…',
+      readingPagesPhase3: 'Extrayendo texto…',
       scanningHintSingle:
         'Detectando post-its y reconstruyendo párrafos.',
       scanningHintMulti:
@@ -680,15 +740,20 @@ export const translations = {
       howItWorks: {
         action: 'Cómo funciona',
         title: 'Subir resaltados',
-        step1Title: 'Marca el pasaje en el margen',
+        scene1: 'Opción A · 2 post-its',
+        scene2: 'Opción B · 2 en L',
+        twoNoteStart: '1.º post-it → Línea inicio',
+        twoNoteEnd: '2.º post-it → Línea fin',
+        lArmCallout: '1 horizontal + 1 vertical en L',
+        lAutoCutCallout: 'Punto y aparte → Corta el final solo',
+        step1Title: 'Opción A · Dos post-its horizontales (Inicio y Fin)',
         step1Body:
-          'Coloca un post-it en la primera y última línea del resaltado, o uno en forma de L para un bloque completo.',
-        step2Title: 'Sube las fotos en orden de lectura',
+          'Apunta el 1.º post-it a la línea donde empieza el pasaje y el 2.º post-it a la línea donde termina (en la misma página o en otra siguiente; las páginas del medio se incluyen enteras).',
+        step2Title: 'Opción B · Dos post-its formando una L (Un párrafo)',
         step2Body:
-          'Si el resaltado cruza varias páginas, selecciona las fotos en orden consecutivo.',
-        step3Title: 'Ajusta líneas o restaura el modo automático',
-        step3Body:
-          'Toca cualquier línea sobre la foto para afinar el corte, o pulsa Restaurar auto para volver a la detección original.',
+          'Coloca un post-it en horizontal apuntando a la primera línea y otro en vertical justo debajo formando una L: la app corta sola al terminar ese párrafo (punto y aparte).',
+        bulkNote:
+          'Subida en lote: Selecciona todas las fotos con post-its que quieras de una sola vez (incluso de distintos capítulos) — cada resaltado se detecta y se guarda en su capítulo automáticamente.',
       },
       tutorialStep1:
         'Coloca un post-it en la línea de inicio y fin (o en L para un bloque).',
@@ -699,8 +764,7 @@ export const translations = {
       endTag: 'Fin',
       tapModeStart: 'Línea inicio',
       tapModeEnd: 'Línea fin',
-      tapHint:
-        'Toca cualquier línea en la página para ajustar el inicio o el fin.',
+      tapHint: 'Toca cualquier línea para ajustar el inicio o el fin.',
       photoBadgePage: 'pág. {page}',
       photoBadgeIndex: 'Foto {index}',
       text: 'Resaltado extraído',
@@ -710,6 +774,12 @@ export const translations = {
       save: 'Añadir',
       saveExisting: 'Guardar',
       delete: 'Eliminar resaltado',
+      deleteConfirm: {
+        title: '¿Eliminar este resaltado?',
+        message: 'Se eliminará este resaltado del capítulo.',
+        confirm: 'Eliminar',
+        cancel: 'Cancelar',
+      },
     },
     reader: {
       contents: 'Contenido',
@@ -728,6 +798,7 @@ export const translations = {
           dark: 'Oscuro',
           sepia: 'Sepia',
           paper: 'Papel',
+          book: 'Ilustrado',
         },
       },
       pageOf: '{page} de {total}',
@@ -737,19 +808,34 @@ export const translations = {
         subtitle: 'Comprueba tu conexión y vuelve a intentarlo.',
       },
       empty: {
-        title: 'Aún no hay nada que leer',
-        subtitle: 'Añade un resumen o un resaltado a este libro.',
+        title: 'Sin resaltados aún',
+        subtitle:
+          'Sube un resaltado en el primer capítulo para empezar a leer.',
+        action: 'Subir resaltado',
+        actionIndex: 'Subir foto del índice',
       },
     },
     export: {
       title: 'Exportar PDF',
       titleAll: 'Exportar todos los libros',
       scope: { label: 'Libros', book: 'Este libro', all: 'Todos los libros' },
+      format: 'Formato de página',
+      formats: {
+        trade: '6 × 9 in',
+        digest: '5.5 × 8.5 in',
+        a5: 'A5',
+        letter: 'Carta',
+      },
+      preview: 'Vista previa',
       action: 'Exportar',
       footer:
-        'El PDF se compone en papel 6 × 9 in como en el lector: su portada, su resumen y cada resaltado.',
+        'El PDF se compone en papel 6 × 9 in como en el lector: su portada, su índice y cada resaltado.',
       footerAll:
-        'Cada libro se guarda como su propio PDF 6 × 9 in: su portada, su resumen y cada resaltado.',
+        'Cada libro se guarda como su propio PDF 6 × 9 in: su portada, su índice y cada resaltado.',
+      footerFormat:
+        'El PDF se compone en formato {format} como en el lector: su portada, su índice y cada resaltado.',
+      footerAllFormat:
+        'Cada libro se guarda como su propio PDF en formato {format}: su portada, su índice y cada resaltado.',
     },
     genres: {
       fiction: 'Ficción',
@@ -906,6 +992,7 @@ export const translations = {
       'book-delete-failed':
         'No se pudo eliminar el libro. Vuelve a intentarlo.',
       'highlight-deleted': 'Resaltado eliminado',
+      'highlight-routed': 'Movido de {from} a {chapter}',
       'notes-save-failed':
         'No se pudieron guardar los cambios. Vuelve a intentarlo.',
       'reorder-failed':
@@ -915,6 +1002,11 @@ export const translations = {
       'toc-already-loaded': 'El índice ya estaba cargado (sin duplicados)',
       'chapters-cleared': 'Todos los capítulos eliminados',
       'scan-empty': 'No se detectó texto en las fotos seleccionadas.',
+      'not-an-index': 'No se detectó ningún índice en la foto seleccionada.',
+      'not-a-book-page':
+        'No se detectó ninguna página de libro en la foto seleccionada.',
+      'index-in-highlight':
+        'Esa foto es del índice. Sube aquí páginas del libro con post-its.',
       'scan-failed': 'No se pudo procesar la página. Reintenta.',
       'picture-too-large': 'La portada debe pesar menos de 5 MB.',
       'library-full': 'Se alcanzó el límite de almacenamiento.',
@@ -1074,20 +1166,26 @@ export const translations = {
       add: '添加章节',
       scanToc: '上传目录照片',
       scanningToc: '正在读取目录…',
+      scanningTocPhase1: '正在读取目录…',
+      scanningTocPhase2: '正在识别章节…',
+      scanningTocPhase3: '正在提取页码范围…',
       scanningIndexHint: '正在从照片中提取章节与页码范围。',
       howItWorks: {
         action: '了解运作方式',
         title: '上传目录',
-        step1Title: '拍摄清晰的目录页照片',
-        step1Body: '在均匀光线下拍下完整目录页，确保章节名称与页码清晰可读。',
-        step2Title: '上传一张或多张目录照片',
-        step2Body: '系统会按顺序自动提取所有章节标题及对应页码范围。',
-        step3Title: '随时补传更多目录页',
-        step3Body: '再次上传时仅会追加新章节，不会重复已有章节。',
+        step1Title: '拍摄图书目录页',
+        step1Body: '上传一张或多张清晰的目录页照片，系统会自动按顺序提取所有章节标题与起止页码（不会重复添加）。若同时选择带有便利贴的书页照片，高亮也会自动按页码归入对应章节。',
+        demo1: 'I. 仰望夜空',
+        demo2: 'II. 浩瀚无垠的宇宙',
+        demo3: 'III. 每颗星辰的故事',
+        demo4: 'IV. 万物运转的奥秘',
+        demo5: 'V. 尚未发现的未知',
       },
       newPlaceholder: '章节标题',
       untitled: '未命名章节',
       noHighlightsYet: '尚无高亮',
+      noHighlightsCallout: '当前尚未创建任何高亮。请在章节中添加一条。',
+      noHighlightsAction: '上传高亮',
       pageSingle: '第 {page} 页',
       pageRange: '第 {pages} 页',
       empty: {
@@ -1116,6 +1214,10 @@ export const translations = {
       highlights: '高亮',
       add: '添加高亮',
       scan: '上传书页照片',
+      readChapter: '在阅读器中阅读',
+      routedNotice: '在“{from}”中上传的“{snippet}” — 已按页码自动移至“{to}”。',
+      routedBatchNotice: '在“{from}”中批量上传 — 已按页码自动归入：{summary}。',
+      routedBatchItem: '“{chapter}” {count} 条',
       emptyTitle: '尚无高亮',
       empty: '上传带有便利贴标记的书页照片以提取高亮段落。',
       page: '第 {page} 页',
@@ -1123,6 +1225,7 @@ export const translations = {
     highlightEdit: {
       titleNew: '上传高亮',
       title: '高亮',
+      titleEdit: '编辑高亮',
       scanTitle: '上传书页照片',
       scanSubtitle: '按阅读顺序上传一张或多张书页照片以提取标记段落。',
       choosePhotos: '上传照片',
@@ -1130,18 +1233,26 @@ export const translations = {
       queued: '正在读取书页…',
       loadingModels: '正在读取书页…',
       readingPages: '正在读取书页…',
+      readingPagesPhase1: '正在读取书页…',
+      readingPagesPhase2: '正在识别便利贴标记…',
+      readingPagesPhase3: '正在提取高亮段落…',
       scanningHintSingle: '正在识别便利贴标记并重建段落。',
       scanningHintMulti: '第 {done}/{total} 页 · 正在识别便利贴与段落。',
       resetAuto: '恢复自动',
       howItWorks: {
         action: '了解运作方式',
         title: '上传高亮',
-        step1Title: '在书页边距标记起止位置',
-        step1Body: '在段落首尾行贴上便利贴，或使用 L 形便利贴标记整段。',
-        step2Title: '按阅读顺序上传照片',
-        step2Body: '若段落跨越多页，请按阅读顺序选择所有书页照片。',
-        step3Title: '点按微调或恢复自动',
-        step3Body: '点按照片上的任意行可微调起止位置，或点按“恢复自动”还原。',
+        scene1: '方式 A · 双便利贴',
+        scene2: '方式 B · L 形组合',
+        twoNoteStart: '第 1 张 → 起始行',
+        twoNoteEnd: '第 2 张 → 结束行',
+        lArmCallout: '1 张横贴 + 1 张竖贴呈 L 形',
+        lAutoCutCallout: '段落末尾 → 自动截断',
+        step1Title: '方式 A · 两张水平便利贴（标记起点与终点）',
+        step1Body: '第 1 张便利贴指向段落起始行，第 2 张指向结束行（可在同页或跨页，中间书页会自动完整包含）。',
+        step2Title: '方式 B · 横竖两张便利贴拼成 L 形（标记整段）',
+        step2Body: '将第 1 张便利贴横贴指向首行，第 2 张竖贴紧贴其下方组成 L 形：系统会在该段落结束处自动截断。',
+        bulkNote: '批量上传：可一次选择任意多张带有便利贴的书页照片（甚至跨不同章节）— 系统会自动提取每条高亮并归入对应章节。',
       },
       tutorialStep1: '在起止行旁贴上便利贴（或用 L 形标记整段）。',
       tutorialStep2: '按阅读顺序上传 1 张或多张书页照片。',
@@ -1150,7 +1261,7 @@ export const translations = {
       endTag: '终点',
       tapModeStart: '起始行',
       tapModeEnd: '结束行',
-      tapHint: '点按书页上的任意行即可微调起点或终点。',
+      tapHint: '点按任意行即可微调起止位置。',
       photoBadgePage: '第 {page} 页',
       photoBadgeIndex: '照片 {index}',
       text: '已提取的高亮',
@@ -1160,6 +1271,12 @@ export const translations = {
       save: '添加',
       saveExisting: '存储',
       delete: '删除高亮',
+      deleteConfirm: {
+        title: '删除此高亮？',
+        message: '此高亮将从当前章节中删除。',
+        confirm: '删除',
+        cancel: '取消',
+      },
     },
     reader: {
       contents: '目录',
@@ -1178,6 +1295,7 @@ export const translations = {
           dark: '深色',
           sepia: '棕褐色',
           paper: '纸张',
+          book: '插画',
         },
       },
       pageOf: '第 {page} 页，共 {total} 页',
@@ -1187,17 +1305,29 @@ export const translations = {
         subtitle: '请检查网络连接，然后重试。',
       },
       empty: {
-        title: '还没有可阅读的内容',
-        subtitle: '为这本书添加摘要或高亮。',
+        title: '尚无高亮',
+        subtitle: '在第一章中上传一条高亮即可开始阅读。',
+        action: '上传高亮',
+        actionIndex: '上传目录照片',
       },
     },
     export: {
       title: '导出 PDF',
       titleAll: '导出所有图书',
       scope: { label: '图书', book: '本书', all: '所有图书' },
+      format: '页面尺寸',
+      formats: {
+        trade: '6 × 9 英寸',
+        digest: '5.5 × 8.5 英寸',
+        a5: 'A5',
+        letter: 'Letter',
+      },
+      preview: '预览',
       action: '导出',
-      footer: 'PDF 按 6 × 9 英寸书籍排版：封面、摘要，然后是每条高亮。',
-      footerAll: '每本书都会存储为单独的 6 × 9 英寸 PDF：封面、摘要，然后是每条高亮。',
+      footer: 'PDF 按 6 × 9 英寸书籍排版：封面、目录，然后是每条高亮。',
+      footerAll: '每本书都会存储为单独的 6 × 9 英寸 PDF：封面、目录，然后是每条高亮。',
+      footerFormat: 'PDF 按 {format} 纸张排版：封面、目录，然后是每条高亮。',
+      footerAllFormat: '每本书都会存储为单独的 {format} PDF：封面、目录，然后是每条高亮。',
     },
     genres: {
       fiction: '小说',
@@ -1345,6 +1475,7 @@ export const translations = {
       'book-deleted': '图书已删除',
       'book-delete-failed': '无法删除这本书。请再试一次。',
       'highlight-deleted': '已删除高亮',
+      'highlight-routed': '已从《{from}》移至《{chapter}》',
       'notes-save-failed': '无法存储你的更改。请再试一次。',
       'reorder-failed': '无法重新排序图书。请再试一次。',
       'scan-saved': '已存储扫描的高亮',
@@ -1352,6 +1483,9 @@ export const translations = {
       'toc-already-loaded': '目录已导入（未添加重复章节）',
       'chapters-cleared': '已删除所有章节',
       'scan-empty': '所选照片中未检测到文字。',
+      'not-an-index': '所选照片中未检测到图书目录。',
+      'not-a-book-page': '所选照片中未检测到书页文字。',
+      'index-in-highlight': '该照片为目录页，请在此上传带有便利贴的书页照片。',
       'scan-failed': '无法处理该页面，请重试。',
       'picture-too-large': '封面图片须小于 5 MB。',
       'library-full': '已达到存储空间上限。',

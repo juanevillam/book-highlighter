@@ -7,7 +7,7 @@ import { genreLabel } from '../lib/genres';
 import { useBodiesStore } from '../store/bodies';
 
 import { Artwork } from './Artwork';
-import { CalendarGlyph, GenreGlyph, genreTint, YEAR_TINT } from './genreGlyphs';
+import { GenreGlyph, genreTint } from './genreGlyphs';
 import {
   CloseGlyph,
   ContentsGlyph,
@@ -129,24 +129,23 @@ export function BookStage({
 
         <div className="now-copy">
           <span className="now-title">{book.name}</span>
-          {book.author && <span className="now-artist">{book.author}</span>}
-        </div>
-
-        {book.year !== null || book.genres.length > 0 ? (
-          <ul className="genre-tags">
-            {book.year !== null && (
-              <li
-                className="genre-tag"
-                style={{ '--tag-tint': YEAR_TINT } as React.CSSProperties}
-              >
-                <CalendarGlyph />
-                <span>
+          {(book.author || book.year !== null) && (
+            <span className="now-artist">
+              {book.author}
+              {book.year !== null && (
+                <span className="now-year">
+                  {book.author ? ' · ' : ''}
                   {formatYear(book.year, y =>
                     t('bookEdit.year.bc', { year: y }),
                   )}
                 </span>
-              </li>
-            )}
+              )}
+            </span>
+          )}
+        </div>
+
+        {book.genres.length > 0 ? (
+          <ul className="genre-tags">
             {book.genres.map(g => (
               <li
                 key={g}

@@ -11,7 +11,7 @@ export const UI_STATE_LAB = import.meta.env.DEV && STATE_LAB;
 
 export type HomeState = 'live' | 'skeleton' | 'empty' | 'error';
 export type ChaptersState = 'live' | 'skeleton' | 'empty' | 'scanning';
-export type ChapterDetailState = 'live' | 'empty';
+export type ChapterDetailState = 'live' | 'empty' | 'scanning';
 export type ScannerState = 'live' | 'scanning';
 export type ReaderLabState = 'live' | 'skeleton' | 'empty' | 'error';
 export type AccountState = 'live' | 'skeleton' | 'deleting';
@@ -83,7 +83,12 @@ export const CHAPTER_DETAIL_STATES: readonly Labelled<ChapterDetailState>[] = [
   {
     value: 'empty',
     label: 'No highlights',
-    note: 'Animated Highlight Scan tutorial SVG + primary Scan Highlight button.',
+    note: 'Empty state with How it works link + primary Upload Page Photos button.',
+  },
+  {
+    value: 'scanning',
+    label: 'Scanning Pages',
+    note: 'Circular progress ring with dynamic 3-phase status legend.',
   },
 ];
 

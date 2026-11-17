@@ -10,6 +10,7 @@ import {
   type BookFields,
 } from '../books';
 import { t } from '../i18n';
+import { loadCoverPalette } from '../lib/coverPalette';
 import { genreLabel, GENRES } from '../lib/genres';
 import { uploadFailureKey, uploadImage, type Asset } from '../media';
 import { useBodiesStore } from '../store/bodies';
@@ -164,6 +165,9 @@ export function BookFormPanel({
           body: initialBody,
           position: leadPosition(allBooks, cleanSeries),
         });
+        if (uploadedCover?.url) {
+          void loadCoverPalette(uploadedCover.url, `${createdId}:${fields.name}`);
+        }
         primeBody(createdId, initialBody);
         showToast(t('snackbar.book-created'));
         onSaved(createdId);
@@ -173,6 +177,9 @@ export function BookFormPanel({
           fields,
           ...(uploadedCover === undefined ? {} : { cover: uploadedCover }),
         });
+        if (uploadedCover?.url) {
+          void loadCoverPalette(uploadedCover.url, `${book.id}:${fields.name}`);
+        }
         showToast(t('snackbar.book-updated'));
         onSaved(book.id);
       }
@@ -260,6 +267,10 @@ export function BookFormPanel({
               const file = e.target.files?.[0];
               if (file) {
                 const previewUrl = URL.createObjectURL(file);
+                void loadCoverPalette(
+                  previewUrl,
+                  book ? `${book.id}:${name || book.name}` : name,
+                );
                 setCover(prev => {
                   if (prev.state === 'picked') {
                     URL.revokeObjectURL(prev.previewUrl);

@@ -17,10 +17,6 @@ export type StateLabGroup = {
 /**
  * THE DEV STATE LAB — Web counterpart to `sound-shaper/src/ui/StateLab.tsx`.
  * Renders nothing in production (`!import.meta.env.DEV`).
- *
- * When a new surface opens (e.g. Chapters, Chapter Detail, Scanner, Reader,
- * Account, Trophies), its group is appended to `groups` and automatically
- * selected so the stepper immediately controls the surface in front.
  */
 export function StateLab({
   groups,
