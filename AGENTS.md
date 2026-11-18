@@ -1,16 +1,17 @@
 # Book Highlighter
 
-> **WEB ONLY (Juan, 2026-11-10).** Book Highlighter is the standalone web +
-> installable PWA evolution of the portfolio's `apps/booker` (whose native iOS
-> app stays frozen in the private monorepo). It runs at
-> https://bookhighlighter.juanevillam.com, deployed on Cloudflare Pages
+> **WEB ONLY (Juan, 2026-11-10).** Book Highlighter is a 100% web and
+> installable offline-first PWA product — it has no native mobile app. It runs
+> at https://bookhighlighter.juanevillam.com, deployed on Cloudflare Pages
 > (`bookhighlighter`).
 
-A **personal reader for the book summaries and highlights Juan writes himself** —
-not an e-book store and not an AI product; there is no AI or OCR in it. You add
-a book, write an optional summary in your own words, and organize chapters and
-highlights with the printed edition's page numbers as written, then read them
-like a pocket edition or export them as a 6 × 9 in trade-paperback PDF.
+A **personal reader for the book summaries and highlights Juan captures from his
+physical books** — not an e-book store and not a cloud AI product. You add a
+book, write an optional summary in your own words, photograph the printed table
+of contents (`ÍNDICE`) and sticky-note flagged pages so the on-device neural
+pipeline extracts chapters, printed page numbers, and multi-paragraph highlights
+automatically, then read them like a pocket edition or export them as a
+searchable vector PDF.
 
 **Personal-only, like Sound Shaper.** No social surface, ever. Every book and
 highlight belongs to the signed-in reader alone.
@@ -21,12 +22,16 @@ highlight belongs to the signed-in reader alone.
   unless asked. **`git commit` hangs silently** unless the SSH signing key is
   loaded — check `ssh-add -l` first; never `--no-gpg-sign`.
 - **Scripts:** `npm run dev`, `npm run typecheck` (`tsc --noEmit`),
-  `npm test` (`vitest run`), `npm run build` (`tsc --noEmit && vite build`).
-- **Offline-first PWA:** Unlike Sound Shaper Web (which streams audio and
-  unregisters Service Workers), Book Highlighter ships `public/manifest.webmanifest`
+  `npm test` (`vitest run`), `npm run build` (`tsc --noEmit && vite build`),
+  `npm run eval:photos` (`tsx scripts/eval-photos.ts`).
+- **Offline-first PWA:** Book Highlighter ships `public/manifest.webmanifest`
   and `public/sw.js` paired with Firestore's IndexedDB `persistentLocalCache`,
-  so a shelf installed to the iPhone Home Screen opens and reads offline like a
-  Kindle.
+  so a shelf installed to the iPhone Home Screen or desktop opens and reads
+  offline like a Kindle.
+- **Shared web UI primitives:** `ActionSheet.tsx`, `Artwork.tsx`, `Backdrop.tsx`,
+  `ConfirmDialog.tsx`, `SidePanel.tsx`, `StateLab.tsx`, and `Toast.tsx` are kept
+  byte-for-byte identical with `sound-shaper/web` (`npm run check:web-ui` in the
+  root portfolio repo).
 
 ## Versions
 
@@ -48,7 +53,7 @@ launch) and follows the same disciplined cadence as Sound Shaper and
 
 | field    | code                      | rendered (en)         | notes                                       |
 | -------- | ------------------------- | --------------------- | ------------------------------------------- |
-| title    | `name`                    | Title                 | `name`, matching Sound Shaper and Topper    |
+| title    | `name`                    | Title                 | `name`, matching Sound Shaper               |
 | author   | `author`                  | Author                | one string, kept as written                 |
 | year     | `year`                    | Year                  | drives "Publication Date"; may be `< 0`     |
 | series   | `series` / `seriesNumber` | Series / Book #       | optional; stacks books sharing a series     |
@@ -57,20 +62,24 @@ launch) and follows the same disciplined cadence as Sound Shaper and
 | chapters | `body.chapters[]`         | Chapters / Highlights | each: `id`, `name`, `pages`, `highlights[]` |
 | cover    | `artUrl` / `artPublicId`  | Cover                 | 2:3 cover uploaded to Cloudinary            |
 
-- **One prose field and one editor.** The book editor holds the metadata, cover,
-  and `summary`; `ChaptersForm` holds the chapters and their highlights.
+- **One prose field and photo-driven chapters/highlights.** The book editor
+  holds the metadata, cover, and `summary`; `ChaptersForm` holds the chapters
+  and their highlights, populated from photos of the book's table of contents
+  and flagged pages (including automatic chapter creation/routing for books
+  without a printed index).
 - **Two documents per book:** `users/{uid}/books/{id}` (metadata — the ONE
   session listener) and `users/{uid}/bodies/{id}` (the long text — read on
   demand and cached in `src/store/bodies.ts` + IndexedDB). Counts the shelf
   needs (`chapterCount`, `highlightCount`) are denormalized onto the book on
   every body save, which also drives the trophy engine from the single listener.
 - **Pages are the printed edition's, as written — text, not numbers.**
-  `chapter.pages` holds the printed span (e.g. `"14–33"` or `"pág. 14, 33 y 95"`),
-  and `highlight.page` holds the passage's page (`"47"` or `"47–48"`), optional
-  always. Neither is a screen page number.
+  `chapter.pages` holds the printed span (e.g. `"14–33"`), and `highlight.page`
+  holds the passage's page (`"47"` or `"47–48"`), optional always. Neither is a
+  screen page number.
 - **The reader's place is an anchor** (`readerAnchor: { blockId, offset }`),
-  never a page number. Screen pages change with text scale, viewport size, and
-  rotation; the character-offset anchor keeps the exact paragraph in view.
+  never a page number. Screen pages change with text scale, page width, viewport
+  size, and rotation; the character-offset anchor keeps the exact paragraph in
+  view.
 
 ## On-device neural highlight & TOC detector (`src/lib/ocr/`, `src/lib/photoImport/`)
 
@@ -88,61 +97,64 @@ launch) and follows the same disciplined cadence as Sound Shaper and
   48 px strip before recognition, and pools split diacritic probabilities plus
   soft-token CTC thresholds (`pBlank < 0.68` for spaces and punctuation).
 - **Paper Sandwich sticky-note detector (`findFlags` in `analyze.ts`):**
-  Detects sticky flags of any hue inside the current page's outer margin strip
-  (`0.006 * W` to `0.038 * W` outside the text column) by requiring a
-  high-saturation band (`rowS >= 80 && rowV >= 110`) sandwiched between bare
-  low-saturation paper both above and below (`aboveS < 42 && belowS < 42`). This
-  rejects both background tabs sticking out past the page edge and thumbs
-  holding the bottom corner. Distinguishes horizontal `'bar'` flags (range
-  start/end) from vertical `'L'` flags (single-paragraph mark).
+  Detects sticky flags of any hue (neon, pastel, teal, or neutral/translucent)
+  inside the current page's outer margin strip (`0.006 * W` to `0.038 * W`
+  outside the text column) by requiring a distinct flag band sandwiched between
+  bare paper both above and below. This rejects both background tabs sticking
+  out past the page edge and thumbs holding the bottom corner. Distinguishes
+  horizontal `'bar'` flags (range start/end) from vertical `'L'` flags
+  (single-paragraph mark where the horizontal `IN + MID` arm marks the start and
+  the paragraph break closes the passage).
 - **5-signal paragraph reconstruction & TOC extraction (`assemble.ts`):**
   Reconstructs paragraph breaks across `1..N` photos of a highlight from (1)
   first-line indent (`> 0.65 * lh`, excluding right-aligned hanging verse
   continuations), (2) short previous line ("punto y aparte sin sangría"), (3)
   vertical block gap, (4) dialogue em-dash (`—`), and (5) cross-line/cross-page
-  hyphenation, paired with an interactive per-photo line inspector in
-  `ChaptersForm.tsx` and TOC (`ÍNDICE`) photo scanning.
+  hyphenation, paired with an interactive per-photo line inspector (`Reset Auto`
+  to restore automatic marks) and TOC (`ÍNDICE`) photo scanning.
 
 ## Library & shelf
 
-- **Sort** (`src/lib/librarySort.ts`): `Recent` (last opened), `Title`,
-  `Author`, `Publication Date`, each with ascending/descending order, persisted
-  per device in `src/store/librarySort.ts`.
-- **No hand order.** A music library is arranged by hand; a bookshelf is browsed
-  by these four sorts.
+- **Hand order + 4 sorts** (`src/lib/librarySort.ts`, `src/lib/gridOrder.ts`):
+  long-press/drag 2D fractional reordering across the shelf, plus `Recent`
+  (last opened), `Title`, `Author`, and `Publication Date` sorts (ascending or
+  descending), persisted per device in `src/store/librarySort.ts`.
 - **Series stack into one tile** (`src/lib/shelf.ts`). Books sharing a `series`
-  name stack into a fan tile at the position of the series' first book in the
-  active sort; opening it shows the series ordered by `seriesNumber`.
+  name stack into a fan tile at the position of the series' first book; opening
+  it shows the series ordered by `seriesNumber`.
 - **Genres are a translated catalogue** (`src/lib/genres.ts`, translated under
   `genres.*` in `en`, `es`, `zh`), multi-select and searchable.
-- **Recently Deleted:** Deleting a book soft-deletes it (`trashedAt`) with an
-  Undo toast; `TrashSheet` (reached from Account) offers Recover or Delete
-  Permanently.
+- **Direct deletion with confirmation:** Deleting a book confirms with a modal
+  dialog (`ConfirmDialog`) and permanently deletes the Firestore documents and
+  Cloudinary cover asset (`deleteBook`).
 
 ## The reader (`src/ui/Reader.tsx`, `src/lib/paginator.ts`)
 
-- **Reading order:** Cover (if present) → interior title page → `Summary` → each
-  chapter that has highlights, with highlights set in typographic quotes (`“…”`).
-- **Three page-turn modes (`PAGE_TURNS`):**
-  - `curl`: interactive double-sided page curl showing the mirrored back of the
-    turning leaf over the active paper tone.
-  - `slide`: horizontal paginated swipe/keyboard step.
-  - `scroll`: continuous vertical column with the top bar pinned and page
-    footers omitted.
-- **Four page themes (`READER_THEMES`):** `light` (`#FFFFFF`), `dark`
-  (`#000000`), `sepia` (`#F3E9D2`), and `paper` (`#CFCFCB`), or `null` to follow
-  the app appearance.
-- **Six text scales (`TEXT_SCALES`):** `0.7`, `0.8`, `0.9`, `1.0`, `1.1`, `1.2`,
-  shared between the screen reader and PDF export.
+- **Reading order (`src/lib/readerSections.ts`):** Typographic title card with
+  cover art (`title`) → interactive book index (`book-index`, jumping to the
+  chapter or opening photo upload if empty) → `Summary` → each chapter with its
+  highlights and page citations → farewell colophon (`end`).
+- **Two page-turn modes (`PAGE_TURNS`):**
+  - `slide` (default): horizontal paginated swipe and keyboard step.
+  - `scroll`: continuous vertical column with page footers omitted.
+- **Five page themes (`READER_THEMES`):** `light` (`#FFFFFF`), `dark`
+  (`#0D0D0D`), `sepia` (`#F3E9D2`), `paper` (`#CFCFCB`), and `book` (`#FAF6EE`
+  light / `#141210` dark with cover-extracted chromatic accents, hand-drawn
+  botanical header/footer ornaments `BookPageOrnament`, and margin illustrations
+  `BookPageMarginArt`), or `null` to follow the app appearance.
+- **Seven text scales (`TEXT_SCALES`) & two page widths (`PAGE_WIDTHS`):**
+  `0.76`, `0.84`, `0.92`, `1.0` (default), `1.1`, `1.22`, `1.36`, plus
+  `standard` and `extended` column widths, shared with PDF export.
 
 ## Export (PDF — `src/lib/pdfExport.ts`, `src/ui/ExportForm.tsx`)
 
-- **Client-side vector PDF (`6 × 9 in` trade paperback):** Generated in the
+- **Client-side vector PDF (`A5`, `B5`, `A4`, `Letter`):** Generated in the
   browser with `jspdf` for `This Book` or `All Books`. Text is drawn as
-  selectable, searchable glyphs rather than rasterized images.
-- **Order:** Front cover with title, author, year, and genres (or title page if
-  there is no cover) → `Summary` → chapters and quoted highlights, seeded with
-  the reader's current theme and text scale.
+  selectable, searchable glyphs (with high-DPI Canvas fallback for CJK lines).
+- **Order:** Cover page (when cover art exists) → interior title page →
+  interactive outline & contents → `Summary` → chapters and highlights, seeded
+  with the reader's current theme (including `book` ornaments and borders), text
+  scale, and paper format.
 
 ## UI & craft rules
 
@@ -151,8 +163,10 @@ launch) and follows the same disciplined cadence as Sound Shaper and
   Glass floating bars with a tonal floor, circular lone-glyph controls vs pill
   text controls, and tactile `:active` press squash.
 - **Responsive stage:** On desktop (`>= 64rem`), up to three columns sit side by
-  side (`LibraryGrid` → `BookStage` → `SidePanel`); on mobile (`< 64rem`), a
-  2-column 2:3 cover grid pairs with full-height sheets.
+  side (`LibraryGrid` → `BookStage` → `SidePanel`), with global centered modal
+  sheets (`.modals`) for Settings, Account, Trophies, Sort, Series, and
+  New/Edit Book; on mobile (`< 64rem`), a 2-column 2:3 cover grid pairs with
+  full-height swipe-to-dismiss sheets.
 - **Trophies (`src/trophies/`):** 7 PlayStation-tier trophies (`Book Highlighter`
   platinum, `Rereader`, `Marker`, `Shelver`, `Writer`, `Binder`, `Finisher`),
   with titles always kept in English across all UI languages.
