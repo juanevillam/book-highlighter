@@ -1,10 +1,9 @@
 /**
  * Book Highlighter's mark and its icon tile, as the welcome screen draws them.
  *
- * The mark is `apps/booker/src/components/ui/BrandMark.tsx`'s open book on the
- * 48-unit grid (`scripts/gen-brand-art.py` `MARKS["booker"]`): two pages
- * dipping into the spine, upright outer edges, nothing written on them.
- * The tile is `sound-shaper/web/src/ui/brand.tsx`'s `BrandTile`, dark: the iOS
+ * The mark is an open book on the 48-unit grid: two pages dipping into the
+ * spine, upright outer edges, nothing written on them. The tile is
+ * `sound-shaper/web/src/ui/brand.tsx`'s `BrandTile`, dark: the iOS
  * superellipse (n = 4.5), its measured shine and a blurred contact shadow.
  */
 const BOOK_PATHS = [

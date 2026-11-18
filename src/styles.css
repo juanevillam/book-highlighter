@@ -101,7 +101,7 @@
 html {
   -webkit-text-size-adjust: 100%;
   -webkit-tap-highlight-color: transparent;
-  overscroll-behavior-y: none;
+  overscroll-behavior: none;
 }
 
 body {
@@ -111,7 +111,7 @@ body {
   color: var(--ink);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
-  overscroll-behavior-y: none;
+  overscroll-behavior: none;
 }
 
 chrome_annotation,
@@ -1753,6 +1753,23 @@ button {
   margin-left: auto;
 }
 
+@media (hover: hover) {
+  .round.quiet:hover {
+    background: rgb(var(--fg) / 0.08);
+  }
+}
+
+.round.quiet:active {
+  background: rgb(var(--fg) / 0.12);
+}
+
+@media (hover: hover) {
+  .banner:hover,
+  .link-row:hover {
+    background: rgb(var(--fg) / 0.04);
+  }
+}
+
 .banner:active,
 .link-row:active {
   background: rgb(var(--fg) / 0.06);
@@ -2918,6 +2935,18 @@ button {
   background: none;
   color: inherit;
   text-align: start;
+}
+
+@media (hover: hover) {
+  .reorder-row-btn:hover .reorder-title,
+  .highlight-body-btn:hover .highlight-quote {
+    opacity: 0.82;
+  }
+}
+
+.reorder-row-btn:active,
+.highlight-body-btn:active {
+  opacity: 0.65;
 }
 
 .reorder-title {
@@ -5600,6 +5629,8 @@ button {
   border-radius: 2.125rem 2.125rem 0 0;
   background: var(--surface);
   outline: none;
+  touch-action: none;
+  cursor: grab;
   transform: translateY(105%);
   visibility: hidden;
   transition:
