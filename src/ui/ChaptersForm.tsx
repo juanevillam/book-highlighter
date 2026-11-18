@@ -28,7 +28,6 @@ import {
 } from '../lib/bodyEdits';
 import { parsePageRef } from '../lib/bookFields';
 import {
-  DEFAULT_COVER_PALETTE,
   hslToCss,
   interpolatePaletteColor,
   useBookCoverPalette,
@@ -43,10 +42,7 @@ import {
   textBetween,
   type Mark,
 } from '../lib/photoImport/assemble';
-import {
-   type PageAnalysis,
-  type TocEntry,
-} from '../lib/photoImport/analyze';
+import { type PageAnalysis, type TocEntry } from '../lib/photoImport/analyze';
 import {
   runPhotoImport,
   type PhotoImportItem,
@@ -89,11 +85,11 @@ const marksEqual = (
 ): boolean =>
   Boolean(
     a &&
-      b &&
-      a.start.photo === b.start.photo &&
-      a.start.line === b.start.line &&
-      a.end.photo === b.end.photo &&
-      a.end.line === b.end.line,
+    b &&
+    a.start.photo === b.start.photo &&
+    a.start.line === b.start.line &&
+    a.end.photo === b.end.photo &&
+    a.end.line === b.end.line,
   );
 
 const LEAVE_MS = 320;
@@ -219,62 +215,197 @@ const DEMO_TOC_SPANS = [
   { key: 'chapters.howItWorks.demo5', page: '65', range: '65–82' },
 ] as const;
 
-const INDEX_BEAT_PCTS = [
-  0, 0, 0, 14, 42, 72, 95, 100, 100, 100, 100, 100, 100,
+function StickyNoteArt({ variant }: { variant: 'start' | 'end' | 'l-pair' }) {
+  if (variant === 'l-pair') {
+    return (
+      <svg
+        className="how-sticky-svg is-l-pair"
+        viewBox="0 0 48 50"
+        fill="none"
+        aria-hidden="true"
+      >
+        {/* 1st Note (underneath): 43.5×14.8 horizontal sticky note protruding left */}
+        <g className="how-sticky-note-unit is-first">
+          <rect
+            x="2"
+            y="4"
+            width="43.5"
+            height="14.8"
+            rx="2"
+            fill="#000000"
+            fillOpacity="0.18"
+          />
+          <rect
+            x="1"
+            y="2.5"
+            width="43.5"
+            height="14.8"
+            rx="2"
+            fill="var(--span-start)"
+            stroke="rgb(0 0 0 / 0.2)"
+            strokeWidth="0.88"
+          />
+          <path
+            d="M8.9 9.9 H24.2 M20.6 6.8 L24.5 9.9 L20.6 13"
+            fill="none"
+            stroke="var(--span-start-ink)"
+            strokeWidth="1.55"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </g>
+
+        {/* 2nd Note (pasted ON TOP flush with top-right corner x=29.7..44.5, y=2.5..46) */}
+        <g className="how-sticky-note-unit is-second">
+          <rect
+            x="30.7"
+            y="4"
+            width="14.8"
+            height="43.5"
+            rx="2"
+            fill="#000000"
+            fillOpacity="0.22"
+          />
+          <rect
+            x="29.7"
+            y="2.5"
+            width="14.8"
+            height="43.5"
+            rx="2"
+            fill="var(--span-end)"
+            stroke="rgb(0 0 0 / 0.24)"
+            strokeWidth="0.88"
+          />
+          <path
+            d="M37.1 25.2 V40.5 M34 36.9 L37.1 40.8 L40.2 36.9"
+            fill="none"
+            stroke="var(--span-end-ink)"
+            strokeWidth="1.55"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </g>
+      </svg>
+    );
+  }
+
+  const isStart = variant === 'start';
+  const fillVar = isStart ? 'var(--span-start)' : 'var(--span-end)';
+  const inkVar = isStart ? 'var(--span-start-ink)' : 'var(--span-end-ink)';
+
+  return (
+    <svg
+      className={`how-sticky-svg is-single is-${variant}`}
+      viewBox="0 0 48 20"
+      fill="none"
+      aria-hidden="true"
+    >
+      <g
+        className={
+          isStart
+            ? 'how-sticky-note-unit is-first'
+            : 'how-sticky-note-unit is-second'
+        }
+      >
+        <rect
+          x="2"
+          y="4"
+          width="43.5"
+          height="14.8"
+          rx="2"
+          fill="#000000"
+          fillOpacity="0.18"
+        />
+        <rect
+          x="1"
+          y="2.5"
+          width="43.5"
+          height="14.8"
+          rx="2"
+          fill={fillVar}
+          stroke="rgb(0 0 0 / 0.2)"
+          strokeWidth="0.88"
+        />
+        <path
+          d="M23.7 9.9 H39 M35.4 6.8 L39.3 9.9 L35.4 13"
+          fill="none"
+          stroke={inkVar}
+          strokeWidth="1.55"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </g>
+    </svg>
+  );
+}
+
+const INDEX_SCAN_PCTS = [
+  0, 0, 20, 40, 60, 80, 100, 100, 100, 100, 100, 100,
 ] as const;
 
 function IndexTheaterStage() {
   const [beat, setBeat] = useState(0);
 
   useEffect(() => {
+    if (
+      typeof window !== 'undefined' &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    ) {
+      setBeat(8);
+      return;
+    }
     const id = window.setInterval(() => {
-      setBeat(prev => (prev + 1) % 13);
-    }, 860);
+      setBeat(prev => (prev + 1) % 12);
+    }, 880);
     return () => window.clearInterval(id);
   }, []);
 
-  const isSelecting = beat === 0 || beat === 1;
-  const isUploading = beat === 2;
-  const isFraming = beat <= 2;
-  const isScanning = beat >= 3 && beat <= 6;
+  const isFraming = beat <= 1;
+  const isScanning = beat >= 2 && beat <= 6;
   const isExtracted = beat >= 7;
-  const extractedCount = isExtracted ? Math.min(5, beat - 6) : 0;
-  const scanPct = INDEX_BEAT_PCTS[beat] ?? 64;
-  const scanPhaseLabel =
-    beat <= 3
-      ? t('chapters.scanningTocPhase1')
-      : beat === 4
-        ? t('chapters.scanningTocPhase2')
-        : t('chapters.scanningTocPhase3');
+  const extractedCount =
+    beat < 2 ? 0 : Math.min(DEMO_TOC_SPANS.length, beat - 1);
+  const scanPct = INDEX_SCAN_PCTS[beat] ?? 100;
 
   return (
-    <div className="how-book-viewport" aria-hidden="true">
+    <div className="how-book-viewport is-index-viewport" aria-hidden="true">
       <div
         className={[
-          'how-open-page',
+          'how-open-page is-index-sheet',
           isFraming ? 'is-framing' : '',
-          isUploading ? 'is-uploading' : '',
           isScanning ? 'is-scanning' : '',
           isExtracted ? 'is-extracted' : '',
         ]
           .filter(Boolean)
           .join(' ')}
       >
-        <span className="how-page-spine" aria-hidden="true" />
         <span className="how-corner is-tl" />
         <span className="how-corner is-tr" />
         <span className="how-corner is-bl" />
         <span className="how-corner is-br" />
 
-        <div className="how-mini-kicker">{t('reader.contents')}</div>
+        <div className="how-mini-kicker-row">
+          <span className="how-mini-kicker">{t('reader.contents')}</span>
+          <span
+            className={
+              isScanning || isExtracted
+                ? 'how-live-scan-chip is-visible'
+                : 'how-live-scan-chip'
+            }
+          >
+            <span
+              className={
+                isExtracted ? 'how-live-scan-dot is-done' : 'how-live-scan-dot'
+              }
+            />
+            <span>{`${scanPct}%`}</span>
+          </span>
+        </div>
 
         <div className="how-mini-toc-scan">
           {DEMO_TOC_SPANS.map((row, idx) => {
-            const rowExtracted = isExtracted && idx < extractedCount;
-            const cls = [
-              'how-mini-toc-line',
-              rowExtracted ? 'is-scanned' : '',
-            ]
+            const rowExtracted = idx < extractedCount;
+            const cls = ['how-mini-toc-line', rowExtracted ? 'is-scanned' : '']
               .filter(Boolean)
               .join(' ');
             return (
@@ -295,33 +426,6 @@ function IndexTheaterStage() {
         </div>
 
         <div className="how-page-folio">7</div>
-
-        <div
-          className={[
-            'how-index-picker-bar',
-            isSelecting || isUploading ? 'is-visible' : '',
-            isUploading ? 'is-pressed' : '',
-          ]
-            .filter(Boolean)
-            .join(' ')}
-        >
-          <span className="how-picker-pill">
-            <span>{t('chapters.scanToc')}</span>
-          </span>
-        </div>
-
-        <div
-          className={
-            isScanning
-              ? 'how-index-scan-overlay is-active'
-              : 'how-index-scan-overlay'
-          }
-        >
-          <ScanProgressRing percent={scanPct} />
-          <span key={scanPhaseLabel} className="how-index-scan-label">
-            {scanPhaseLabel}
-          </span>
-        </div>
       </div>
     </div>
   );
@@ -340,64 +444,117 @@ const MINI_L_PROSE = [
   'Cada estrella guarda su propia historia.',
   'Mirar hacia arriba también me despierta',
   'curiosidad por cómo funcionan las cosas y por',
-  'todo lo que todavía nos falta por descubrir.',
-  'En esta sección comparto algunas de mis imágenes…',
+  'todo lo que nos falta por descubrir.',
+  'En esta sección comparto mis notas.',
 ] as const;
 
-function HighlightTheaterStage({ scene }: { scene: number }) {
+function HighlightTheaterStage({
+  scene,
+  palette,
+}: {
+  scene: number;
+  palette: CoverPalette;
+}) {
   if (scene === 0) {
+    const spanCount = 4;
     return (
-      <div className="how-book-viewport" aria-hidden="true">
+      <div className="how-book-viewport is-prose-viewport" aria-hidden="true">
         <div className="how-open-page is-prose-sheet">
-          <span className="how-page-spine" aria-hidden="true" />
-          <div className="how-callout-row is-top">
-            <span className="how-Diagram-pill is-start">
-              {t('highlightEdit.howItWorks.twoNoteStart')}
-            </span>
-          </div>
+          <span className="how-corner is-tl" />
+          <span className="how-corner is-tr" />
+          <span className="how-corner is-bl" />
+          <span className="how-corner is-br" />
 
-          <div className="how-mini-prose">
-            {MINI_PROSE.map((line, idx) => {
-              const inRange = idx >= 1 && idx <= 4;
-              const isStart = idx === 1;
-              const isMid = idx === 2 || idx === 3;
-              const isEnd = idx === 4;
-              const isOutside = !inRange;
-              const cls = [
-                'how-prose-line',
-                inRange ? 'is-in-range' : '',
-                isStart ? 'is-start' : '',
-                isMid ? 'is-mid' : '',
-                isEnd ? 'is-end' : '',
-                isOutside ? 'is-outside' : '',
-              ]
-                .filter(Boolean)
-                .join(' ');
-              return (
-                <div key={idx} className={cls}>
-                  {isStart && (
-                    <span
-                      className="how-sticky-flag is-start"
-                      aria-hidden="true"
-                    >
-                      <span className="how-sticky-arrow">→</span>
-                    </span>
-                  )}
-                  {isEnd && (
-                    <span className="how-sticky-flag is-end" aria-hidden="true">
-                      <span className="how-sticky-arrow">→</span>
-                    </span>
-                  )}
-                  <span className="how-prose-text">{line}</span>
-                </div>
-              );
-            })}
-          </div>
+          <div className="how-prose-stage">
+            <div className="how-callout-row is-top">
+              <span className="how-Diagram-pill is-start">
+                {t('highlightEdit.howItWorks.twoNoteStart')}
+              </span>
+            </div>
 
-          <div className="how-callout-row is-bottom">
-            <span className="how-Diagram-pill is-end">
-              {t('highlightEdit.howItWorks.twoNoteEnd')}
-            </span>
+            <div className="how-mini-prose">
+              {MINI_PROSE.map((line, idx) => {
+                const inRange = idx >= 1 && idx <= 4;
+                const isStart = idx === 1;
+                const isMid = idx === 2 || idx === 3;
+                const isEnd = idx === 4;
+                const isOutside = !inRange;
+                const stepIdx = inRange ? idx - 1 : 0;
+                const tLine = inRange ? stepIdx / (spanCount - 1) : 0;
+                const hsl = interpolatePaletteColor(palette, tLine);
+                const lineStyle = inRange
+                  ? ({
+                      '--line-step': stepIdx,
+                      '--tut-fill': hslToCss(hsl, 0.24),
+                      '--tut-edge': hslToCss(hsl, 0.58),
+                    } as CSSProperties)
+                  : undefined;
+
+                const cls = [
+                  'how-prose-line',
+                  inRange ? 'is-in-range' : '',
+                  isStart ? 'is-start' : '',
+                  isMid ? 'is-mid' : '',
+                  isEnd ? 'is-end' : '',
+                  isOutside ? 'is-outside' : '',
+                ]
+                  .filter(Boolean)
+                  .join(' ');
+                return (
+                  <div key={idx} className={cls} style={lineStyle}>
+                    {isStart && (
+                      <>
+                        <svg
+                          className="how-pin-leader is-from-top"
+                          viewBox="0 0 26 54"
+                          fill="none"
+                          aria-hidden="true"
+                        >
+                          <path
+                            className="how-leader-stroke"
+                            pathLength="1"
+                            d="M25 5 C12 5 10 18 10 50 M6.4 45.4 L10 50.6 L13.6 45.4"
+                            stroke="var(--span-start)"
+                            strokeWidth="1.55"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                        </svg>
+                        <StickyNoteArt variant="start" />
+                      </>
+                    )}
+                    {isEnd && (
+                      <>
+                        <StickyNoteArt variant="end" />
+                        <svg
+                          className="how-pin-leader is-from-bottom"
+                          viewBox="0 0 26 54"
+                          fill="none"
+                          aria-hidden="true"
+                        >
+                          <path
+                            className="how-leader-stroke is-delayed"
+                            pathLength="1"
+                            d="M25 49 C12 49 10 36 10 4 M6.4 8.6 L10 3.4 L13.6 8.6"
+                            stroke="var(--span-end)"
+                            strokeWidth="1.55"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                        </svg>
+                      </>
+                    )}
+                    <span className="how-prose-text">{line}</span>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="how-callout-row is-bottom">
+              <span className="how-Diagram-pill is-end">
+                {t('highlightEdit.howItWorks.twoNoteEnd')}
+              </span>
+            </div>
           </div>
 
           <div className="how-page-folio">47</div>
@@ -406,59 +563,104 @@ function HighlightTheaterStage({ scene }: { scene: number }) {
     );
   }
 
+  const lSpanCount = 3;
   return (
-    <div className="how-book-viewport" aria-hidden="true">
+    <div className="how-book-viewport is-prose-viewport" aria-hidden="true">
       <div className="how-open-page is-prose-sheet">
-        <span className="how-page-spine" aria-hidden="true" />
-        <div className="how-callout-row is-top">
-          <span className="how-Diagram-pill is-start">
-            {t('highlightEdit.howItWorks.lArmCallout')}
-          </span>
-        </div>
+        <span className="how-corner is-tl" />
+        <span className="how-corner is-tr" />
+        <span className="how-corner is-bl" />
+        <span className="how-corner is-br" />
 
-        <div className="how-mini-prose">
-          {MINI_L_PROSE.map((line, idx) => {
-            const inRange = idx >= 1 && idx <= 3;
-            const isStart = idx === 1;
-            const isMid = idx === 2;
-            const isEnd = idx === 3;
-            const isOutside = !inRange;
-            const cls = [
-              'how-prose-line',
-              inRange ? 'is-in-range' : '',
-              isStart ? 'is-start' : '',
-              isMid ? 'is-mid' : '',
-              isEnd ? 'is-end' : '',
-              isOutside ? 'is-outside' : '',
-            ]
-              .filter(Boolean)
-              .join(' ');
-            return (
-              <div key={idx} className={cls}>
-                {isStart && (
-                  <>
-                    <span
-                      className="how-sticky-flag is-end is-l-vert"
-                      aria-hidden="true"
-                    />
-                    <span
-                      className="how-sticky-flag is-start is-l-horiz"
+        <div className="how-prose-stage">
+          <div className="how-callout-row is-top">
+            <span className="how-Diagram-pill is-start">
+              {t('highlightEdit.howItWorks.lArmCallout')}
+            </span>
+          </div>
+
+          <div className="how-mini-prose">
+            {MINI_L_PROSE.map((line, idx) => {
+              const inRange = idx >= 1 && idx <= 3;
+              const isStart = idx === 1;
+              const isMid = idx === 2;
+              const isEnd = idx === 3;
+              const isNextPara = idx === 4;
+              const isOutside = !inRange;
+              const stepIdx = inRange ? idx - 1 : 0;
+              const tLine = inRange ? stepIdx / (lSpanCount - 1) : 0;
+              const hsl = interpolatePaletteColor(palette, tLine);
+              const lineStyle = inRange
+                ? ({
+                    '--line-step': stepIdx,
+                    '--tut-fill': hslToCss(hsl, 0.24),
+                    '--tut-edge': hslToCss(hsl, 0.58),
+                  } as CSSProperties)
+                : undefined;
+
+              const cls = [
+                'how-prose-line',
+                inRange ? 'is-in-range' : '',
+                isStart ? 'is-start' : '',
+                isMid ? 'is-mid' : '',
+                isEnd ? 'is-end is-para-end' : '',
+                isNextPara ? 'is-next-para' : '',
+                isOutside ? 'is-outside' : '',
+              ]
+                .filter(Boolean)
+                .join(' ');
+              return (
+                <div key={idx} className={cls} style={lineStyle}>
+                  {isStart && (
+                    <>
+                      <svg
+                        className="how-pin-leader is-from-top"
+                        viewBox="0 0 26 54"
+                        fill="none"
+                        aria-hidden="true"
+                      >
+                        <path
+                          className="how-leader-stroke"
+                          pathLength="1"
+                          d="M25 5 C12 5 10 18 10 50 M6.4 45.4 L10 50.6 L13.6 45.4"
+                          stroke="var(--span-start)"
+                          strokeWidth="1.55"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
+                      <StickyNoteArt variant="l-pair" />
+                    </>
+                  )}
+                  <span className="how-prose-text">{line}</span>
+                  {isEnd && (
+                    <svg
+                      className="how-pin-leader is-to-para-cut"
+                      viewBox="0 0 48 56"
+                      fill="none"
                       aria-hidden="true"
                     >
-                      <span className="how-sticky-arrow">→</span>
-                    </span>
-                  </>
-                )}
-                <span className="how-prose-text">{line}</span>
-              </div>
-            );
-          })}
-        </div>
+                      <path
+                        className="how-leader-stroke is-delayed"
+                        pathLength="1"
+                        d="M26 55 C44 42 42 4 1.5 4 M6.8 0.8 L1 4 L6.8 7.4"
+                        stroke="var(--span-end)"
+                        strokeWidth="1.55"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                  )}
+                </div>
+              );
+            })}
+          </div>
 
-        <div className="how-callout-row is-bottom">
-          <span className="how-Diagram-pill is-end">
-            {t('highlightEdit.howItWorks.lAutoCutCallout')}
-          </span>
+          <div className="how-callout-row is-bottom is-end-aligned">
+            <span className="how-Diagram-pill is-end">
+              {t('highlightEdit.howItWorks.lAutoCutCallout')}
+            </span>
+          </div>
         </div>
 
         <div className="how-page-folio">48</div>
@@ -580,10 +782,31 @@ function HowItWorksPanel({
         )}
 
         {kind === 'index' ? (
-          <IndexTheaterStage />
+          <>
+            <IndexTheaterStage />
+            <div className="how-bulk-callout">
+              <p>{t('chapters.howItWorks.noIndexNote')}</p>
+            </div>
+            <div className="how-panel-actions">
+              <button
+                type="button"
+                className="pill is-primary"
+                onClick={() => {
+                  onClose();
+                  onAction();
+                }}
+              >
+                <span>{actionLabel}</span>
+              </button>
+            </div>
+          </>
         ) : (
           <>
-            <HighlightTheaterStage scene={scene} />
+            <HighlightTheaterStage
+              key={scene}
+              scene={scene}
+              palette={palette}
+            />
             <div className="how-bulk-callout">
               <p>{t('highlightEdit.howItWorks.bulkNote')}</p>
             </div>
@@ -882,7 +1105,9 @@ function SortableCardList<T extends { id: string }>({
                 : undefined
             }
             className={
-              lifted === id ? 'cell reorder-item is-lifted' : 'cell reorder-item'
+              lifted === id
+                ? 'cell reorder-item is-lifted'
+                : 'cell reorder-item'
             }
             onPointerDown={e => press(e, id)}
           >
@@ -926,7 +1151,12 @@ export function ChaptersPanel({
 
   const [activeChapterId, setActiveChapterId] = useState<string | null>(null);
   const [editingHighlight, setEditingHighlight] = useState<
-    | { mode: 'new'; chapterId: string; initialFiles?: File[] }
+    | {
+        mode: 'new';
+        chapterId: string;
+        initialFiles?: File[];
+        initialItems?: PhotoImportItem[];
+      }
     | { mode: 'edit'; chapterId: string; highlight: Highlight }
     | null
   >(null);
@@ -939,27 +1169,62 @@ export function ChaptersPanel({
   >(null);
   const [confirmDeleteAll, setConfirmDeleteAll] = useState(false);
   const [tocHowOpen, setTocHowOpen] = useState(false);
+  const [hlHowOpen, setHlHowOpen] = useState(false);
   const [justScanned, setJustScanned] = useState(false);
   const [justAddedHighlight, setJustAddedHighlight] = useState(false);
   const [tocProgress, setTocProgress] = useState<PhotoImportProgress | null>(
     null,
   );
   const tocInputRef = useRef<HTMLInputElement | null>(null);
+  const hlInputRef = useRef<HTMLInputElement | null>(null);
   const prevChaptersLab = useRef(chaptersLab);
   const appliedInitialFirstRef = useRef(false);
+  const prevBookIdRef = useRef(book.id);
 
   useEffect(() => {
     void ensureBody(book.id).catch(() => {});
   }, [book.id, ensureBody]);
 
+  const body: BookBody = entry?.body ?? EMPTY_BODY;
+  const activeChapter: Chapter | null =
+    body.chapters.find(ch => ch.id === activeChapterId) ?? null;
+
+  const [leavingChapter, setLeavingChapter] = useState<Chapter | null>(null);
   useEffect(() => {
-    if (!open) {
+    if (activeChapter) {
+      setLeavingChapter(activeChapter);
+      return;
+    }
+    const id = window.setTimeout(() => setLeavingChapter(null), LEAVE_MS);
+    return () => window.clearTimeout(id);
+  }, [activeChapter]);
+  const viewChapter = activeChapter ?? leavingChapter;
+
+  const [leavingHighlight, setLeavingHighlight] =
+    useState<typeof editingHighlight>(null);
+  useEffect(() => {
+    if (editingHighlight) {
+      setLeavingHighlight(editingHighlight);
+      return;
+    }
+    const id = window.setTimeout(() => setLeavingHighlight(null), LEAVE_MS);
+    return () => window.clearTimeout(id);
+  }, [editingHighlight]);
+  const viewHighlight = editingHighlight ?? leavingHighlight;
+
+  useEffect(() => {
+    const bookChanged = prevBookIdRef.current !== book.id;
+    prevBookIdRef.current = book.id;
+    if (!open || bookChanged) {
       setActiveChapterId(null);
+      setLeavingChapter(null);
       setEditingHighlight(null);
+      setLeavingHighlight(null);
       setRoutedBanner(null);
       setConfirmDeleteChapterId(null);
       setConfirmDeleteAll(false);
       setTocHowOpen(false);
+      setHlHowOpen(false);
       setJustScanned(false);
       setJustAddedHighlight(false);
       setTocProgress(null);
@@ -1000,33 +1265,6 @@ export function ChaptersPanel({
     const id = window.setTimeout(() => setJustAddedHighlight(false), 850);
     return () => window.clearTimeout(id);
   }, [justAddedHighlight]);
-
-  const body: BookBody = entry?.body ?? EMPTY_BODY;
-  const activeChapter: Chapter | null =
-    body.chapters.find(ch => ch.id === activeChapterId) ?? null;
-
-  const [leavingChapter, setLeavingChapter] = useState<Chapter | null>(null);
-  useEffect(() => {
-    if (activeChapter) {
-      setLeavingChapter(activeChapter);
-      return;
-    }
-    const id = window.setTimeout(() => setLeavingChapter(null), LEAVE_MS);
-    return () => window.clearTimeout(id);
-  }, [activeChapter]);
-  const viewChapter = activeChapter ?? leavingChapter;
-
-  const [leavingHighlight, setLeavingHighlight] =
-    useState<typeof editingHighlight>(null);
-  useEffect(() => {
-    if (editingHighlight) {
-      setLeavingHighlight(editingHighlight);
-      return;
-    }
-    const id = window.setTimeout(() => setLeavingHighlight(null), LEAVE_MS);
-    return () => window.clearTimeout(id);
-  }, [editingHighlight]);
-  const viewHighlight = editingHighlight ?? leavingHighlight;
 
   useEffect(() => {
     onSubStackChange?.({
@@ -1080,11 +1318,7 @@ export function ChaptersPanel({
         p => p.kind === 'page' && p.flags.length > 0,
       );
       const tocSourcePages =
-        indexPages.length > 0
-          ? indexPages
-          : hasFlaggedPages
-            ? []
-            : allPages;
+        indexPages.length > 0 ? indexPages : hasFlaggedPages ? [] : allPages;
       const detected = tocSourcePages.length
         ? extractChaptersFromToc(tocSourcePages)
         : [];
@@ -1100,7 +1334,9 @@ export function ChaptersPanel({
         const existing = existingByName.get(key);
         if (existing) {
           if (ch.pages && !existing.pages?.trim()) {
-            nextBody = updateChapter(nextBody, existing.id, { pages: ch.pages });
+            nextBody = updateChapter(nextBody, existing.id, {
+              pages: ch.pages,
+            });
             updatedChapterMeta += 1;
           }
           continue;
@@ -1120,64 +1356,69 @@ export function ChaptersPanel({
       }
 
       // If the user selected the index photo together with sticky-flagged book pages in one batch,
-      // route each marked highlight to its matching chapter by page number.
-      // Never extract unflagged or non-book pages here (e.g. a random photo of a shoe).
-      const contentPages = allPages.filter(p => isValidBookPage(p));
-      let addedHighlights = 0;
-      if (
-        contentPages.length > 0 &&
-        hasFlaggedPages &&
-        (detected.length > 0 || body.chapters.length > 0)
-      ) {
-        const chapterToc: TocEntry[] = nextBody.chapters
-          .map(c => {
-            const m = /^(\d{1,4})/.exec((c.pages ?? '').trim());
-            return m ? { title: c.name, page: Number(m[1]) } : null;
-          })
-          .filter((x): x is TocEntry => x !== null)
-          .sort((a, b) => a.page - b.page);
+      // OR if the book has no printed index (`detected.length === 0`) and the user uploaded book page
+      // photos directly, create chapters automatically (from page headings or book title) and open
+      // the highlight inspector with the already-scanned items.
+      const contentItems = items.filter(it => isValidBookPage(it.page));
+      const contentPages = contentItems.map(it => it.page);
+      const shouldOpenHighlightScanner =
+        contentItems.length > 0 && (hasFlaggedPages || detected.length === 0);
 
-        const nums = repairPageNumbers(allPages, chapterToc);
-        const marks = findMarks(allPages, nums);
-
-        for (const m of marks) {
-          const text = textBetween(allPages, m.start, m.end);
-          if (!text) continue;
-          const startNum = nums[m.start.photo] ?? null;
-          const endNum = nums[m.end.photo] ?? null;
-          const page = formatPageSpan(startNum, endNum) || null;
-
-          let targetChapterId: string | null = null;
-          if (startNum !== null && nextBody.chapters.length > 0) {
-            const matched = [...nextBody.chapters].reverse().find(c => {
-              const mStart = /^(\d{1,4})/.exec((c.pages ?? '').trim());
-              return mStart ? Number(mStart[1]) <= startNum : false;
-            });
-            if (matched) targetChapterId = matched.id;
+      if (shouldOpenHighlightScanner) {
+        if (nextBody.chapters.length === 0) {
+          const inferredHeadings: { name: string; page: number | null }[] = [];
+          const seenHeadingKeys = new Set<string>();
+          for (const p of contentPages) {
+            if (p.headingIndex !== null && p.lines[p.headingIndex]) {
+              const rawHeading = p.lines[p.headingIndex].text.trim();
+              const key = rawHeading.toLowerCase();
+              if (rawHeading.length >= 2 && !seenHeadingKeys.has(key)) {
+                seenHeadingKeys.add(key);
+                inferredHeadings.push({
+                  name: rawHeading,
+                  page: p.pageNumber,
+                });
+              }
+            }
           }
-          if (!targetChapterId && nextBody.chapters.length > 0) {
-            targetChapterId =
-              nextBody.chapters[nextBody.chapters.length - 1].id;
+          if (inferredHeadings.length > 0) {
+            for (const h of inferredHeadings) {
+              const id = makeId();
+              nextBody = addChapter(nextBody, { id, name: h.name });
+              if (h.page !== null) {
+                nextBody = updateChapter(nextBody, id, {
+                  pages: String(h.page),
+                });
+              }
+              addedChapters += 1;
+            }
+          } else {
+            const id = makeId();
+            const fallbackName = book.name.trim() || t('chapters.untitled');
+            nextBody = addChapter(nextBody, { id, name: fallbackName });
+            addedChapters += 1;
           }
-          if (!targetChapterId) continue;
+        }
 
-          nextBody = addHighlight(nextBody, targetChapterId, {
-            id: makeId(),
-            text,
-            page,
+        const firstCh = nextBody.chapters[0];
+        if (firstCh) {
+          const unusedItems = items.filter(it => !contentItems.includes(it));
+          revokeUrls(unusedItems);
+          await persist(nextBody);
+          setTocProgress(null);
+          setEditingHighlight({
+            mode: 'new',
+            chapterId: firstCh.id,
+            initialItems: contentItems,
           });
-          addedHighlights += 1;
+          return;
         }
       }
 
       revokeUrls(items);
       setTocProgress(null);
 
-      if (
-        addedChapters === 0 &&
-        updatedChapterMeta === 0 &&
-        addedHighlights === 0
-      ) {
+      if (addedChapters === 0 && updatedChapterMeta === 0) {
         if (detected.length > 0) {
           showToast(t('snackbar.toc-already-loaded'));
         } else {
@@ -1186,13 +1427,7 @@ export function ChaptersPanel({
         return;
       }
       if (addedChapters > 0) setJustScanned(true);
-      if (addedHighlights > 0) setJustAddedHighlight(true);
       await persist(nextBody);
-      showToast(
-        addedHighlights > 0 && addedChapters === 0
-          ? t('snackbar.scan-saved')
-          : t('snackbar.toc-scanned'),
-      );
     } catch (error) {
       console.warn('scanToc', error);
       setTocProgress(null);
@@ -1233,10 +1468,22 @@ export function ChaptersPanel({
   }, [tocHowOpen]);
   const showTocHow = tocHowOpen || leavingTocHow;
 
+  const [leavingHlHow, setLeavingHlHow] = useState(false);
+  useEffect(() => {
+    if (hlHowOpen) {
+      setLeavingHlHow(true);
+      return;
+    }
+    const id = window.setTimeout(() => setLeavingHlHow(false), LEAVE_MS);
+    return () => window.clearTimeout(id);
+  }, [hlHowOpen]);
+  const showHlHow = hlHowOpen || leavingHlHow;
+
   const childStackDepth =
     (activeChapter ? 1 : 0) +
     (editingHighlight ? 1 : 0) +
-    (tocHowOpen ? 1 : 0);
+    (tocHowOpen ? 1 : 0) +
+    (hlHowOpen ? 1 : 0);
 
   return (
     <>
@@ -1265,12 +1512,12 @@ export function ChaptersPanel({
               </button>
               <button
                 type="button"
-                title={t('chapters.scanToc')}
+                title={t('chapters.noHighlightsAction')}
                 disabled={tocBusy}
-                onClick={() => tocInputRef.current?.click()}
+                onClick={() => hlInputRef.current?.click()}
               >
                 <UploadGlyph />
-                <span className="sr">{t('chapters.scanToc')}</span>
+                <span className="sr">{t('chapters.noHighlightsAction')}</span>
               </button>
             </span>
           ) : (
@@ -1297,6 +1544,25 @@ export function ChaptersPanel({
           onChange={e => {
             void handleTocFiles(e.target.files);
             e.target.value = '';
+          }}
+        />
+        <input
+          ref={hlInputRef}
+          type="file"
+          accept="image/*"
+          multiple
+          hidden
+          onChange={e => {
+            const files = e.target.files ? Array.from(e.target.files) : [];
+            e.target.value = '';
+            const first = displayedChapters[0];
+            if (files.length > 0 && first) {
+              setEditingHighlight({
+                mode: 'new',
+                chapterId: first.id,
+                initialFiles: files,
+              });
+            }
           }}
         />
 
@@ -1342,9 +1608,6 @@ export function ChaptersPanel({
           <div className="chapters-populated-stack">
             {routedBanner && (
               <div className="chapter-routed-banner" role="status">
-                <span className="chapter-routed-icon" aria-hidden="true">
-                  <ContentsGlyph />
-                </span>
                 <p className="chapter-routed-text">{routedBanner.message}</p>
                 <button
                   type="button"
@@ -1362,16 +1625,22 @@ export function ChaptersPanel({
                 <p className="chapters-callout-text">
                   {t('chapters.noHighlightsCallout')}
                 </p>
-                <button
-                  type="button"
-                  className="pill is-primary"
-                  onClick={() => {
-                    const first = displayedChapters[0];
-                    if (first) setActiveChapterId(first.id);
-                  }}
-                >
-                  <span>{t('chapters.noHighlightsAction')}</span>
-                </button>
+                <div className="chapters-callout-actions">
+                  <button
+                    type="button"
+                    className="pill is-primary"
+                    onClick={() => hlInputRef.current?.click()}
+                  >
+                    <span>{t('chapters.noHighlightsAction')}</span>
+                  </button>
+                  <button
+                    type="button"
+                    className="text-action"
+                    onClick={() => setHlHowOpen(true)}
+                  >
+                    {t('highlightEdit.howItWorks.action')}
+                  </button>
+                </div>
               </div>
             )}
 
@@ -1429,10 +1698,37 @@ export function ChaptersPanel({
               body: t('chapters.howItWorks.step1Body'),
             },
           ]}
-          palette={DEFAULT_COVER_PALETTE}
+          palette={palette}
           actionLabel={t('chapters.scanToc')}
           onAction={() => tocInputRef.current?.click()}
           onClose={() => setTocHowOpen(false)}
+        />
+      )}
+
+      {showHlHow && (
+        <HowItWorksPanel
+          open={open && hlHowOpen}
+          index={index + 1}
+          kind="highlight"
+          title={t('highlightEdit.howItWorks.title')}
+          scenes={[
+            t('highlightEdit.howItWorks.scene1'),
+            t('highlightEdit.howItWorks.scene2'),
+          ]}
+          steps={[
+            {
+              title: t('highlightEdit.howItWorks.step1Title'),
+              body: t('highlightEdit.howItWorks.step1Body'),
+            },
+            {
+              title: t('highlightEdit.howItWorks.step2Title'),
+              body: t('highlightEdit.howItWorks.step2Body'),
+            },
+          ]}
+          palette={palette}
+          actionLabel={t('chapters.noHighlightsAction')}
+          onAction={() => hlInputRef.current?.click()}
+          onClose={() => setHlHowOpen(false)}
         />
       )}
 
@@ -1485,6 +1781,11 @@ export function ChaptersPanel({
               ? viewHighlight.initialFiles
               : undefined
           }
+          initialItems={
+            viewHighlight.mode === 'new'
+              ? viewHighlight.initialItems
+              : undefined
+          }
           onSave={({ text, page }) => {
             if (viewHighlight.mode === 'new') {
               const targetChapterId = resolveTargetChapterId(
@@ -1492,37 +1793,23 @@ export function ChaptersPanel({
                 viewHighlight.chapterId,
               );
               setJustAddedHighlight(true);
-              if (targetChapterId !== viewHighlight.chapterId) {
-                const fromCh = body.chapters.find(
-                  c => c.id === viewHighlight.chapterId,
-                );
-                const targetCh = body.chapters.find(
-                  c => c.id === targetChapterId,
-                );
+              const targetCh = body.chapters.find(
+                c => c.id === targetChapterId,
+              );
+              if (
+                targetChapterId !== viewHighlight.chapterId &&
+                activeChapterId !== null
+              ) {
                 setActiveChapterId(targetChapterId);
-                if (targetCh) {
-                  const fromLabel = fromCh?.name || t('chapters.untitled');
-                  const toLabel = targetCh.name || t('chapters.untitled');
-                  const cleanText = text.trim().replace(/\s+/g, ' ');
-                  const snippet =
-                    cleanText.length > 44
-                      ? `${cleanText.slice(0, 44)}…`
-                      : cleanText;
-                  setRoutedBanner({
-                    chapterId: targetChapterId,
-                    message: t('chapter.routedNotice', {
-                      snippet,
-                      from: fromLabel,
-                      to: toLabel,
-                    }),
-                  });
-                  showToast(
-                    t('snackbar.highlight-routed', {
-                      from: fromLabel,
-                      chapter: toLabel,
-                    }),
-                  );
-                }
+              }
+              if (targetCh && page) {
+                setRoutedBanner({
+                  chapterId: targetChapterId,
+                  message: t('chapter.routedNotice', {
+                    to: targetCh.name || t('chapters.untitled'),
+                    page,
+                  }),
+                });
               } else {
                 setRoutedBanner(null);
               }
@@ -1567,55 +1854,39 @@ export function ChaptersPanel({
                       page: item.page,
                     });
                   }
-                  const routedElsewhere =
-                    countsByChapterId.size > 1 ||
-                    !countsByChapterId.has(viewHighlight.chapterId);
-                  if (routedElsewhere) {
-                    const fromCh = body.chapters.find(
-                      c => c.id === viewHighlight.chapterId,
-                    );
-                    const fromLabel = fromCh?.name || t('chapters.untitled');
-                    const summaryParts: string[] = [];
-                    for (const [chId, count] of countsByChapterId.entries()) {
-                      const ch = body.chapters.find(c => c.id === chId);
-                      const chName = ch?.name || t('chapters.untitled');
-                      summaryParts.push(
-                        t('chapter.routedBatchItem', {
-                          count,
-                          chapter: chName,
-                        }),
-                      );
-                    }
-                    const summary = summaryParts.join(', ');
-                    setActiveChapterId(lastTargetId);
-                    setRoutedBanner({
-                      chapterId: lastTargetId,
-                      message:
-                        batch.length === 1
-                          ? t('chapter.routedNotice', {
-                              snippet:
-                                batch[0].text.trim().length > 44
-                                  ? `${batch[0].text.trim().slice(0, 44)}…`
-                                  : batch[0].text.trim(),
-                              from: fromLabel,
-                              to:
-                                body.chapters.find(c => c.id === lastTargetId)
-                                  ?.name || t('chapters.untitled'),
-                            })
-                          : t('chapter.routedBatchNotice', {
-                              from: fromLabel,
-                              summary,
-                            }),
-                    });
-                    showToast(
-                      t('chapter.routedBatchNotice', {
-                        from: fromLabel,
-                        summary,
+                  const summaryParts: string[] = [];
+                  for (const [chId, count] of countsByChapterId.entries()) {
+                    const ch = body.chapters.find(c => c.id === chId);
+                    const chName = ch?.name || t('chapters.untitled');
+                    summaryParts.push(
+                      t('chapter.routedBatchItem', {
+                        count,
+                        chapter: chName,
                       }),
                     );
-                  } else {
-                    setRoutedBanner(null);
                   }
+                  const summary = summaryParts.join(', ');
+                  if (
+                    lastTargetId !== viewHighlight.chapterId &&
+                    activeChapterId !== null
+                  ) {
+                    setActiveChapterId(lastTargetId);
+                  }
+                  setRoutedBanner({
+                    chapterId: lastTargetId,
+                    message:
+                      batch.length === 1 && batch[0].page
+                        ? t('chapter.routedNotice', {
+                            to:
+                              body.chapters.find(c => c.id === lastTargetId)
+                                ?.name || t('chapters.untitled'),
+                            page: batch[0].page,
+                          })
+                        : t('chapter.routedBatchNotice', {
+                            total: batch.length,
+                            summary,
+                          }),
+                  });
                   void persist(nextBody);
                   setEditingHighlight(null);
                 }
@@ -1716,8 +1987,7 @@ function ChapterDetailPanel({
   onClose: () => void;
 }) {
   const chapterLab = useUiStateLab(s => (UI_STATE_LAB ? s.chapter : 'live'));
-  const displayedHighlights =
-    chapterLab === 'empty' ? [] : chapter.highlights;
+  const displayedHighlights = chapterLab === 'empty' ? [] : chapter.highlights;
   const hasHighlights = displayedHighlights.length > 0;
   const [howOpen, setHowOpen] = useState(false);
   const [leavingHow, setLeavingHow] = useState(false);
@@ -1827,9 +2097,6 @@ function ChapterDetailPanel({
           <div className="chapters-populated-stack">
             {routedNotice && (
               <div className="chapter-routed-banner" role="status">
-                <span className="chapter-routed-icon" aria-hidden="true">
-                  <ContentsGlyph />
-                </span>
                 <p className="chapter-routed-text">{routedNotice}</p>
                 {onDismissRoutedNotice && (
                   <button
@@ -1872,7 +2139,6 @@ function ChapterDetailPanel({
                   className="pill is-primary chapter-read-pill"
                   onClick={onReadChapter}
                 >
-                  <BookOpenGlyph />
                   <span>{t('chapter.readChapter')}</span>
                 </button>
               </div>
@@ -1917,6 +2183,7 @@ function HighlightEditorPanel({
   palette,
   initial,
   initialFiles,
+  initialItems,
   onSave,
   onSaveBatch,
   onDelete,
@@ -1927,6 +2194,7 @@ function HighlightEditorPanel({
   palette: CoverPalette;
   initial: Highlight | null;
   initialFiles?: File[];
+  initialItems?: PhotoImportItem[];
   onSave: (value: { text: string; page: string | null }) => void;
   onSaveBatch?: (values: { text: string; page: string | null }[]) => void;
   onDelete?: () => void;
@@ -2025,12 +2293,49 @@ function HighlightEditorPanel({
   }, [howOpen]);
   const showHow = howOpen || leavingHow;
 
+  const applyLoadedItems = (validItems: PhotoImportItem[]) => {
+    const pages = validItems.map(it => it.page);
+    const nums = repairPageNumbers(pages);
+    const marks = findMarks(pages, nums);
+    const span =
+      marks.length > 0
+        ? { start: marks[0].start, end: marks[0].end }
+        : findHighlightSpan(pages, nums);
+    const initialMarks =
+      marks.length > 0
+        ? marks.map(m => ({ start: { ...m.start }, end: { ...m.end } }))
+        : span
+          ? [{ start: { ...span.start }, end: { ...span.end } }]
+          : [];
+    setItems(validItems);
+    setPageNums(nums);
+    setAllMarks(initialMarks);
+    setAutoMarks(
+      initialMarks.map(m => ({ start: { ...m.start }, end: { ...m.end } })),
+    );
+    setActiveMarkIdx(0);
+    setProgress(null);
+    setJustLoadedScan(true);
+    if (span) {
+      applyRange(validItems, nums, { start: span.start, end: span.end });
+      setActivePhotoIdx(span.start.photo);
+      setTapTarget('start');
+    } else {
+      showToast(t('snackbar.not-a-book-page'));
+      if (!initial) onClose();
+    }
+  };
+
   useEffect(() => {
+    if (open && initialItems && initialItems.length > 0 && !initial) {
+      applyLoadedItems(initialItems);
+      return;
+    }
     if (open && initialFiles && initialFiles.length > 0 && !initial) {
       void handlePhotoFiles(initialFiles);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, initialFiles]);
+  }, [open, initialFiles, initialItems]);
 
   useEffect(
     () => () => {
@@ -2085,42 +2390,17 @@ function HighlightEditorPanel({
         setProgress(null);
         const hadIndex = result.some(it => it.page.kind === 'index');
         showToast(
-          t(hadIndex ? 'snackbar.index-in-highlight' : 'snackbar.not-a-book-page'),
+          t(
+            hadIndex
+              ? 'snackbar.index-in-highlight'
+              : 'snackbar.not-a-book-page',
+          ),
         );
         if (!initial) onClose();
         return;
       }
 
-      const pages = validItems.map(it => it.page);
-      const nums = repairPageNumbers(pages);
-      const marks = findMarks(pages, nums);
-      const span =
-        marks.length > 0
-          ? { start: marks[0].start, end: marks[0].end }
-          : findHighlightSpan(pages, nums);
-      const initialMarks =
-        marks.length > 0
-          ? marks.map(m => ({ start: { ...m.start }, end: { ...m.end } }))
-          : span
-            ? [{ start: { ...span.start }, end: { ...span.end } }]
-            : [];
-      setItems(validItems);
-      setPageNums(nums);
-      setAllMarks(initialMarks);
-      setAutoMarks(
-        initialMarks.map(m => ({ start: { ...m.start }, end: { ...m.end } })),
-      );
-      setActiveMarkIdx(0);
-      setProgress(null);
-      setJustLoadedScan(true);
-      if (span) {
-        applyRange(validItems, nums, { start: span.start, end: span.end });
-        setActivePhotoIdx(span.start.photo);
-        setTapTarget('start');
-      } else {
-        showToast(t('snackbar.not-a-book-page'));
-        if (!initial) onClose();
-      }
+      applyLoadedItems(validItems);
     } catch (error) {
       if ((error as Error)?.name === 'AbortError') return;
       console.warn('runPhotoImport', error);
@@ -2288,7 +2568,9 @@ function HighlightEditorPanel({
             >
               <CheckGlyph />
               <span className="sr">
-                {t(initial ? 'highlightEdit.saveExisting' : 'highlightEdit.save')}
+                {t(
+                  initial ? 'highlightEdit.saveExisting' : 'highlightEdit.save',
+                )}
               </span>
             </button>
           )
@@ -2316,9 +2598,7 @@ function HighlightEditorPanel({
         ) : items.length === 0 && !initial ? (
           <div
             className={
-              dragOver
-                ? 'side-empty is-full is-dragover'
-                : 'side-empty is-full'
+              dragOver ? 'side-empty is-full is-dragover' : 'side-empty is-full'
             }
             onDragOver={e => {
               e.preventDefault();
@@ -2383,6 +2663,7 @@ function HighlightEditorPanel({
                           }
                           onClick={() => {
                             setActiveMarkIdx(mIdx);
+                            setTapTarget('start');
                             applyRange(items, pageNums, m);
                             setActivePhotoIdx(m.start.photo);
                           }}
@@ -2412,8 +2693,7 @@ function HighlightEditorPanel({
                       const ownerMarkIdx =
                         !inSpan && allMarks.length > 1
                           ? allMarks.findIndex(
-                              m =>
-                                idx >= m.start.photo && idx <= m.end.photo,
+                              m => idx >= m.start.photo && idx <= m.end.photo,
                             )
                           : -1;
                       const spanCls =
@@ -2464,6 +2744,7 @@ function HighlightEditorPanel({
                             ) {
                               const nextM = allMarks[ownerMarkIdx]!;
                               setActiveMarkIdx(ownerMarkIdx);
+                              setTapTarget('start');
                               applyRange(items, pageNums, nextM);
                             }
                             setActivePhotoIdx(idx);
@@ -2473,13 +2754,14 @@ function HighlightEditorPanel({
                           {allMarks.length > 1 &&
                             (inSpan || ownerMarkIdx !== -1) && (
                               <span className="scanner-thumb-mark-tag">
-                                #
-                                {(inSpan ? activeMarkIdx : ownerMarkIdx) + 1}
+                                #{(inSpan ? activeMarkIdx : ownerMarkIdx) + 1}
                               </span>
                             )}
                           <span className="scanner-thumb-badge">
                             {pNum !== null
-                              ? t('highlightEdit.photoBadgePage', { page: pNum })
+                              ? t('highlightEdit.photoBadgePage', {
+                                  page: pNum,
+                                })
                               : `${idx + 1}`}
                           </span>
                         </button>
@@ -2554,7 +2836,8 @@ function HighlightEditorPanel({
                     </div>
 
                     <div
-                      className="scanner-photo-stage"
+                      key={activePhotoIdx}
+                      className="scanner-photo-stage is-turning"
                       style={{
                         aspectRatio: `${activeItem.page.width} / ${activeItem.page.height}`,
                       }}

@@ -19,7 +19,8 @@ export function estimateSkew(img: Rgba, maxDeg = 8, stepDeg = 0.25): number {
   for (let y = 0; y < h; y++) {
     for (let x = 0; x < w; x++) {
       const o = (Math.floor(y / scale) * img.width + Math.floor(x / scale)) * 4;
-      const v = 0.299 * img.data[o] + 0.587 * img.data[o + 1] + 0.114 * img.data[o + 2];
+      const v =
+        0.299 * img.data[o] + 0.587 * img.data[o + 1] + 0.114 * img.data[o + 2];
       gray[y * w + x] = v;
       sum += v;
     }
@@ -140,4 +141,21 @@ export function rotate90Ccw(img: Rgba): Rgba {
     }
   }
   return { data: out, width: h, height: w };
+}
+
+/** Rotate 180° (`width × height` → `width × height`) when a photo arrived upside-down. */
+export function rotate180(img: Rgba): Rgba {
+  const { width: w, height: h, data } = img;
+  const out = new Uint8ClampedArray(w * h * 4);
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const src = (y * w + x) * 4;
+      const dst = ((h - 1 - y) * w + (w - 1 - x)) * 4;
+      out[dst] = data[src];
+      out[dst + 1] = data[src + 1];
+      out[dst + 2] = data[src + 2];
+      out[dst + 3] = data[src + 3];
+    }
+  }
+  return { data: out, width: w, height: h };
 }
