@@ -1,4 +1,4 @@
-const SHELL_CACHE = 'bookhighlighter-shell-v1';
+const SHELL_CACHE = 'bookhighlighter-shell-v2';
 const COVERS_CACHE = 'bookhighlighter-covers-v1';
 const SHELL_URLS = [
   '/',
@@ -63,7 +63,7 @@ self.addEventListener('fetch', event => {
   if (url.origin === self.location.origin) {
     if (request.mode === 'navigate') {
       event.respondWith(
-        fetch(request)
+        fetch(request, { cache: 'no-cache' })
           .then(response => {
             if (response.ok) {
               const copy = response.clone();
