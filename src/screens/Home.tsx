@@ -18,7 +18,7 @@ import {
 } from '../store/books';
 import { useTrophySystem } from '../trophies';
 import { AccountForm } from '../ui/AccountForm';
-import { Backdrop, PlayerBackdrop } from '../ui/Backdrop';
+import { PlayerBackdrop } from '../ui/Backdrop';
 import { BookFormPanel } from '../ui/BookForm';
 import { BookStage } from '../ui/BookStage';
 import { ChaptersPanel } from '../ui/ChaptersForm';
@@ -35,6 +35,20 @@ import { TrophiesForm, TrophyBanner } from '../ui/Trophies';
 const DESK = '(min-width: 64rem)';
 const LEAVE_MS = 240;
 const APP_NAME = 'Book Highlighter';
+
+const useIsDesktop = (): boolean => {
+  const [isDesk, setIsDesk] = useState(
+    () => typeof matchMedia === 'function' && matchMedia(DESK).matches,
+  );
+  useEffect(() => {
+    const mq = matchMedia(DESK);
+    const onChange = (e: MediaQueryListEvent) => setIsDesk(e.matches);
+    setIsDesk(mq.matches);
+    mq.addEventListener('change', onChange);
+    return () => mq.removeEventListener('change', onChange);
+  }, []);
+  return isDesk;
+};
 
 const morph = (change: () => void) => {
   const doc = document as Document & {
@@ -176,6 +190,7 @@ export function Home({ user }: { user: User }) {
   const modalBase = liveModals[0]?.entry.kind ?? null;
 
   const [stood, setStood] = useState(false);
+  const isDesk = useIsDesktop();
   const hasCurrent = Boolean(selectedBook);
   const isStaged = hydrated.current ? stood : hasCurrent;
 
@@ -190,11 +205,7 @@ export function Home({ user }: { user: User }) {
     morph(() => setStood(hasCurrent));
   }, [hasSettled, error, hasCurrent, stood]);
 
-  const tooled = liveTools.length > 0 && hasCurrent;
-  const [toolsShown, setToolsShown] = useState(false);
-  useEffect(() => {
-    if (tooled !== toolsShown) morph(() => setToolsShown(tooled));
-  }, [tooled, toolsShown]);
+  const toolsShown = liveTools.length > 0 && hasCurrent;
 
   const leaveIn = <T extends Entry>(
     setStack: React.Dispatch<React.SetStateAction<Layer<T>[]>>,
@@ -218,18 +229,29 @@ export function Home({ user }: { user: User }) {
     );
   };
 
-  const pushTool = (entry: ToolEntry, switching = false) =>
-    setToolLayers(all => [
-      ...all,
-      { id: (nextLayerId += 1), entry, leaving: false, switching },
-    ]);
+  const pushTool = (entry: ToolEntry, switching = false) => {
+    const apply = () =>
+      setToolLayers(all => [
+        ...all,
+        { id: (nextLayerId += 1), entry, leaving: false, switching },
+      ]);
+    if (liveTools.length === 0 && hasCurrent) morph(apply);
+    else apply();
+  };
 
   const popTool = () => {
     const front = liveTools[liveTools.length - 1];
-    if (front) leaveIn(setToolLayers, layer => layer.id !== front.id);
+    if (!front) return;
+    const apply = () => leaveIn(setToolLayers, layer => layer.id !== front.id);
+    if (liveTools.length === 1 && hasCurrent) morph(apply);
+    else apply();
   };
 
-  const closeTools = () => leaveIn(setToolLayers, () => false);
+  const closeTools = () => {
+    const apply = () => leaveIn(setToolLayers, () => false);
+    if (liveTools.length > 0 && hasCurrent) morph(apply);
+    else apply();
+  };
 
   const openTool = (entry: ToolEntry) => {
     if (liveTools.length === 1 && toolBase === entry.kind) {
@@ -237,7 +259,7 @@ export function Home({ user }: { user: User }) {
       return;
     }
     const wasOpen = liveTools.length > 0;
-    if (wasOpen) closeTools();
+    if (wasOpen) leaveIn(setToolLayers, () => false);
     pushTool(entry, wasOpen);
   };
 
@@ -507,10 +529,13 @@ export function Home({ user }: { user: User }) {
     labScreens.push('reader');
   }
 
+  const stageFlowing =
+    !readingBook &&
+    (isDesk ||
+      (mobileStageOpen && liveTools.length === 0 && liveModals.length === 0));
+
   return (
     <div className={className}>
-      <Backdrop artUrl={selectedBook?.artUrl ?? ''} />
-
       <main className="library">
         <header className={titled ? 'bar is-edge is-titled' : 'bar'}>
           <span className="bar-lead" aria-hidden="true" />
@@ -552,7 +577,10 @@ export function Home({ user }: { user: User }) {
 
       <div className="stage">
         <div className="now-column">
-          <PlayerBackdrop artUrl={selectedBook?.artUrl ?? ''} />
+          <PlayerBackdrop
+            artUrl={selectedBook?.artUrl ?? ''}
+            flowing={stageFlowing}
+          />
           {selectedBook && (
             <BookStage
               book={selectedBook}

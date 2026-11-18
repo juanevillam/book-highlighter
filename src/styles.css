@@ -311,33 +311,6 @@ button {
 
 /* ══ The signed-in app ═════════════════════════════════════════════════ */
 
-.backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 0;
-  overflow: hidden;
-  pointer-events: none;
-}
-
-.backdrop img {
-  position: absolute;
-  inset: -10%;
-  width: 120%;
-  height: 120%;
-  object-fit: cover;
-  filter: blur(64px) saturate(1.1) brightness(0.55);
-  opacity: 0;
-  transform: scale(1.05);
-  transition:
-    opacity 900ms var(--ease),
-    transform 1600ms var(--ease);
-}
-
-.backdrop img.is-on {
-  opacity: 0.32;
-  transform: scale(1);
-}
-
 .home {
   position: relative;
   min-height: 100svh;
@@ -1560,21 +1533,33 @@ button {
   visibility: hidden;
   transition:
     transform var(--dur-quick) var(--ease),
-    filter var(--dur-quick) var(--ease),
     visibility 0s linear var(--dur-quick);
+}
+
+.side::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  border-radius: inherit;
+  background: rgb(0 0 0 / 0.4);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--dur-turn) var(--ease);
 }
 
 .side.is-open {
   transform: translateY(var(--pull, 0px));
   visibility: visible;
-  transition:
-    transform var(--dur-turn) var(--ease),
-    filter var(--dur-turn) var(--ease);
+  transition: transform var(--dur-turn) var(--ease);
 }
 
 .side.is-open.is-under {
   transform: translateY(-0.5rem) scale(0.94);
-  filter: brightness(0.6);
+}
+
+.side.is-open.is-under::after {
+  opacity: 1;
 }
 
 .side.is-open.is-deep {
@@ -5155,7 +5140,6 @@ button {
     transition:
       opacity var(--dur-quick) var(--ease),
       transform var(--dur-turn) var(--ease),
-      filter var(--dur-turn) var(--ease),
       background-color var(--dur-turn) var(--ease),
       border-radius var(--dur-turn) var(--ease),
       border-color var(--dur-turn) var(--ease);
