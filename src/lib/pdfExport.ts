@@ -12,23 +12,53 @@ import {
 import { type ReaderPalette } from './readerThemes';
 import { thumbUrl } from './thumbUrl';
 
-// Standard book & document trim sizes in points (72 pt/in).
-export type PdfFormatId = 'trade' | 'digest' | 'a5' | 'letter';
+// Standard universal book & document formats in points (72 pt/in).
+export type PdfFormatId = 'a5' | 'b5' | 'a4' | 'letter';
 
 export const PDF_FORMATS: Record<
   PdfFormatId,
-  { widthPt: number; heightPt: number; aspect: string }
+  {
+    widthPt: number;
+    heightPt: number;
+    aspect: string;
+    previewW: string;
+    previewH: string;
+  }
 > = {
-  trade: { widthPt: 432, heightPt: 648, aspect: '2 / 3' },
-  digest: { widthPt: 396, heightPt: 612, aspect: '11 / 17' },
-  a5: { widthPt: 420, heightPt: 595, aspect: '148 / 210' },
-  letter: { widthPt: 612, heightPt: 792, aspect: '8.5 / 11' },
+  a5: {
+    widthPt: 420,
+    heightPt: 595,
+    aspect: '148 / 210',
+    previewW: '8.75rem',
+    previewH: '12.4rem',
+  },
+  b5: {
+    widthPt: 499,
+    heightPt: 709,
+    aspect: '176 / 250',
+    previewW: '9.5rem',
+    previewH: '13.5rem',
+  },
+  a4: {
+    widthPt: 595,
+    heightPt: 842,
+    aspect: '210 / 297',
+    previewW: '10.125rem',
+    previewH: '14.375rem',
+  },
+  letter: {
+    widthPt: 612,
+    heightPt: 792,
+    aspect: '8.5 / 11',
+    previewW: '10.875rem',
+    previewH: '14.0625rem',
+  },
 };
 
 export const PDF_FORMAT_IDS: readonly PdfFormatId[] = [
-  'trade',
-  'digest',
   'a5',
+  'b5',
+  'a4',
   'letter',
 ];
 
@@ -69,9 +99,7 @@ const safePdfFileName = (rawTitle: string, used: Set<string>): string => {
 };
 
 const normalizeWinAnsi = (text: string): string =>
-  text
-    .replace(/\u202f|\u00a0/g, ' ')
-    .replace(/[\u2010\u2011\u2012]/g, '-');
+  text.replace(/\u202f|\u00a0/g, ' ').replace(/[\u2010\u2011\u2012]/g, '-');
 
 type LoadedCover = {
   dataUrl: string;
@@ -263,7 +291,7 @@ const buildSingleBookPdf = async (
   fontScale: number,
   strings: PdfStrings,
   usedNames: Set<string>,
-  format: PdfFormatId = 'trade',
+  format: PdfFormatId = 'a5',
 ): Promise<GeneratedPdfFile> => {
   const { widthPt: PAGE_W, heightPt: PAGE_H } = PDF_FORMATS[format];
   const FOOTER_Y = PAGE_H - 30;
@@ -310,13 +338,7 @@ const buildSingleBookPdf = async (
 
   const paintPageGround = () => {
     doc.setFillColor(pageRgb[0], pageRgb[1], pageRgb[2]);
-    doc.rect(
-      -BLEED,
-      -BLEED,
-      PAGE_W + BLEED * 2,
-      PAGE_H + BLEED * 2,
-      'F',
-    );
+    doc.rect(-BLEED, -BLEED, PAGE_W + BLEED * 2, PAGE_H + BLEED * 2, 'F');
     if (palette.ornament) {
       doc.setDrawColor(accentRgb[0], accentRgb[1], accentRgb[2]);
       doc.setLineWidth(0.5);
@@ -496,20 +518,14 @@ const buildSingleBookPdf = async (
         cursorY += 20;
       }
       cursorY += headingSize;
-      drawTextLine(
-        doc,
-        section.heading ?? 'Contents',
-        PAGE_W / 2,
-        cursorY,
-        {
-          font: 'times',
-          style: 'bold',
-          size: headingSize,
-          rgb: textRgb,
-          hex: palette.text,
-          align: 'center',
-        },
-      );
+      drawTextLine(doc, section.heading ?? 'Contents', PAGE_W / 2, cursorY, {
+        font: 'times',
+        style: 'bold',
+        size: headingSize,
+        rgb: textRgb,
+        hex: palette.text,
+        align: 'center',
+      });
       cursorY += headingSize * 1.4;
 
       for (const entry of section.indexEntries) {
@@ -525,20 +541,14 @@ const buildSingleBookPdf = async (
           hex: palette.text,
         });
         if (entry.pages) {
-          drawTextLine(
-            doc,
-            entry.pages,
-            PAGE_W - MARGIN_SIDE,
-            cursorY,
-            {
-              font: 'helvetica',
-              style: 'normal',
-              size: 10,
-              rgb: mutedRgb,
-              hex: palette.muted,
-              align: 'right',
-            },
-          );
+          drawTextLine(doc, entry.pages, PAGE_W - MARGIN_SIDE, cursorY, {
+            font: 'helvetica',
+            style: 'normal',
+            size: 10,
+            rgb: mutedRgb,
+            hex: palette.muted,
+            align: 'right',
+          });
         }
         cursorY += rowStep;
       }
@@ -721,7 +731,7 @@ export const generateBookPdfs = async (
   palette: ReaderPalette,
   fontScale: number,
   strings: PdfStrings,
-  format: PdfFormatId = 'trade',
+  format: PdfFormatId = 'a5',
 ): Promise<GeneratedPdfFile[]> => {
   const usedNames = new Set<string>();
   const results: GeneratedPdfFile[] = [];

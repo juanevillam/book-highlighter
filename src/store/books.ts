@@ -3,11 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { create } from 'zustand';
 
-import {
-  backfillShelfPositions,
-  subscribeToBooks,
-  type Book,
-} from '../books';
+import { backfillShelfPositions, subscribeToBooks, type Book } from '../books';
 import { requireDb, USERS_COLLECTION } from '../firebase';
 import { needsPositionRepair } from '../lib/gridOrder';
 import { shelfEntries } from '../lib/shelf';
@@ -17,6 +13,7 @@ type BooksState = {
   error: Error | null;
   hasSettled: boolean;
   setBooks: (books: Book[]) => void;
+  patchBook: (bookId: string, patch: Partial<Book>) => void;
   setError: (error: Error) => void;
   reset: () => void;
 };
@@ -26,6 +23,12 @@ export const useBooksStore = create<BooksState>()(set => ({
   error: null,
   hasSettled: false,
   setBooks: books => set({ books, error: null, hasSettled: true }),
+  patchBook: (bookId, patch) =>
+    set(state => ({
+      books: state.books.map(book =>
+        book.id === bookId ? { ...book, ...patch } : book,
+      ),
+    })),
   setError: error => set({ error, hasSettled: true }),
   reset: () => set({ books: [], error: null, hasSettled: false }),
 }));

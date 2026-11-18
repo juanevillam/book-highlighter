@@ -13,7 +13,12 @@ export type HomeState = 'live' | 'skeleton' | 'empty' | 'error';
 export type ChaptersState = 'live' | 'skeleton' | 'empty' | 'scanning';
 export type ChapterDetailState = 'live' | 'empty' | 'scanning';
 export type ScannerState = 'live' | 'scanning';
-export type ReaderLabState = 'live' | 'skeleton' | 'empty' | 'error';
+export type ReaderLabState =
+  | 'live'
+  | 'decorations'
+  | 'skeleton'
+  | 'empty'
+  | 'error';
 export type AccountState = 'live' | 'skeleton' | 'deleting';
 export type TrophiesState = 'live' | 'skeleton';
 
@@ -110,6 +115,11 @@ export const READER_STATES: readonly Labelled<ReaderLabState>[] = [
     value: 'live',
     label: 'Live',
     note: 'Real paginated book in the Kindle-style reader.',
+  },
+  {
+    value: 'decorations',
+    label: 'All Decorations',
+    note: 'Gallery of all 5 header/footer ornaments and all 6 margin edge illustrations.',
   },
   {
     value: 'skeleton',

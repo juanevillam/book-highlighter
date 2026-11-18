@@ -5,11 +5,7 @@ import { type User } from 'firebase/auth';
 
 import { markBookRead, type Book } from '../books';
 import { UiStateLabBar } from '../dev/UiStateLabBar';
-import {
-  UI_STATE_LAB,
-  useUiStateLab,
-  type LabScreen,
-} from '../dev/uiStateLab';
+import { UI_STATE_LAB, useUiStateLab, type LabScreen } from '../dev/uiStateLab';
 import { t } from '../i18n';
 import { loadCoverPalette } from '../lib/coverPalette';
 import { shelfEntries } from '../lib/shelf';
@@ -37,7 +33,7 @@ import { Toast } from '../ui/Toast';
 import { TrophiesForm, TrophyBanner } from '../ui/Trophies';
 
 const DESK = '(min-width: 64rem)';
-const LEAVE_MS = 320;
+const LEAVE_MS = 240;
 const APP_NAME = 'Book Highlighter';
 
 const morph = (change: () => void) => {
@@ -111,8 +107,7 @@ export function Home({ user }: { user: User }) {
   const entries = useMemo(() => shelfEntries(shelf), [shelf]);
   const effectiveEntries = homeLab === 'empty' ? [] : entries;
   const effectiveSettled = homeLab === 'skeleton' ? false : hasSettled;
-  const effectiveError =
-    homeLab === 'error' ? new Error('Lab error') : error;
+  const effectiveError = homeLab === 'error' ? new Error('Lab error') : error;
 
   const [selectedBookId, setSelectedBookId] = useState<string | null>(null);
   const [mobileStageOpen, setMobileStageOpen] = useState(false);
@@ -349,9 +344,9 @@ export function Home({ user }: { user: User }) {
 
       case 'chapters': {
         const book =
+          selectedBook ??
           shelf.find(b => b.id === entry.bookId) ??
-          books.find(b => b.id === entry.bookId) ??
-          selectedBook;
+          books.find(b => b.id === entry.bookId);
         if (!book) return null;
         return (
           <ChaptersPanel
@@ -363,9 +358,11 @@ export function Home({ user }: { user: User }) {
             book={book}
             initialOpenFirstChapter={Boolean(entry.openFirstChapter)}
             onReadChapter={chapterId => {
-              void markBookRead(book.id, {
-                anchor: { blockId: `chapter:${chapterId}`, offset: 0 },
-              });
+              const anchor = { blockId: `chapter:${chapterId}`, offset: 0 };
+              useBooksStore
+                .getState()
+                .patchBook(book.id, { readerAnchor: anchor });
+              void markBookRead(book.id, { anchor });
               setReadingBookId(book.id);
             }}
             onSubStackChange={setChaptersSubStack}
@@ -374,7 +371,12 @@ export function Home({ user }: { user: User }) {
         );
       }
 
-      case 'export':
+      case 'export': {
+        const exportBook = entry.book
+          ? (selectedBook ??
+            shelf.find(b => b.id === entry.book?.id) ??
+            entry.book)
+          : null;
         return (
           <ExportPanel
             key={layer.id}
@@ -382,10 +384,11 @@ export function Home({ user }: { user: User }) {
             switching={switching}
             depth={effectiveDepth}
             index={indexInGroup}
-            initialBook={entry.book}
+            initialBook={exportBook}
             onClose={handleClose}
           />
         );
+      }
 
       case 'settings':
         return (
@@ -581,9 +584,7 @@ export function Home({ user }: { user: User }) {
 
       <div className="modals">
         <div
-          className={
-            liveModals.length ? 'modal-scrim is-open' : 'modal-scrim'
-          }
+          className={liveModals.length ? 'modal-scrim is-open' : 'modal-scrim'}
           aria-hidden="true"
           onClick={closeModals}
         />

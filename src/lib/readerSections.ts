@@ -11,7 +11,14 @@ export type BookIndexItem = {
 
 export type ReaderSection = {
   id: string;
-  kind: 'cover' | 'title' | 'bookIndex' | 'prose' | 'quote' | 'highlights';
+  kind:
+    | 'cover'
+    | 'title'
+    | 'bookIndex'
+    | 'prose'
+    | 'quote'
+    | 'highlights'
+    | 'end';
   heading?: string | null;
   subheading?: string | null;
   paragraphs?: string[];
@@ -26,6 +33,7 @@ export type ReaderStrings = {
   summary: string;
   untitledChapter: string;
   contents?: string;
+  theEnd?: string;
   genre: (genre: string) => string;
   year: (year: number) => string;
 };
@@ -35,6 +43,7 @@ export const TITLE_SECTION_ID = 'title';
 export const COVER_SECTION_ID = 'cover';
 export const BOOK_INDEX_SECTION_ID = 'book-index';
 export const EMPTY_HIGHLIGHTS_SECTION_ID = 'empty-highlights';
+export const END_SECTION_ID = 'the-end';
 
 export const readerSections = (
   book: Pick<Book, 'artUrl' | 'author' | 'genres' | 'name' | 'year'>,
@@ -42,12 +51,14 @@ export const readerSections = (
   strings: ReaderStrings,
   coverUrl: string | null,
 ): ReaderSection[] => {
-  const meta = [
+  const authorWithYear = [
+    book.author ? strings.by(book.author) : '',
     book.year ? strings.year(book.year) : '',
-    book.genres.map(strings.genre).join(', '),
   ]
     .filter(Boolean)
     .join(' · ');
+
+  const genresLine = book.genres.map(strings.genre).filter(Boolean).join(' · ');
 
   const sections: ReaderSection[] = [
     {
@@ -55,8 +66,8 @@ export const readerSections = (
       kind: 'title',
       imageUrl: coverUrl,
       heading: book.name,
-      subheading: book.author ? strings.by(book.author) : null,
-      paragraphs: meta ? [meta] : [],
+      subheading: authorWithYear || null,
+      paragraphs: genresLine ? [genresLine] : [],
     },
   ];
 
@@ -94,6 +105,18 @@ export const readerSections = (
         text: highlight.text,
         page: highlight.page !== null ? strings.page(highlight.page) : null,
       })),
+    });
+  }
+
+  if (
+    strings.theEnd &&
+    body.chapters.some(chapter => chapter.highlights.length > 0)
+  ) {
+    sections.push({
+      id: END_SECTION_ID,
+      kind: 'end',
+      heading: strings.theEnd,
+      subheading: book.name,
     });
   }
 

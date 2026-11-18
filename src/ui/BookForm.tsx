@@ -57,9 +57,12 @@ export function BookFormPanel({
 
   const [name, setName] = useState(book?.name ?? '');
   const [author, setAuthor] = useState(book?.author ?? '');
-  // Years are AD only (0 onward); an empty field means no year.
+  // Negative years represent BC / BCE (e.g. -500 -> "500 BC" / "500 a. C." / "公元前 500 年").
   const [yearText, setYearText] = useState(
-    book?.year != null && book.year >= 0 ? String(book.year) : '',
+    book?.year != null ? String(Math.abs(book.year)) : '',
+  );
+  const [yearBc, setYearBc] = useState(
+    Boolean(book?.year != null && book.year < 0),
   );
   const [genres, setGenres] = useState<string[]>(book?.genres ?? []);
   const [series, setSeries] = useState<string | null>(book?.series ?? null);
@@ -87,9 +90,8 @@ export function BookFormPanel({
     if (!open) return;
     setName(book?.name ?? '');
     setAuthor(book?.author ?? '');
-    setYearText(
-      book?.year != null && book.year >= 0 ? String(book.year) : '',
-    );
+    setYearText(book?.year != null ? String(Math.abs(book.year)) : '');
+    setYearBc(Boolean(book?.year != null && book.year < 0));
     setGenres(book?.genres ?? []);
     setSeries(book?.series ?? null);
     setSeriesNumber(book?.seriesNumber ?? 1);
@@ -132,8 +134,7 @@ export function BookFormPanel({
         ? cover.url
         : '';
 
-  const canSave =
-    name.trim().length > 0 && author.trim().length > 0 && !busy;
+  const canSave = name.trim().length > 0 && author.trim().length > 0 && !busy;
 
   const handleSave = async () => {
     if (!canSave) return;
@@ -147,7 +148,13 @@ export function BookFormPanel({
       }
 
       const cleanSeries = series?.trim() || null;
-      const year = yearText === '' ? null : Number.parseInt(yearText, 10);
+      const parsedYear = yearText === '' ? null : Number.parseInt(yearText, 10);
+      const year =
+        parsedYear === null || Number.isNaN(parsedYear)
+          ? null
+          : yearBc && parsedYear > 0
+            ? -parsedYear
+            : parsedYear;
       const fields: BookFields = {
         name: name.trim(),
         author: author.trim(),
@@ -166,7 +173,10 @@ export function BookFormPanel({
           position: leadPosition(allBooks, cleanSeries),
         });
         if (uploadedCover?.url) {
-          void loadCoverPalette(uploadedCover.url, `${createdId}:${fields.name}`);
+          void loadCoverPalette(
+            uploadedCover.url,
+            `${createdId}:${fields.name}`,
+          );
         }
         primeBody(createdId, initialBody);
         showToast(t('snackbar.book-created'));
@@ -220,9 +230,7 @@ export function BookFormPanel({
         trailing={
           <button
             type="button"
-            className={
-              busy ? 'round is-commit is-busy' : 'round is-commit'
-            }
+            className={busy ? 'round is-commit is-busy' : 'round is-commit'}
             disabled={!canSave}
             onClick={() => void handleSave()}
           >
@@ -240,22 +248,14 @@ export function BookFormPanel({
             className="art-pick"
             disabled={busy}
             onClick={() =>
-              coverPreview
-                ? setCoverSheet(true)
-                : fileInputRef.current?.click()
+              coverPreview ? setCoverSheet(true) : fileInputRef.current?.click()
             }
           >
             <span className="art-box">
-              {coverPreview ? (
-                <img src={coverPreview} alt="" />
-              ) : (
-                <PlusGlyph />
-              )}
+              {coverPreview ? <img src={coverPreview} alt="" /> : <PlusGlyph />}
             </span>
             <span className="text-action">
-              {t(
-                coverPreview ? 'bookEdit.cover.change' : 'bookEdit.cover.add',
-              )}
+              {t(coverPreview ? 'bookEdit.cover.change' : 'bookEdit.cover.add')}
             </span>
           </button>
           <input
@@ -323,7 +323,7 @@ export function BookFormPanel({
         </div>
 
         <div className="card">
-          <label className="cell field">
+          <div className="cell field year-field-row">
             <input
               inputMode="numeric"
               value={yearText}
@@ -331,16 +331,36 @@ export function BookFormPanel({
               aria-label={t('bookEdit.year.label')}
               disabled={busy}
               autoComplete="off"
-              onChange={e =>
-                setYearText(
-                  e.target.value
-                    .replace(/\D/g, '')
-                    .slice(0, 4)
-                    .replace(/^0+(?=\d)/, ''),
-                )
-              }
+              onKeyDown={e => {
+                if (e.key === '-') {
+                  e.preventDefault();
+                  setYearBc(prev => !prev);
+                }
+              }}
+              onChange={e => {
+                const raw = e.target.value;
+                if (raw.includes('-')) {
+                  setYearBc(true);
+                }
+                const digits = raw
+                  .replace(/\D/g, '')
+                  .slice(0, 4)
+                  .replace(/^0+(?=\d)/, '');
+                setYearText(digits);
+                if (!digits) setYearBc(false);
+              }}
             />
-          </label>
+            {yearText.length > 0 && (
+              <button
+                type="button"
+                disabled={busy}
+                className={yearBc ? 'year-era-pill is-bc' : 'year-era-pill'}
+                onClick={() => setYearBc(prev => !prev)}
+              >
+                {t(yearBc ? 'bookEdit.year.eraBc' : 'bookEdit.year.eraAd')}
+              </button>
+            )}
+          </div>
 
           <button
             type="button"

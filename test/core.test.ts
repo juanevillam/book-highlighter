@@ -22,10 +22,7 @@ import {
   needsPositionRepair,
   positionForMove,
 } from '../src/lib/gridOrder';
-import {
-  pageIndexForAnchor,
-  paginateSections,
-} from '../src/lib/paginator';
+import { pageIndexForAnchor, paginateSections } from '../src/lib/paginator';
 import { readerSections } from '../src/lib/readerSections';
 import {
   effectiveTheme,
@@ -140,11 +137,7 @@ describe('gridOrder & shelfEntries', () => {
     expect(needsPositionRepair(entries)).toBe(false);
     expect(
       positionForMove(
-        [
-          { position: 0 },
-          { position: null },
-          { position: 1 },
-        ],
+        [{ position: 0 }, { position: null }, { position: 1 }],
         1,
       ),
     ).toBe(0.5);
@@ -193,7 +186,7 @@ describe('readerThemes, readerSections & paginator reflow anchor stability', () 
   it('resolves themes, palettes, and nearest text scale', () => {
     expect(effectiveTheme(null, 'dark')).toBe('dark');
     expect(effectiveTheme('sepia', 'dark')).toBe('sepia');
-    expect(readerPalette('dark').page).toBe('#000000');
+    expect(readerPalette('dark').page).toBe('#0D0D0D');
     expect(TEXT_SCALES[nearestScaleIndex(1.12)]).toBe(1.1);
     expect(TEXT_SCALES).toHaveLength(7);
   });
@@ -244,10 +237,7 @@ describe('readerThemes, readerSections & paginator reflow anchor stability', () 
       fontScale: 1,
     });
     expect(normal.pages.length).toBeGreaterThan(3);
-    expect(normal.toc.map(t => t.id)).toEqual([
-      'title',
-      'chapter:bk2',
-    ]);
+    expect(normal.toc.map(t => t.id)).toEqual(['title', 'chapter:bk2']);
     expect(normal.pages[0]?.imageUrl).toBe(
       'https://res.cloudinary.com/demo/image/upload/sample.jpg',
     );
@@ -289,13 +279,23 @@ const makePage = (overrides: Partial<PageAnalysis>): PageAnalysis => ({
 
 describe('photoImport (clean, assemble, sticky span, TOC & 5-signal paragraphs)', () => {
   it('cleans Latin OCR errors and restores Spanish typography & accents without false question marks', () => {
-    const rawLine1 = cleanOcr('--Dime, Govinda-pregunt6 Siddhartha-, crees que hemos llegado a alguna meta?');
-    const rawLine2 = cleanOcr('Todo mentia, cuando no era mas que podredumbre. <Si-pens6 con la cabeza inclinada-, que quedaria de todo cuanto nos parece sagrado?>');
+    const rawLine1 = cleanOcr(
+      '--Dime, Govinda-pregunt6 Siddhartha-, crees que hemos llegado a alguna meta?',
+    );
+    const rawLine2 = cleanOcr(
+      'Todo mentia, cuando no era mas que podredumbre. <Si-pens6 con la cabeza inclinada-, que quedaria de todo cuanto nos parece sagrado?>',
+    );
     const polished = polishSpanishProse(`${rawLine1}\n\n${rawLine2}`);
-    expect(polished).toContain('—Dime, Govinda —preguntó Siddhartha—, ¿crees que hemos llegado a alguna meta?');
-    expect(polished).toContain('Todo mentía, cuando no era más que podredumbre.');
+    expect(polished).toContain(
+      '—Dime, Govinda —preguntó Siddhartha—, ¿crees que hemos llegado a alguna meta?',
+    );
+    expect(polished).toContain(
+      'Todo mentía, cuando no era más que podredumbre.',
+    );
     expect(polished).not.toContain('¿cuando no era');
-    expect(polished).toContain('«Sí —pensó con la cabeza inclinada—, ¿qué quedaría de todo cuanto nos parece sagrado?»');
+    expect(polished).toContain(
+      '«Sí —pensó con la cabeza inclinada—, ¿qué quedaría de todo cuanto nos parece sagrado?»',
+    );
   });
 
   it('repairs missing or partially read page numbers across sequential photos', () => {
@@ -313,9 +313,27 @@ describe('photoImport (clean, assemble, sticky span, TOC & 5-signal paragraphs)'
       pageNumber: 25,
       flags: [{ side: 'R', shape: 'bar', y: 120, lineIndex: 0 }],
       lines: [
-        { text: 'En el camino, Siddhartha regaló su túnica a un brah-', x1: 140, y1: 100, x2: 895, y2: 124 },
-        { text: 'mán pobre. Una tortura era la vida.', x1: 100, y1: 135, x2: 520, y2: 159 }, // ends short -> punto y aparte even if next line is unindented
-        { text: 'Solo una meta se perfilaba ante Siddhartha: quedarse', x1: 100, y1: 170, x2: 895, y2: 194 },
+        {
+          text: 'En el camino, Siddhartha regaló su túnica a un brah-',
+          x1: 140,
+          y1: 100,
+          x2: 895,
+          y2: 124,
+        },
+        {
+          text: 'mán pobre. Una tortura era la vida.',
+          x1: 100,
+          y1: 135,
+          x2: 520,
+          y2: 159,
+        }, // ends short -> punto y aparte even if next line is unindented
+        {
+          text: 'Solo una meta se perfilaba ante Siddhartha: quedarse',
+          x1: 100,
+          y1: 170,
+          x2: 895,
+          y2: 194,
+        },
         { text: 'vacío.', x1: 100, y1: 205, x2: 210, y2: 229 },
       ],
     });
@@ -323,9 +341,21 @@ describe('photoImport (clean, assemble, sticky span, TOC & 5-signal paragraphs)'
       pageNumber: 26,
       flags: [{ side: 'L', shape: 'bar', y: 215, lineIndex: 2 }],
       lines: [
-        { text: 'El puro de espíritu que, meditando, se sumerja', x1: 135, y1: 100, x2: 880, y2: 124 },
+        {
+          text: 'El puro de espíritu que, meditando, se sumerja',
+          x1: 135,
+          y1: 100,
+          x2: 880,
+          y2: 124,
+        },
         { text: '[en el Atmán,', x1: 680, y1: 135, x2: 890, y2: 159 }, // hanging right-aligned continuation
-        { text: 'sentirá en su corazón una alegría inefable.', x1: 100, y1: 170, x2: 720, y2: 194 },
+        {
+          text: 'sentirá en su corazón una alegría inefable.',
+          x1: 100,
+          y1: 170,
+          x2: 720,
+          y2: 194,
+        },
       ],
     });
     const nums = repairPageNumbers([p1, p2]);
@@ -368,12 +398,8 @@ describe('photoImport (clean, assemble, sticky span, TOC & 5-signal paragraphs)'
   it('extracts two distinct high-visibility highlighter colors from book cover pixels and interpolates smoothly', () => {
     // 2 pixels of dark crimson + 2 pixels of deep gold + 2 pixels of near-black background
     const rgba = new Uint8ClampedArray([
-      195, 38, 42, 255,
-      190, 42, 45, 255,
-      218, 165, 32, 255,
-      224, 170, 38, 255,
-      12, 12, 14, 255,
-      250, 250, 250, 255,
+      195, 38, 42, 255, 190, 42, 45, 255, 218, 165, 32, 255, 224, 170, 38, 255,
+      12, 12, 14, 255, 250, 250, 250, 255,
     ]);
     const palette = extractPaletteFromRgba(rgba, 'siddhartha');
     expect(palette.start.s).toBeGreaterThanOrEqual(74);

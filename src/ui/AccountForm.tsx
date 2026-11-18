@@ -32,6 +32,9 @@ const formatMemberSince = (millis: number | null) =>
       })
     : '—';
 
+const disarmEmailDetector = (email: string | null | undefined) =>
+  email ? email.replace(/([@.])/g, '$1\u200B') : '—';
+
 function NameDialog({
   open,
   initial,
@@ -240,7 +243,9 @@ export function AccountForm({
             <span className="cell-name">
               {t('settings.manageAccount.email')}
             </span>
-            <span className="cell-value">{user.email ?? '—'}</span>
+            <span className="cell-value">
+              {disarmEmailDetector(user.email)}
+            </span>
           </div>
           <div className="cell">
             <span className="cell-name">
@@ -272,7 +277,7 @@ export function AccountForm({
         </button>
       </div>
 
-      {/* Detached from Trophies and untitled: Export All Books stands on its own. */}
+      {/* Detached from Trophies and untitled: Export stands on its own. */}
       <div className="card">
         <button
           type="button"
@@ -280,7 +285,9 @@ export function AccountForm({
           disabled={deleting || shelfCount === 0}
           onClick={onExportAll}
         >
-          <span className="cell-name">{t('export.titleAll')}</span>
+          <span className="cell-name">
+            {t(shelfCount === 1 ? 'export.title' : 'export.titleAll')}
+          </span>
           <span className="chevron">
             <ChevronRightGlyph />
           </span>

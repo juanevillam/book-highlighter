@@ -95,7 +95,7 @@ export const translations = {
       continue: 'Continue',
       exportPdf: 'Export PDF',
       exportShort: 'Export',
-      exportSummary: 'PDF · 6 × 9 in',
+      exportSummary: 'PDF · A5',
       summary: 'Summary',
       chapters: 'Chapters',
       notWritten: 'Not Written',
@@ -118,6 +118,8 @@ export const translations = {
       year: {
         label: 'Year',
         bc: '{year} BC',
+        eraAd: 'AD',
+        eraBc: 'BC',
       },
       genres: { label: 'Genre', none: 'None', search: 'Search Genres' },
       series: {
@@ -164,19 +166,21 @@ export const translations = {
         demo3: 'III. Every Star Holds a Story',
         demo4: 'IV. How the Universe Works',
         demo5: 'V. What Remains Undiscovered',
+        noIndexNote:
+          'No index in your book? Upload your page photos with sticky notes right here — the app creates the chapter from the page heading or book title and extracts your highlights automatically.',
       },
       newPlaceholder: 'Chapter title',
       untitled: 'Untitled Chapter',
       noHighlightsYet: 'No highlights yet',
       noHighlightsCallout:
-        'You currently have no highlights created. Create one in a chapter.',
-      noHighlightsAction: 'Upload Highlight',
+        'Upload page photos with sticky notes — highlights are routed to their chapter automatically by page number.',
+      noHighlightsAction: 'Upload Page Photos',
       pageSingle: 'p. {page}',
       pageRange: 'pp. {pages}',
       empty: {
         title: 'No Chapters Yet',
         subtitle:
-          'Upload a photo of the book’s index to load all its chapters.',
+          'Upload a photo of the book’s index to load its chapters — or, if the book has no index, upload page photos with sticky notes directly.',
       },
       delete: 'Delete',
       deleteAll: 'Delete All Chapters',
@@ -203,10 +207,9 @@ export const translations = {
       add: 'Add Highlight',
       scan: 'Upload Page Photos',
       readChapter: 'Read in Reader',
-      routedNotice:
-        'Uploaded “{snippet}” in “{from}” — moved automatically to “{to}” by page number.',
+      routedNotice: 'Saved in “{to}” (p. {page}).',
       routedBatchNotice:
-        'Uploaded in “{from}” — routed automatically by page number: {summary}.',
+        '{total} highlights saved automatically by page number: {summary}.',
       routedBatchItem: '{count} in “{chapter}”',
       emptyTitle: 'No Highlights Yet',
       empty:
@@ -281,11 +284,14 @@ export const translations = {
       contents: 'Contents',
       cover: 'Cover',
       titlePage: 'Title Page',
+      theEnd: 'The End',
       close: 'Close',
       settings: {
         title: 'Themes and Settings',
         open: 'Themes and Settings',
         textSize: 'Text Size',
+        pageWidth: 'Page Width',
+        widths: { standard: 'Standard', extended: 'Extended' },
         pageTurn: 'Page Turn',
         turns: { curl: 'Curl', slide: 'Slide', scroll: 'Scroll' },
         themes: 'Themes',
@@ -316,17 +322,17 @@ export const translations = {
       scope: { label: 'Books', book: 'This Book', all: 'All Books' },
       format: 'Page Format',
       formats: {
-        trade: '6 × 9 in',
-        digest: '5.5 × 8.5 in',
         a5: 'A5',
+        b5: 'B5',
+        a4: 'A4',
         letter: 'Letter',
       },
       preview: 'Preview',
       action: 'Export',
       footer:
-        'The PDF is set on 6 × 9 in trade paper like the book in the reader: its cover, its index, and every highlight.',
+        'The PDF is set on A5 paper like the book in the reader: its cover, its index, and every highlight.',
       footerAll:
-        'Each book is saved as its own 6 × 9 in PDF: its cover, its index, and every highlight.',
+        'Each book is saved as its own A5 PDF: its cover, its index, and every highlight.',
       footerFormat:
         'The PDF is set on {format} paper like the book in the reader: its cover, its index, and every highlight.',
       footerAllFormat:
@@ -485,7 +491,8 @@ export const translations = {
       'reorder-failed': "Couldn't reorder your books. Try again.",
       'scan-saved': 'Scanned highlights saved',
       'toc-scanned': 'Chapters imported from index',
-      'toc-already-loaded': 'Index already loaded — no duplicate chapters added',
+      'toc-already-loaded':
+        'Index already loaded — no duplicate chapters added',
       'chapters-cleared': 'All chapters deleted',
       'scan-empty': 'No text detected in the selected photos.',
       'not-an-index': 'No book index detected in the selected photo.',
@@ -599,7 +606,7 @@ export const translations = {
       continue: 'Continuar',
       exportPdf: 'Exportar PDF',
       exportShort: 'Exportar',
-      exportSummary: 'PDF · 6 × 9 in',
+      exportSummary: 'PDF · A5',
       summary: 'Resumen',
       chapters: 'Capítulos',
       notWritten: 'Sin escribir',
@@ -622,6 +629,8 @@ export const translations = {
       year: {
         label: 'Año',
         bc: '{year} a. C.',
+        eraAd: 'd. C.',
+        eraBc: 'a. C.',
       },
       genres: { label: 'Género', none: 'Ninguno', search: 'Buscar géneros' },
       series: {
@@ -668,19 +677,21 @@ export const translations = {
         demo3: 'III. La historia de cada estrella',
         demo4: 'IV. Cómo funciona el universo',
         demo5: 'V. Lo que falta por descubrir',
+        noIndexNote:
+          '¿Tu libro no tiene índice? Sube aquí mismo las fotos de las páginas con post-its: la app crea el capítulo con el encabezado de la página o el título del libro y extrae tus resaltados automáticamente.',
       },
       newPlaceholder: 'Título del capítulo',
       untitled: 'Capítulo sin título',
       noHighlightsYet: 'Sin resaltados aún',
       noHighlightsCallout:
-        'Actualmente no tienes resaltados creados. Crea uno en un capítulo.',
-      noHighlightsAction: 'Subir resaltado',
+        'Sube las fotos de las páginas con post-its — cada resaltado se guarda en su capítulo automáticamente por su página.',
+      noHighlightsAction: 'Subir fotos de páginas',
       pageSingle: 'pág. {page}',
       pageRange: 'págs. {pages}',
       empty: {
         title: 'Sin capítulos aún',
         subtitle:
-          'Sube una foto del índice del libro para cargar sus capítulos.',
+          'Sube una foto del índice para cargar sus capítulos — o, si el libro no tiene índice, sube directo las páginas con post-its.',
       },
       delete: 'Eliminar',
       deleteAll: 'Eliminar todos los capítulos',
@@ -707,10 +718,9 @@ export const translations = {
       add: 'Añadir resaltado',
       scan: 'Subir fotos de páginas',
       readChapter: 'Leer en el lector',
-      routedNotice:
-        'Subiste “{snippet}” en “{from}” — se movió automáticamente a “{to}” por su página.',
+      routedNotice: 'Guardado en “{to}” (pág. {page}).',
       routedBatchNotice:
-        'Subiste resaltados desde “{from}” — se organizaron por página: {summary}.',
+        '{total} resaltados guardados automáticamente por su página: {summary}.',
       routedBatchItem: '{count} en “{chapter}”',
       emptyTitle: 'Sin resaltados aún',
       empty:
@@ -732,8 +742,7 @@ export const translations = {
       readingPagesPhase1: 'Leyendo páginas…',
       readingPagesPhase2: 'Detectando marcas…',
       readingPagesPhase3: 'Extrayendo texto…',
-      scanningHintSingle:
-        'Detectando post-its y reconstruyendo párrafos.',
+      scanningHintSingle: 'Detectando post-its y reconstruyendo párrafos.',
       scanningHintMulti:
         'Página {done} de {total} · Detectando post-its y párrafos.',
       resetAuto: 'Restaurar auto',
@@ -785,11 +794,14 @@ export const translations = {
       contents: 'Contenido',
       cover: 'Portada',
       titlePage: 'Portadilla',
+      theEnd: 'Fin',
       close: 'Cerrar',
       settings: {
         title: 'Temas y ajustes',
         open: 'Temas y ajustes',
         textSize: 'Tamaño del texto',
+        pageWidth: 'Ancho de página',
+        widths: { standard: 'Estándar', extended: 'Amplio' },
         pageTurn: 'Pasar página',
         turns: { curl: 'Doblar', slide: 'Deslizar', scroll: 'Desplazar' },
         themes: 'Temas',
@@ -821,17 +833,17 @@ export const translations = {
       scope: { label: 'Libros', book: 'Este libro', all: 'Todos los libros' },
       format: 'Formato de página',
       formats: {
-        trade: '6 × 9 in',
-        digest: '5.5 × 8.5 in',
         a5: 'A5',
+        b5: 'B5',
+        a4: 'A4',
         letter: 'Carta',
       },
       preview: 'Vista previa',
       action: 'Exportar',
       footer:
-        'El PDF se compone en papel 6 × 9 in como en el lector: su portada, su índice y cada resaltado.',
+        'El PDF se compone en formato A5 como en el lector: su portada, su índice y cada resaltado.',
       footerAll:
-        'Cada libro se guarda como su propio PDF 6 × 9 in: su portada, su índice y cada resaltado.',
+        'Cada libro se guarda como su propio PDF en formato A5: su portada, su índice y cada resaltado.',
       footerFormat:
         'El PDF se compone en formato {format} como en el lector: su portada, su índice y cada resaltado.',
       footerAllFormat:
@@ -1113,7 +1125,7 @@ export const translations = {
       continue: '继续',
       exportPdf: '导出 PDF',
       exportShort: '导出',
-      exportSummary: 'PDF · 6 × 9 英寸',
+      exportSummary: 'PDF · A5',
       summary: '摘要',
       chapters: '章节',
       notWritten: '未填写',
@@ -1136,6 +1148,8 @@ export const translations = {
       year: {
         label: '年份',
         bc: '公元前 {year} 年',
+        eraAd: '公元',
+        eraBc: '公元前',
       },
       genres: { label: '类型', none: '无', search: '搜索类型' },
       series: {
@@ -1174,23 +1188,28 @@ export const translations = {
         action: '了解运作方式',
         title: '上传目录',
         step1Title: '拍摄图书目录页',
-        step1Body: '上传一张或多张清晰的目录页照片，系统会自动按顺序提取所有章节标题与起止页码（不会重复添加）。若同时选择带有便利贴的书页照片，高亮也会自动按页码归入对应章节。',
+        step1Body:
+          '上传一张或多张清晰的目录页照片，系统会自动按顺序提取所有章节标题与起止页码（不会重复添加）。若同时选择带有便利贴的书页照片，高亮也会自动按页码归入对应章节。',
         demo1: 'I. 仰望夜空',
         demo2: 'II. 浩瀚无垠的宇宙',
         demo3: 'III. 每颗星辰的故事',
         demo4: 'IV. 万物运转的奥秘',
         demo5: 'V. 尚未发现的未知',
+        noIndexNote:
+          '图书没有目录？直接在此上传带有便利贴的书页照片即可 — 系统会根据页面标题或书名自动创建章节并提取高亮。',
       },
       newPlaceholder: '章节标题',
       untitled: '未命名章节',
       noHighlightsYet: '尚无高亮',
-      noHighlightsCallout: '当前尚未创建任何高亮。请在章节中添加一条。',
-      noHighlightsAction: '上传高亮',
+      noHighlightsCallout:
+        '上传带有便利贴的书页照片 — 系统会按页码自动将每条高亮归入对应章节。',
+      noHighlightsAction: '上传书页照片',
       pageSingle: '第 {page} 页',
       pageRange: '第 {pages} 页',
       empty: {
         title: '尚无章节',
-        subtitle: '上传图书目录页照片即可自动导入所有章节。',
+        subtitle:
+          '上传目录页照片即可导入所有章节；若图书没有目录，也可直接上传带有便利贴的书页照片。',
       },
       delete: '删除',
       deleteAll: '删除所有章节',
@@ -1215,8 +1234,8 @@ export const translations = {
       add: '添加高亮',
       scan: '上传书页照片',
       readChapter: '在阅读器中阅读',
-      routedNotice: '在“{from}”中上传的“{snippet}” — 已按页码自动移至“{to}”。',
-      routedBatchNotice: '在“{from}”中批量上传 — 已按页码自动归入：{summary}。',
+      routedNotice: '已按页码存入“{to}”（第 {page} 页）。',
+      routedBatchNotice: '已按页码自动保存共 {total} 条高亮：{summary}。',
       routedBatchItem: '“{chapter}” {count} 条',
       emptyTitle: '尚无高亮',
       empty: '上传带有便利贴标记的书页照片以提取高亮段落。',
@@ -1249,10 +1268,13 @@ export const translations = {
         lArmCallout: '1 张横贴 + 1 张竖贴呈 L 形',
         lAutoCutCallout: '段落末尾 → 自动截断',
         step1Title: '方式 A · 两张水平便利贴（标记起点与终点）',
-        step1Body: '第 1 张便利贴指向段落起始行，第 2 张指向结束行（可在同页或跨页，中间书页会自动完整包含）。',
+        step1Body:
+          '第 1 张便利贴指向段落起始行，第 2 张指向结束行（可在同页或跨页，中间书页会自动完整包含）。',
         step2Title: '方式 B · 横竖两张便利贴拼成 L 形（标记整段）',
-        step2Body: '将第 1 张便利贴横贴指向首行，第 2 张竖贴紧贴其下方组成 L 形：系统会在该段落结束处自动截断。',
-        bulkNote: '批量上传：可一次选择任意多张带有便利贴的书页照片（甚至跨不同章节）— 系统会自动提取每条高亮并归入对应章节。',
+        step2Body:
+          '将第 1 张便利贴横贴指向首行，第 2 张竖贴紧贴其下方组成 L 形：系统会在该段落结束处自动截断。',
+        bulkNote:
+          '批量上传：可一次选择任意多张带有便利贴的书页照片（甚至跨不同章节）— 系统会自动提取每条高亮并归入对应章节。',
       },
       tutorialStep1: '在起止行旁贴上便利贴（或用 L 形标记整段）。',
       tutorialStep2: '按阅读顺序上传 1 张或多张书页照片。',
@@ -1282,11 +1304,14 @@ export const translations = {
       contents: '目录',
       cover: '封面',
       titlePage: '扉页',
+      theEnd: '全书完',
       close: '关闭',
       settings: {
         title: '主题和设置',
         open: '主题和设置',
         textSize: '文字大小',
+        pageWidth: '页面宽度',
+        widths: { standard: '标准', extended: '宽幅' },
         pageTurn: '翻页',
         turns: { curl: '卷曲', slide: '滑动', scroll: '滚动' },
         themes: '主题',
@@ -1317,17 +1342,18 @@ export const translations = {
       scope: { label: '图书', book: '本书', all: '所有图书' },
       format: '页面尺寸',
       formats: {
-        trade: '6 × 9 英寸',
-        digest: '5.5 × 8.5 英寸',
         a5: 'A5',
-        letter: 'Letter',
+        b5: 'B5',
+        a4: 'A4',
+        letter: '信纸',
       },
       preview: '预览',
       action: '导出',
-      footer: 'PDF 按 6 × 9 英寸书籍排版：封面、目录，然后是每条高亮。',
-      footerAll: '每本书都会存储为单独的 6 × 9 英寸 PDF：封面、目录，然后是每条高亮。',
+      footer: 'PDF 按 A5 纸张排版：封面、目录，然后是每条高亮。',
+      footerAll: '每本书都会存储为单独的 A5 PDF：封面、目录，然后是每条高亮。',
       footerFormat: 'PDF 按 {format} 纸张排版：封面、目录，然后是每条高亮。',
-      footerAllFormat: '每本书都会存储为单独的 {format} PDF：封面、目录，然后是每条高亮。',
+      footerAllFormat:
+        '每本书都会存储为单独的 {format} PDF：封面、目录，然后是每条高亮。',
     },
     genres: {
       fiction: '小说',

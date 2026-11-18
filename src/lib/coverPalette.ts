@@ -13,11 +13,14 @@ export type CoverPalette = {
   start: HslColor;
   mid: HslColor;
   end: HslColor;
+  bg?: HslColor;
   startCss: string;
   midCss: string;
   endCss: string;
   startInk: '#0d0d0d' | '#ffffff';
   endInk: '#0d0d0d' | '#ffffff';
+  /** True when the book cover's overall brightness is dark (< ~52%), false when light. */
+  isDarkCover?: boolean;
 };
 
 const DEFAULT_START: HslColor = { h: 142, s: 78, l: 56 }; // Emerald green
@@ -27,7 +30,7 @@ const wrapHue = (h: number): number => ((h % 360) + 360) % 360;
 
 const shortestHueDelta = (fromH: number, toH: number): number => {
   const diff = ((toH - fromH + 540) % 360) - 180;
-  return Math.abs(diff) < 28 ? (diff >= 0 ? 64 : -64) : diff;
+  return Math.abs(diff) < 16 ? (diff >= 0 ? 28 : -28) : diff;
 };
 
 /**
@@ -54,6 +57,16 @@ export function hslToCss(c: HslColor, alpha?: number): string {
   return alpha !== undefined
     ? `hsl(${h} ${s}% ${l}% / ${alpha})`
     : `hsl(${h} ${s}% ${l}%)`;
+}
+
+export function hslToHex(c: HslColor): string {
+  const [r, g, b] = hslToRgb(c);
+  const toHex = (n: number) =>
+    Math.max(0, Math.min(255, Math.round(n)))
+      .toString(16)
+      .padStart(2, '0')
+      .toUpperCase();
+  return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
 }
 
 function hslToRgb(c: HslColor): [number, number, number] {
@@ -135,6 +148,8 @@ export function interpolatePaletteColor(
 export function buildCoverPalette(
   rawStart: HslColor,
   rawEnd: HslColor,
+  isDarkCover?: boolean,
+  bg?: HslColor,
 ): CoverPalette {
   const start = normalizeHighlighterHsl(rawStart);
   const delta = shortestHueDelta(start.h, rawEnd.h);
@@ -153,11 +168,13 @@ export function buildCoverPalette(
     start,
     mid,
     end,
+    ...(bg ? { bg } : {}),
     startCss: hslToCss(start),
     midCss: hslToCss(mid),
     endCss: hslToCss(end),
     startInk: contrastInkForHsl(start),
     endInk: contrastInkForHsl(end),
+    ...(isDarkCover !== undefined ? { isDarkCover } : {}),
   };
 }
 
@@ -179,10 +196,7 @@ export function fallbackPaletteForSeed(seed: string): CoverPalette {
   }
   const h1 = wrapHue(Math.abs(hash) % 360);
   const h2 = wrapHue(h1 + 88 + (Math.abs(hash >> 8) % 56));
-  return buildCoverPalette(
-    { h: h1, s: 82, l: 58 },
-    { h: h2, s: 84, l: 64 },
-  );
+  return buildCoverPalette({ h: h1, s: 82, l: 58 }, { h: h2, s: 84, l: 64 });
 }
 
 /**
@@ -193,7 +207,9 @@ export function extractPaletteFromRgba(
   data: Uint8ClampedArray | number[],
   fallbackSeed = '',
 ): CoverPalette {
-  const buckets = Array.from({ length: 12 }, (_, idx) => ({
+  const BUCKET_COUNT = 18;
+  const BUCKET_DEG = 360 / BUCKET_COUNT;
+  const buckets = Array.from({ length: BUCKET_COUNT }, (_, idx) => ({
     idx,
     weight: 0,
     sumX: 0,
@@ -202,19 +218,38 @@ export function extractPaletteFromRgba(
     sumL: 0,
   }));
 
+  let lumSum = 0;
+  let opaqueCount = 0;
+  let bgSumX = 0;
+  let bgSumY = 0;
+  let bgSumS = 0;
+  let bgSumL = 0;
+  let bgWeight = 0;
+
   for (let i = 0; i + 3 < data.length; i += 4) {
     const a = data[i + 3]!;
     if (a < 128) continue;
     const r = data[i]!;
     const g = data[i + 1]!;
     const b = data[i + 2]!;
+    lumSum += 0.299 * r + 0.587 * g + 0.114 * b;
+    opaqueCount += 1;
     const { h, s, l } = rgbToHsl(r, g, b);
-    // Ignore near-black, near-white, and low-saturation grays/paper tones
-    if (l < 14 || l > 90 || s < 18) continue;
 
-    const bucketIdx = Math.floor(wrapHue(h) / 30) % 12;
+    // Track dominant field/background tone across all pixels (including dark obsidian, cream, or tinted paper)
+    const bw = 1.2 - Math.min(0.6, s / 160);
+    const bRad = (h * Math.PI) / 180;
+    bgWeight += bw;
+    bgSumX += Math.cos(bRad) * (s / 100) * bw;
+    bgSumY += Math.sin(bRad) * (s / 100) * bw;
+    bgSumS += s * bw;
+    bgSumL += l * bw;
+
+    // Ignore only extreme pure-black/white and neutral grays; keep gold/bronze/crimson (s >= 12, l 10..93)
+    if (l < 10 || l > 93 || s < 12) continue;
+
+    const bucketIdx = Math.floor(wrapHue(h) / BUCKET_DEG) % BUCKET_COUNT;
     const bucket = buckets[bucketIdx]!;
-    // Weight favors saturated, mid-lightness chromatic pixels
     const w = Math.max(0.1, thevividWeight(s, l));
     const rad = (h * Math.PI) / 180;
     bucket.weight += w;
@@ -224,12 +259,15 @@ export function extractPaletteFromRgba(
     bucket.sumL += l * w;
   }
 
+  const isDarkCover = opaqueCount > 0 ? lumSum / opaqueCount < 132 : undefined;
+
   const ranked = buckets
-    .filter(b => b.weight > 0.5)
+    .filter(b => b.weight > 0.35)
     .sort((a, b) => b.weight - a.weight);
 
   if (ranked.length === 0) {
-    return fallbackPaletteForSeed(fallbackSeed);
+    const fb = fallbackPaletteForSeed(fallbackSeed);
+    return isDarkCover !== undefined ? { ...fb, isDarkCover } : fb;
   }
 
   const bucketToHsl = (b: (typeof buckets)[number]): HslColor => {
@@ -243,25 +281,42 @@ export function extractPaletteFromRgba(
 
   const first = bucketToHsl(ranked[0]!);
 
-  // Pick the strongest secondary bucket whose hue is at least 48° away from `first`
+  // Pick the strongest secondary bucket at least 22° away so Red (~8°) + Gold (~40°) is preserved
+  // instead of falling back to an artificial green shift.
   const secondBucket = ranked.find(b => {
     const cand = bucketToHsl(b);
     const dist = Math.abs(((cand.h - first.h + 540) % 360) - 180);
-    return dist >= 48;
+    return dist >= 22;
   });
 
   const second: HslColor = secondBucket
     ? bucketToHsl(secondBucket)
-    : { h: wrapHue(first.h + 84), s: first.s, l: first.l };
+    : {
+        h: wrapHue(first.h + 34),
+        s: Math.max(68, first.s * 0.9),
+        l: Math.min(72, first.l + 8),
+      };
 
-  return buildCoverPalette(first, second);
+  const bg: HslColor | undefined =
+    bgWeight > 0
+      ? {
+          h:
+            Math.hypot(bgSumX, bgSumY) > 0.02
+              ? wrapHue((Math.atan2(bgSumY, bgSumX) * 180) / Math.PI)
+              : first.h,
+          s: Math.round(bgSumS / bgWeight),
+          l: Math.round(bgSumL / bgWeight),
+        }
+      : undefined;
+
+  return buildCoverPalette(first, second, isDarkCover, bg);
 }
 
 function thevividWeight(s: number, l: number): number {
   return (s / 100) * (1 - Math.min(0.85, Math.abs(l - 52) / 55));
 }
 
-const PALETTE_STORAGE_KEY = 'bh:cover-palette:v1';
+const PALETTE_STORAGE_KEY = 'bh:cover-palette:v3';
 const paletteCache = new Map<string, CoverPalette>();
 let storageHydrated = false;
 
@@ -273,11 +328,24 @@ function hydratePaletteStorage(): void {
     if (!raw) return;
     const parsed = JSON.parse(raw) as Record<
       string,
-      { start: HslColor; end: HslColor }
+      {
+        start: HslColor;
+        end: HslColor;
+        isDarkCover?: boolean;
+        bg?: HslColor;
+      }
     >;
     for (const [key, entry] of Object.entries(parsed)) {
       if (entry?.start && entry?.end) {
-        paletteCache.set(key, buildCoverPalette(entry.start, entry.end));
+        paletteCache.set(
+          key,
+          buildCoverPalette(
+            entry.start,
+            entry.end,
+            entry.isDarkCover,
+            entry.bg,
+          ),
+        );
       }
     }
   } catch {
@@ -291,9 +359,24 @@ function savePaletteToStorage(key: string, palette: CoverPalette): void {
   try {
     const raw = localStorage.getItem(PALETTE_STORAGE_KEY);
     const parsed = raw
-      ? (JSON.parse(raw) as Record<string, { start: HslColor; end: HslColor }>)
+      ? (JSON.parse(raw) as Record<
+          string,
+          {
+            start: HslColor;
+            end: HslColor;
+            isDarkCover?: boolean;
+            bg?: HslColor;
+          }
+        >)
       : {};
-    parsed[key] = { start: palette.start, end: palette.end };
+    parsed[key] = {
+      start: palette.start,
+      end: palette.end,
+      ...(palette.isDarkCover !== undefined
+        ? { isDarkCover: palette.isDarkCover }
+        : {}),
+      ...(palette.bg ? { bg: palette.bg } : {}),
+    };
     const keys = Object.keys(parsed);
     if (keys.length > 80) {
       delete parsed[keys[0]!];

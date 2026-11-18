@@ -3,6 +3,7 @@ import {
   BOOK_INDEX_SECTION_ID,
   COVER_SECTION_ID,
   EMPTY_HIGHLIGHTS_SECTION_ID,
+  END_SECTION_ID,
   TITLE_SECTION_ID,
   type BookIndexItem,
   type ReaderSection,
@@ -34,13 +35,17 @@ export type PageFlowItem = {
   marginTop: number;
   startOffset: number;
   endOffset: number;
+  edgeArtSlot?: {
+    motif: number;
+    side: 'left' | 'right';
+  };
 };
 
 export type PaginatedPage = {
   /** 0-based page index. */
   index: number;
   sectionId: string;
-  kind: 'cover' | 'title' | 'bookIndex' | 'empty' | 'content';
+  kind: 'cover' | 'title' | 'bookIndex' | 'empty' | 'content' | 'end';
   imageUrl?: string;
   titleCard?: {
     heading: string;
@@ -56,8 +61,19 @@ export type PaginatedPage = {
     headingSize: number;
     rowSize: number;
   };
+  endCard?: {
+    heading: string;
+    subheading: string | null;
+    headingSize: number;
+    subSize: number;
+  };
   items: PageFlowItem[];
   anchor: ReaderAnchor;
+  bottomEdgeArt?: {
+    motif: number;
+    side: 'left' | 'right';
+    topPct: number;
+  };
 };
 
 export type TocEntry = {
@@ -79,10 +95,13 @@ export type PaginatorOptions = {
   width: number;
   height: number;
   fontScale: number;
+  maxMeasure?: number;
   coverLabel?: string;
   titleLabel?: string;
   includeEmptyHighlightsPage?: boolean;
   emptyHighlightsLabel?: string;
+  inlineEdgeArt?: boolean;
+  artSeed?: number;
 };
 
 type TextMeasurer = (
@@ -119,7 +138,7 @@ const getCanvasMeasurer = (): TextMeasurer => {
     for (const ch of text) {
       const code = ch.codePointAt(0) ?? 0;
       if (code >= 0x3000) units += 1.0;
-      else if ('ilI.,:;\'!| '.includes(ch)) units += 0.3;
+      else if ("ilI.,:;'!| ".includes(ch)) units += 0.3;
       else if ('mwMW@%'.includes(ch)) units += 0.82;
       else if (ch >= 'A' && ch <= 'Z') units += 0.66;
       else units += 0.53;
@@ -283,8 +302,7 @@ export const parseHighlightSegments = (rawText: string): HighlightSegment[] => {
   for (const para of paragraphs) {
     const rawLines = para.split('\n').filter(l => l.trim().length > 0);
     const isVerse =
-      rawLines.length > 0 &&
-      rawLines.every(l => /^\s*\*[^*]+\*\s*$/.test(l));
+      rawLines.length > 0 && rawLines.every(l => /^\s*\*[^*]+\*\s*$/.test(l));
     if (isVerse) {
       rawLines.forEach((rawLine, lineIdx) => {
         const indentedRight = /^\s{2,}\*/.test(rawLine);
@@ -445,23 +463,118 @@ const buildSectionBlocks = (
  * Splits `ReaderSection[]` into screen-sized pages without ever clipping a line,
  * mapping each page to a stable `{ blockId, offset }` `ReaderAnchor` and TOC page numbers.
  */
+const INLINE_EDGE_ART_H = 142;
+const BOTTOM_TOP_PCTS = [36, 46, 40, 50, 34, 44, 38, 48] as const;
+
+export function hashArtSeed(key: string): number {
+  let h = 2166136261;
+  for (let i = 0; i < key.length; i += 1) {
+    h ^= key.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  h ^= h >>> 16;
+  h = Math.imul(h, 0x85ebca6b);
+  h ^= h >>> 13;
+  return Math.abs(h | 0) || 1;
+}
+
+function mulberry32(seed: number): () => number {
+  let a = seed | 0;
+  return () => {
+    a = (a + 0x6d2b79f5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+function shuffledIndices(count: number, seed: number): number[] {
+  const arr = Array.from({ length: count }, (_, i) => i);
+  const rand = mulberry32(seed);
+  for (let i = count - 1; i > 0; i -= 1) {
+    const j = Math.floor(rand() * (i + 1));
+    const tmp = arr[i]!;
+    arr[i] = arr[j]!;
+    arr[j] = tmp;
+  }
+  return arr;
+}
+
+export function bookOrnamentForSlot(artSeed: number, slot: number): number {
+  const s = Math.abs(slot);
+  const cycle = Math.floor(s / 8);
+  const order = shuffledIndices(
+    8,
+    (artSeed ^ Math.imul(cycle + 1, 0x9e3779b9)) | 0,
+  );
+  return order[s % 8] ?? 0;
+}
+
+export function bookPairForSlot(artSeed: number, slot: number): number {
+  const s = Math.abs(slot);
+  const cycle = Math.floor(s / 7);
+  const order = shuffledIndices(
+    7,
+    (artSeed ^ Math.imul(cycle + 1, 0x85ebca6b)) | 0,
+  );
+  return order[s % 7] ?? 0;
+}
+
+export function bookMotifForSlot(
+  artSeed: number,
+  slot: number,
+): { motif: number; side: 'left' | 'right' } {
+  const s = Math.abs(slot);
+  const pairSlot = Math.floor(s / 2);
+  const pairIdx = bookPairForSlot(artSeed, pairSlot);
+  const leadRight = ((artSeed + pairSlot * 13) & 1) === 1;
+  const isSecond = s % 2 === 1;
+  const side: 'left' | 'right' = leadRight !== isSecond ? 'right' : 'left';
+  const motif = side === 'left' ? pairIdx * 2 : pairIdx * 2 + 1;
+  return { motif, side };
+}
+
+const resolveInlineEdgeSlot = (
+  pageIndex: number,
+  artSeed: number,
+): {
+  motif: number;
+  side: 'left' | 'right';
+  topPct: number;
+} | null => {
+  const slot = pageIndex % 4;
+  if (slot !== 1 && slot !== 3) return null;
+  const illustrationIdx = Math.floor(pageIndex / 4) * 2 + (slot === 3 ? 1 : 0);
+  const { motif, side } = bookMotifForSlot(artSeed, illustrationIdx + 2);
+  const topPct =
+    BOTTOM_TOP_PCTS[(illustrationIdx + artSeed) % BOTTOM_TOP_PCTS.length] ?? 42;
+  return {
+    motif,
+    side,
+    topPct,
+  };
+};
+
 export const paginateSections = (
   sections: ReaderSection[],
   {
     width,
     height,
     fontScale,
+    maxMeasure: maxMeasureCap = 620,
     coverLabel = 'Cover',
     titleLabel = 'Title Page',
     includeEmptyHighlightsPage = false,
     emptyHighlightsLabel = 'Highlights',
+    inlineEdgeArt = false,
+    artSeed = 0,
   }: PaginatorOptions,
 ): PaginationResult => {
-  const safeW = Math.max(280, width);
+  const safeW = Math.max(180, width);
   const safeH = Math.max(360, height);
-  const maxMeasure = Math.min(620, safeW - Math.max(44, Math.round(safeW * 0.12)));
-  const topInset = 68;
-  const bottomInset = 56;
+  const maxMeasure = Math.min(maxMeasureCap, safeW);
+  const topInset = 72;
+  const bottomInset = 76;
   const contentHeight = Math.max(180, safeH - topInset - bottomInset);
   const measure = getCanvasMeasurer();
 
@@ -520,24 +633,61 @@ export const paginateSections = (
     if (section.kind === 'bookIndex' && section.indexEntries) {
       const headingSize = Math.round(24 * fontScale * 10) / 10;
       const rowSize = Math.round(15.5 * fontScale * 10) / 10;
+      const rowHeight = Math.round(rowSize * 1.45) + 10;
+      const headerReserved = Math.round(headingSize * 1.5) + 56;
+      const entriesPerPage = Math.max(
+        5,
+        Math.floor((contentHeight - headerReserved) / rowHeight),
+      );
+
       toc.push({
         id: section.id || BOOK_INDEX_SECTION_ID,
         kind: 'bookIndex',
         label: section.heading || 'Contents',
         page: startPageNumber,
       });
+
+      const allEntries = section.indexEntries;
+      for (let i = 0; i < allEntries.length; i += entriesPerPage) {
+        const slice = allEntries.slice(i, i + entriesPerPage);
+        pages.push({
+          index: pages.length,
+          sectionId: section.id,
+          kind: 'bookIndex',
+          indexCard: {
+            heading: section.heading ?? 'Contents',
+            entries: slice,
+            headingSize,
+            rowSize,
+          },
+          items: [],
+          anchor: { blockId: section.id, offset: i },
+        });
+      }
+      continue;
+    }
+
+    if (section.kind === 'end') {
+      const headingSize = Math.round(28 * fontScale * 10) / 10;
+      const subSize = Math.round(14.5 * fontScale * 10) / 10;
+      toc.push({
+        id: section.id || END_SECTION_ID,
+        kind: 'end',
+        label: section.heading || 'The End',
+        page: startPageNumber,
+      });
       pages.push({
         index: pages.length,
-        sectionId: section.id,
-        kind: 'bookIndex',
-        indexCard: {
-          heading: section.heading ?? 'Contents',
-          entries: section.indexEntries,
+        sectionId: section.id || END_SECTION_ID,
+        kind: 'end',
+        endCard: {
+          heading: section.heading ?? 'The End',
+          subheading: section.subheading ?? null,
           headingSize,
-          rowSize,
+          subSize,
         },
         items: [],
-        anchor: { blockId: section.id, offset: 0 },
+        anchor: { blockId: section.id || END_SECTION_ID, offset: 0 },
       });
       continue;
     }
@@ -560,8 +710,38 @@ export const paginateSections = (
     let currentItems: PageFlowItem[] = [];
     let usedY = 0;
 
+    const currentPageCap = () => {
+      if (!inlineEdgeArt) return contentHeight;
+      const slot = resolveInlineEdgeSlot(pages.length, artSeed);
+      return slot
+        ? Math.max(140, contentHeight - INLINE_EDGE_ART_H)
+        : contentHeight;
+    };
+
     const flushPage = () => {
       if (currentItems.length === 0) return;
+      let bottomEdgeArt: PaginatedPage['bottomEdgeArt'];
+      if (inlineEdgeArt) {
+        let slot = resolveInlineEdgeSlot(pages.length, artSeed);
+        if (!slot && contentHeight - usedY >= INLINE_EDGE_ART_H + 12) {
+          const bonusIdx = pages.length + 1;
+          const { motif, side } = bookMotifForSlot(artSeed, bonusIdx);
+          slot = {
+            motif,
+            side,
+            topPct:
+              BOTTOM_TOP_PCTS[(bonusIdx + artSeed) % BOTTOM_TOP_PCTS.length] ??
+              42,
+          };
+        }
+        if (slot) {
+          bottomEdgeArt = {
+            motif: slot.motif,
+            side: slot.side,
+            topPct: slot.topPct,
+          };
+        }
+      }
       const first = currentItems[0];
       pages.push({
         index: pages.length,
@@ -569,6 +749,7 @@ export const paginateSections = (
         kind: 'content',
         items: currentItems,
         anchor: { blockId: first.blockId, offset: first.startOffset },
+        ...(bottomEdgeArt ? { bottomEdgeArt } : {}),
       });
       currentItems = [];
       usedY = 0;
@@ -580,13 +761,10 @@ export const paginateSections = (
 
       let lineIdx = 0;
       while (lineIdx < lines.length) {
+        const pageCap = currentPageCap();
         const marginTop =
-          currentItems.length === 0
-            ? 0
-            : lineIdx === 0
-              ? block.gapBefore
-              : 0;
-        const remainingH = contentHeight - usedY - marginTop;
+          currentItems.length === 0 ? 0 : lineIdx === 0 ? block.gapBefore : 0;
+        const remainingH = pageCap - usedY - marginTop;
         const maxLinesFit = Math.floor(remainingH / block.lineHeight);
 
         // Avoid stranding a heading/subheading at the very bottom without at least 1 line of its next block.
@@ -602,7 +780,7 @@ export const paginateSections = (
             lines.length * block.lineHeight +
             nextBlock.gapBefore +
             nextBlock.lineHeight;
-          if (usedY + neededWithNext > contentHeight) {
+          if (usedY + neededWithNext > pageCap) {
             flushPage();
             continue;
           }
@@ -640,7 +818,9 @@ export const paginateSections = (
           currentItems.length > 0 &&
           lines.length - lineIdx >= 2 &&
           maxLinesFit === 1 &&
-          (block.style === 'prose' || block.style === 'quote' || block.keepTogether)
+          (block.style === 'prose' ||
+            block.style === 'quote' ||
+            block.keepTogether)
         ) {
           flushPage();
           continue;
@@ -714,7 +894,11 @@ export const pageIndexForAnchor = (
   // 1. Exact block + character offset containment.
   for (let i = 0; i < pages.length; i += 1) {
     const page = pages[i];
-    if (page.anchor.blockId === anchor.blockId && page.items.length === 0) {
+    if (
+      page.anchor.blockId === anchor.blockId &&
+      page.items.length === 0 &&
+      page.anchor.offset === anchor.offset
+    ) {
       return i;
     }
     for (const item of page.items) {

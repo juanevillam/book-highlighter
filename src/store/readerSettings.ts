@@ -3,9 +3,11 @@ import { create } from 'zustand';
 import {
   DEFAULT_TEXT_SCALE_INDEX,
   PAGE_TURNS,
+  PAGE_WIDTHS,
   READER_THEMES,
   TEXT_SCALES,
   type PageTurn,
+  type PageWidth,
   type ReaderTheme,
 } from '../lib/readerThemes';
 
@@ -14,12 +16,14 @@ const READER_SETTINGS_KEY = 'bookhighlighter.reader';
 type StoredReaderSettings = {
   theme: ReaderTheme | null;
   pageTurn: PageTurn;
+  pageWidth: PageWidth;
   scaleIndex: number;
 };
 
 const DEFAULT_SETTINGS: StoredReaderSettings = {
   theme: null,
   pageTurn: 'slide',
+  pageWidth: 'standard',
   scaleIndex: DEFAULT_TEXT_SCALE_INDEX,
 };
 
@@ -39,6 +43,11 @@ const readSettings = (): StoredReaderSettings => {
       (PAGE_TURNS as readonly string[]).includes(parsed.pageTurn)
         ? (parsed.pageTurn as PageTurn)
         : 'slide';
+    const pageWidth =
+      typeof parsed.pageWidth === 'string' &&
+      (PAGE_WIDTHS as readonly string[]).includes(parsed.pageWidth)
+        ? (parsed.pageWidth as PageWidth)
+        : 'standard';
     const scaleIndex =
       typeof parsed.scaleIndex === 'number' &&
       Number.isInteger(parsed.scaleIndex) &&
@@ -47,7 +56,7 @@ const readSettings = (): StoredReaderSettings => {
         ? parsed.scaleIndex
         : DEFAULT_TEXT_SCALE_INDEX;
 
-    return { theme, pageTurn, scaleIndex };
+    return { theme, pageTurn, pageWidth, scaleIndex };
   } catch {
     return DEFAULT_SETTINGS;
   }
@@ -64,6 +73,7 @@ const persist = (settings: StoredReaderSettings) => {
 type ReaderSettingsState = StoredReaderSettings & {
   setReaderTheme: (theme: ReaderTheme | null) => void;
   setPageTurn: (pageTurn: PageTurn) => void;
+  setPageWidth: (pageWidth: PageWidth) => void;
   setScaleIndex: (scaleIndex: number) => void;
 };
 
@@ -74,6 +84,7 @@ export const useReaderSettingsStore = create<ReaderSettingsState>()(
       const next = {
         theme,
         pageTurn: get().pageTurn,
+        pageWidth: get().pageWidth,
         scaleIndex: get().scaleIndex,
       };
       persist(next);
@@ -83,10 +94,21 @@ export const useReaderSettingsStore = create<ReaderSettingsState>()(
       const next = {
         theme: get().theme,
         pageTurn,
+        pageWidth: get().pageWidth,
         scaleIndex: get().scaleIndex,
       };
       persist(next);
       set({ pageTurn });
+    },
+    setPageWidth: pageWidth => {
+      const next = {
+        theme: get().theme,
+        pageTurn: get().pageTurn,
+        pageWidth,
+        scaleIndex: get().scaleIndex,
+      };
+      persist(next);
+      set({ pageWidth });
     },
     setScaleIndex: scaleIndex => {
       const clamped = Math.max(
@@ -96,6 +118,7 @@ export const useReaderSettingsStore = create<ReaderSettingsState>()(
       const next = {
         theme: get().theme,
         pageTurn: get().pageTurn,
+        pageWidth: get().pageWidth,
         scaleIndex: clamped,
       };
       persist(next);

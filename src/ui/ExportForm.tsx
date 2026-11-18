@@ -4,10 +4,12 @@ import { track } from '../analytics';
 import { useScheme } from '../appearance';
 import { EMPTY_BODY, type Book } from '../books';
 import { t } from '../i18n';
+import { loadCoverPalette, useBookCoverPalette } from '../lib/coverPalette';
 import {
-  loadCoverPalette,
-  useBookCoverPalette,
-} from '../lib/coverPalette';
+  bookOrnamentForSlot,
+  bookPairForSlot,
+  hashArtSeed,
+} from '../lib/paginator';
 import {
   PDF_FORMAT_IDS,
   PDF_FORMATS,
@@ -26,7 +28,7 @@ import { selectShelf, useBooksStore } from '../store/books';
 import { useReaderSettingsStore } from '../store/readerSettings';
 
 import { CheckGlyph, CloseGlyph } from './glyphs';
-import { BookPageMarginArt, BookPageOrnament } from './Reader';
+import { BookPageEdgeMotif, BookPageOrnament } from './Reader';
 import { SidePanel } from './SidePanel';
 import { showToast } from './Toast';
 
@@ -60,12 +62,11 @@ export function ExportPanel({
     effectiveTheme(savedReaderTheme, scheme),
   );
   const [scaleIndex, setScaleIndex] = useState<number>(savedScaleIndex);
-  const [format, setFormat] = useState<PdfFormatId>('trade');
+  const [format, setFormat] = useState<PdfFormatId>('a5');
   const [busy, setBusy] = useState(false);
 
   const shelf = selectShelf({ books });
-  const targetBooks =
-    scope === 'book' && initialBook ? [initialBook] : shelf;
+  const targetBooks = scope === 'book' && initialBook ? [initialBook] : shelf;
   const previewBook = initialBook ?? shelf[0] ?? null;
   const previewEntry = useBodiesStore(state =>
     previewBook ? state.entries[previewBook.id] : undefined,
@@ -84,6 +85,12 @@ export function ExportPanel({
   );
   const activePalette = readerPalette(chosenTheme, coverPalette, scheme);
   const fontScale = TEXT_SCALES[scaleIndex] ?? 1;
+  const previewArtSeed = hashArtSeed(
+    previewBook?.id || previewBook?.name || 'export',
+  );
+  const previewRightMotif = bookPairForSlot(previewArtSeed, 0) * 2 + 1;
+  const previewHeaderOrnament = bookOrnamentForSlot(previewArtSeed, 1);
+  const previewFooterOrnament = bookOrnamentForSlot(previewArtSeed, 2);
 
   const firstPopulatedChapter = previewBody.chapters.find(
     ch => ch.highlights.length > 0,
@@ -162,7 +169,11 @@ export function ExportPanel({
       switching={switching}
       depth={depth}
       index={index}
-      title={t(initialBook ? 'export.title' : 'export.titleAll')}
+      title={t(
+        scope === 'all' && shelf.length > 1
+          ? 'export.titleAll'
+          : 'export.title',
+      )}
       action={
         <button
           type="button"
@@ -188,28 +199,27 @@ export function ExportPanel({
       onClose={onClose}
     >
       {initialBook && shelf.length > 1 && (
-        <div className="card">
-          <div className="cell">
-            <div className="segmented">
-              <button
-                type="button"
-                className={scope === 'book' ? 'is-active' : undefined}
-                disabled={busy}
-                onClick={() => setScope('book')}
-              >
-                {t('export.scope.book')}
-              </button>
-              <button
-                type="button"
-                className={scope === 'all' ? 'is-active' : undefined}
-                disabled={busy}
-                onClick={() => setScope('all')}
-              >
-                {t('export.scope.all')}
-              </button>
-            </div>
+        <section>
+          <h3 className="section-head">{t('export.scope.label')}</h3>
+          <div className="segmented reader-turn-picker">
+            <button
+              type="button"
+              className={scope === 'book' ? 'is-active' : undefined}
+              disabled={busy}
+              onClick={() => setScope('book')}
+            >
+              {t('export.scope.book')}
+            </button>
+            <button
+              type="button"
+              className={scope === 'all' ? 'is-active' : undefined}
+              disabled={busy}
+              onClick={() => setScope('all')}
+            >
+              {t('export.scope.all')}
+            </button>
           </div>
-        </div>
+        </section>
       )}
 
       <section>
@@ -219,36 +229,50 @@ export function ExportPanel({
         </h3>
         <div className="export-preview-stage" aria-hidden="true">
           <div
-            className={
-              activePalette.ornament
-                ? 'export-preview-page is-book-themed'
-                : 'export-preview-page'
-            }
+            className={[
+              'export-preview-page',
+              activePalette.ornament ? 'is-book-themed' : '',
+            ]
+              .filter(Boolean)
+              .join(' ')}
             style={{
-              aspectRatio: PDF_FORMATS[format].aspect,
+              width: PDF_FORMATS[format].previewW,
+              height: PDF_FORMATS[format].previewH,
               backgroundColor: activePalette.page,
               color: activePalette.text,
               ['--reader-accent' as string]:
                 activePalette.accent ?? activePalette.muted,
             }}
           >
-            {activePalette.ornament && (
-              <BookPageMarginArt
-                index={0}
-                color={activePalette.accent}
-                secondaryColor={activePalette.accentSecondary}
+            <div
+              key={`margin:${previewBook?.id ?? 'all'}:${chosenTheme}`}
+              className={
+                activePalette.ornament
+                  ? 'export-preview-margin is-active'
+                  : 'export-preview-margin'
+              }
+            >
+              <BookPageEdgeMotif
+                motif={previewRightMotif}
+                side="right"
+                color={activePalette.accent ?? activePalette.muted}
+                secondaryColor={
+                  activePalette.accentSecondary ?? activePalette.muted
+                }
               />
-            )}
+            </div>
             <div className="export-preview-body">
-              {activePalette.ornament && (
-                <BookPageOrnament
-                  style={activePalette.ornament}
-                  variant="header"
-                  seed={0}
-                  color={activePalette.accent}
-                  secondaryColor={activePalette.accentSecondary}
-                />
-              )}
+              <BookPageOrnament
+                key={`head:${previewBook?.id ?? 'all'}:${chosenTheme}`}
+                style={activePalette.ornament}
+                active={Boolean(activePalette.ornament)}
+                variant="header"
+                seed={previewHeaderOrnament}
+                color={activePalette.accent ?? activePalette.muted}
+                secondaryColor={
+                  activePalette.accentSecondary ?? activePalette.muted
+                }
+              />
               <strong
                 className="export-preview-heading"
                 style={{
@@ -276,14 +300,17 @@ export function ExportPanel({
               className="export-preview-foot"
               style={{ color: activePalette.muted }}
             >
-              {activePalette.ornament && (
-                <BookPageOrnament
-                  style={activePalette.ornament}
-                  variant="footer"
-                  color={activePalette.accent}
-                  secondaryColor={activePalette.accentSecondary}
-                />
-              )}
+              <BookPageOrnament
+                key={`foot:${previewBook?.id ?? 'all'}:${chosenTheme}`}
+                style={activePalette.ornament}
+                active={Boolean(activePalette.ornament)}
+                variant="footer"
+                seed={previewFooterOrnament}
+                color={activePalette.accent ?? activePalette.muted}
+                secondaryColor={
+                  activePalette.accentSecondary ?? activePalette.muted
+                }
+              />
               <span>{t('reader.pageOf', { page: 1, total: 4 })}</span>
             </footer>
           </div>
@@ -311,15 +338,14 @@ export function ExportPanel({
                   key={step}
                   type="button"
                   disabled={busy}
-                  className={[
-                    'scale-dot',
-                    idx === DEFAULT_TEXT_SCALE_INDEX ? 'is-default' : '',
-                    idx === scaleIndex ? 'is-active' : '',
-                  ]
-                    .filter(Boolean)
-                    .join(' ')}
+                  className={
+                    idx === scaleIndex ? 'scale-dot is-active' : 'scale-dot'
+                  }
                   aria-label={`${Math.round(step * 100)}%`}
-                  onClick={() => setScaleIndex(idx)}
+                  onClick={() => {
+                    if (idx === scaleIndex) return;
+                    setScaleIndex(idx);
+                  }}
                 />
               ))}
             </div>
@@ -347,7 +373,10 @@ export function ExportPanel({
               type="button"
               disabled={busy}
               className={format === fmt ? 'is-active' : undefined}
-              onClick={() => setFormat(fmt)}
+              onClick={() => {
+                if (format === fmt) return;
+                setFormat(fmt);
+              }}
             >
               {t(`export.formats.${fmt}`)}
             </button>
@@ -380,7 +409,10 @@ export function ExportPanel({
                     : {}),
                 }}
                 disabled={busy}
-                onClick={() => setChosenTheme(themeKey)}
+                onClick={() => {
+                  if (chosenTheme === themeKey) return;
+                  setChosenTheme(themeKey);
+                }}
               >
                 <span className="swatch-aa">Aa</span>
                 <span className="swatch-name">
@@ -390,12 +422,6 @@ export function ExportPanel({
             );
           })}
         </div>
-        <p className="section-foot">
-          {t(
-            scope === 'all' ? 'export.footerAllFormat' : 'export.footerFormat',
-            { format: formatLabel },
-          )}
-        </p>
       </section>
     </SidePanel>
   );
