@@ -13,21 +13,31 @@ const notify = () => {
   listeners.forEach(listener => listener());
 };
 
+const DISPLAY_MODES = [
+  '(display-mode: standalone)',
+  '(display-mode: minimal-ui)',
+  '(display-mode: fullscreen)',
+  '(display-mode: window-controls-overlay)',
+];
+
 const checkStandalone = (): boolean => {
   if (typeof window === 'undefined') return false;
-  return (
-    window.matchMedia('(display-mode: standalone)').matches ||
-    (navigator as Navigator & { standalone?: boolean }).standalone === true
-  );
+  if (DISPLAY_MODES.some(q => window.matchMedia(q).matches)) return true;
+  if ((navigator as Navigator & { standalone?: boolean }).standalone === true) {
+    return true;
+  }
+  if (window.toolbar && window.toolbar.visible === false) return true;
+  return false;
 };
 
 if (typeof window !== 'undefined') {
   standalone = checkStandalone();
-  const mq = window.matchMedia('(display-mode: standalone)');
-  mq.addEventListener?.('change', () => {
-    standalone = checkStandalone();
-    notify();
-  });
+  for (const q of DISPLAY_MODES) {
+    window.matchMedia(q).addEventListener?.('change', () => {
+      standalone = checkStandalone();
+      notify();
+    });
+  }
   window.addEventListener('beforeinstallprompt', event => {
     event.preventDefault();
     deferredPrompt = event as BeforeInstallPromptEvent;
@@ -49,6 +59,15 @@ export const isIosSafari = (): boolean => {
   );
 };
 
+const isSafariBrowser = (): boolean => {
+  if (typeof window === 'undefined' || typeof navigator === 'undefined') {
+    return false;
+  }
+  if ('onbeforeinstallprompt' in window) return false;
+  const ua = navigator.userAgent || '';
+  return /Safari/.test(ua) && !/Chrome|Chromium|CriOS|Edg|OPR|FxiOS|Firefox/.test(ua);
+};
+
 export const usePwaInstall = () => {
   const isInstalled = useSyncExternalStore(
     listener => {
@@ -65,6 +84,9 @@ export const usePwaInstall = () => {
     () => deferredPrompt !== null,
   );
 
+  const canInstall =
+    !isInstalled && (canPromptNatively || isSafariBrowser());
+
   const promptInstall = async (): Promise<
     'installed' | 'dismissed' | 'manual'
   > => {
@@ -77,7 +99,7 @@ export const usePwaInstall = () => {
     return outcome === 'accepted' ? 'installed' : 'dismissed';
   };
 
-  return { isInstalled, canPromptNatively, promptInstall };
+  return { isInstalled, canInstall, canPromptNatively, promptInstall };
 };
 
 /**
