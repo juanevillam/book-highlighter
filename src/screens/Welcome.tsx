@@ -75,12 +75,6 @@ export function Welcome() {
       </section>
 
       <footer className="welcome-actions">
-        {!import.meta.env.DEV && (
-          <p className="construction-pill" role="status">
-            <span className="construction-dot" aria-hidden="true" />
-            {t('welcome.underConstruction.badge')}
-          </p>
-        )}
         <button
           type="button"
           className="google"

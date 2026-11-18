@@ -55,13 +55,6 @@ export const translations = {
         privacy: 'Privacy Policy',
         terms: 'Terms and Conditions',
       },
-      underConstruction: {
-        badge: 'Under Construction',
-        subtitle:
-          'Book Highlighter is currently in private development. Public access will open soon.',
-        enterPreview: 'Continue to Owner Preview',
-        signOut: 'Sign Out',
-      },
     },
     home: {
       newBook: 'New Book',
@@ -572,13 +565,6 @@ export const translations = {
         text: 'Al continuar, aceptas la {privacy} y los {terms} de Book Highlighter.',
         privacy: 'Política de Privacidad',
         terms: 'Términos y Condiciones',
-      },
-      underConstruction: {
-        badge: 'En construcción',
-        subtitle:
-          'Book Highlighter está actualmente en desarrollo privado. Pronto estará disponible.',
-        enterPreview: 'Entrar a vista previa (Owner)',
-        signOut: 'Cerrar sesión',
       },
     },
     home: {
@@ -1099,12 +1085,6 @@ export const translations = {
         text: '继续即表示你同意 Book Highlighter 的{privacy}和{terms}。',
         privacy: '隐私政策',
         terms: '条款与条件',
-      },
-      underConstruction: {
-        badge: '建设中',
-        subtitle: 'Book Highlighter 目前处于内部开发测试阶段，即将开放。',
-        enterPreview: '进入开发者预览',
-        signOut: '退出登录',
       },
     },
     home: {
