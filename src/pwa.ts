@@ -65,7 +65,9 @@ const isSafariBrowser = (): boolean => {
   }
   if ('onbeforeinstallprompt' in window) return false;
   const ua = navigator.userAgent || '';
-  return /Safari/.test(ua) && !/Chrome|Chromium|CriOS|Edg|OPR|FxiOS|Firefox/.test(ua);
+  return (
+    /Safari/.test(ua) && !/Chrome|Chromium|CriOS|Edg|OPR|FxiOS|Firefox/.test(ua)
+  );
 };
 
 export const usePwaInstall = () => {
@@ -84,8 +86,7 @@ export const usePwaInstall = () => {
     () => deferredPrompt !== null,
   );
 
-  const canInstall =
-    !isInstalled && (canPromptNatively || isSafariBrowser());
+  const canInstall = !isInstalled && (canPromptNatively || isSafariBrowser());
 
   const promptInstall = async (): Promise<
     'installed' | 'dismissed' | 'manual'
