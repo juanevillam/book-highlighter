@@ -463,8 +463,8 @@ const buildSectionBlocks = (
  * Splits `ReaderSection[]` into screen-sized pages without ever clipping a line,
  * mapping each page to a stable `{ blockId, offset }` `ReaderAnchor` and TOC page numbers.
  */
-const INLINE_EDGE_ART_H = 142;
-const BOTTOM_TOP_PCTS = [36, 46, 40, 50, 34, 44, 38, 48] as const;
+const INLINE_EDGE_ART_H = 112;
+const BOTTOM_TOP_PCTS = [42, 50, 44, 52, 40, 48, 43, 51] as const;
 
 export function hashArtSeed(key: string): number {
   let h = 2166136261;
@@ -571,11 +571,9 @@ export const paginateSections = (
   }: PaginatorOptions,
 ): PaginationResult => {
   const safeW = Math.max(180, width);
-  const safeH = Math.max(360, height);
+  const safeH = Math.max(240, height);
   const maxMeasure = Math.min(maxMeasureCap, safeW);
-  const topInset = 72;
-  const bottomInset = 76;
-  const contentHeight = Math.max(180, safeH - topInset - bottomInset);
+  const contentHeight = Math.max(180, safeH - 36);
   const measure = getCanvasMeasurer();
 
   const pages: PaginatedPage[] = [];

@@ -71,7 +71,11 @@ export const readerSections = (
     },
   ];
 
-  if (body.chapters.length > 0 && strings.contents) {
+  const hasReadableContent = body.chapters.some(
+    chapter => chapter.highlights.length > 0,
+  );
+
+  if (hasReadableContent && body.chapters.length > 0 && strings.contents) {
     sections.push({
       id: BOOK_INDEX_SECTION_ID,
       kind: 'bookIndex',

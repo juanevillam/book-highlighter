@@ -121,6 +121,31 @@ const isValidBookPage = (p: PageAnalysis): boolean => {
 const RING = 92;
 const RING_STROKE = 8.5;
 
+const prefersReducedMotion = (): boolean =>
+  typeof matchMedia === 'function' &&
+  matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+function useInspectorWake(signature: string, holdMs = 720): boolean {
+  const prevRef = useRef('');
+  const [awake, setAwake] = useState(false);
+
+  useEffect(() => {
+    if (!signature) {
+      prevRef.current = '';
+      setAwake(false);
+      return;
+    }
+    if (signature === prevRef.current) return;
+    prevRef.current = signature;
+    if (prefersReducedMotion()) return;
+    setAwake(true);
+    const id = window.setTimeout(() => setAwake(false), holdMs);
+    return () => window.clearTimeout(id);
+  }, [signature, holdMs]);
+
+  return awake;
+}
+
 /**
  * The app's circular progress ring (`Trophies.tsx` → `Ring`), reused for
  * photo-upload progress inside `.side-empty.is-full` so Empty → Scanning →
@@ -2466,6 +2491,11 @@ function HighlightEditorPanel({
   const pct = effectiveProgress ? effectiveProgress.percent : 0;
 
   const activeItem = items[activePhotoIdx] ?? null;
+  const inspectorSig =
+    items.length > 0 && markRange
+      ? `${items.length}:${activeMarkIdx}:${activePhotoIdx}:${tapTarget}:${markRange.start.photo}:${markRange.start.line}:${markRange.end.photo}:${markRange.end.line}`
+      : '';
+  const inspectorLive = useInspectorWake(inspectorSig);
   const valid = text.trim().length > 0;
   const paragraphs = text
     .split('\n\n')
@@ -2635,11 +2665,13 @@ function HighlightEditorPanel({
           <>
             {items.length > 0 && (
               <section
-                className={
-                  justLoadedScan
-                    ? 'scanner-section is-entering'
-                    : 'scanner-section'
-                }
+                className={[
+                  'scanner-section',
+                  justLoadedScan && 'is-entering',
+                  inspectorLive && 'is-live',
+                ]
+                  .filter(Boolean)
+                  .join(' ')}
                 style={paletteToCssVars(palette)}
               >
                 {allMarks.length > 1 && (
@@ -2771,7 +2803,13 @@ function HighlightEditorPanel({
                 )}
 
                 {activeItem && (
-                  <div className="card scanner-inspector-card">
+                  <div
+                    className={
+                      tapTarget === 'start'
+                        ? 'card scanner-inspector-card is-target-start'
+                        : 'card scanner-inspector-card is-target-end'
+                    }
+                  >
                     <div className="scanner-inspector-bar">
                       <div className="segmented scanner-mode-picker">
                         <button
@@ -2917,6 +2955,7 @@ function HighlightEditorPanel({
                                 '--line-fill': hslToCss(hsl, 0.24),
                                 '--line-fill-hover': hslToCss(hsl, 0.36),
                                 '--line-edge': hslToCss(hsl, 0.52),
+                                '--line-glow': hslToCss(hsl, 0.36),
                               } as CSSProperties;
                             }
 

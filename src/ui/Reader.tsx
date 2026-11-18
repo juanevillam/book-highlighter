@@ -160,7 +160,9 @@ function useInkDrawOnce(active = true) {
 
       if (stateRef.current !== 'idle') return;
 
-      const slideCell = svg.closest('.reader-slide-cell');
+      const slideCell = svg.closest(
+        '.reader-slide-cell, .reader-slide-edge-layer',
+      );
       if (slideCell) {
         if (slideCell.classList.contains('is-current')) {
           triggerDraw();
@@ -2836,7 +2838,7 @@ function PageSheetContent({
   palette,
   artSeed = 1,
   mirrored = false,
-  hasReadableContent = true,
+  hasReadableContent: _hasReadableContent = true,
   hasChapters = false,
   onEmptyAction,
   onSelectChapter,
@@ -2926,24 +2928,6 @@ function PageSheetContent({
                 {page.titleCard.meta}
               </p>
             )}
-            {!hasReadableContent && onEmptyAction && (
-              <div className="reader-inline-empty-cta">
-                <p style={{ color: 'var(--reader-muted)' }}>
-                  {t('reader.empty.title')}
-                </p>
-                <button
-                  type="button"
-                  className="pill is-primary"
-                  onClick={onEmptyAction}
-                >
-                  <span>
-                    {hasChapters
-                      ? t('reader.empty.action')
-                      : t('reader.empty.actionIndex')}
-                  </span>
-                </button>
-              </div>
-            )}
           </div>
         ) : page.kind === 'bookIndex' && page.indexCard ? (
           <div className="reader-book-index">
@@ -2960,7 +2944,7 @@ function PageSheetContent({
 
             <div className="reader-book-index-list">
               {page.indexCard.entries.map(entry => {
-                const interactive = entry.hasHighlights || !hasReadableContent;
+                const interactive = entry.hasHighlights;
                 return (
                   <button
                     key={entry.chapterId}
@@ -3006,25 +2990,6 @@ function PageSheetContent({
                 );
               })}
             </div>
-
-            {!hasReadableContent && onEmptyAction && (
-              <div className="reader-inline-empty-cta">
-                <p style={{ color: 'var(--reader-muted)' }}>
-                  {t('reader.empty.title')}
-                </p>
-                <button
-                  type="button"
-                  className="pill is-primary"
-                  onClick={onEmptyAction}
-                >
-                  <span>
-                    {hasChapters
-                      ? t('reader.empty.action')
-                      : t('reader.empty.actionIndex')}
-                  </span>
-                </button>
-              </div>
-            )}
           </div>
         ) : page.kind === 'end' && page.endCard ? (
           <div className="reader-end-card">
@@ -3435,8 +3400,7 @@ function ScrollReaderBody({
                 </div>
                 <div className="reader-book-index-list">
                   {section.indexEntries.map(entry => {
-                    const interactive =
-                      entry.hasHighlights || !hasReadableContent;
+                    const interactive = entry.hasHighlights;
                     return (
                       <button
                         key={entry.chapterId}
@@ -4720,12 +4684,18 @@ export function Reader({
               <div
                 className={
                   slideOffsetPx !== 0
-                    ? 'reader-slide-track is-dragging'
-                    : 'reader-slide-track'
+                    ? 'reader-slide-edge-overlay is-dragging'
+                    : 'reader-slide-edge-overlay'
                 }
                 style={{
-                  transform: `translate3d(calc(${-pageIndex * 100}% + ${slideOffsetPx}px), 0, 0)`,
+                  opacity: Math.max(
+                    0,
+                    1 -
+                      Math.abs(slideOffsetPx) /
+                        Math.max(72, viewport.stageWidth * 0.24),
+                  ),
                 }}
+                aria-hidden="true"
               >
                 {pages.map(p => {
                   const endEdgeLayout =
@@ -4737,34 +4707,43 @@ export function Reader({
                           pages.length,
                         )
                       : null;
+                  const hasDesktopMarginArt =
+                    Boolean(palette.ornament) &&
+                    !inlineEdgeArt &&
+                    p.kind !== 'cover' &&
+                    p.kind !== 'bookIndex' &&
+                    p.kind !== 'empty';
+                  const hasBottomEdgeArt = Boolean(
+                    palette.ornament && p.bottomEdgeArt,
+                  );
+                  if (
+                    !hasDesktopMarginArt &&
+                    !hasBottomEdgeArt &&
+                    !endEdgeLayout
+                  ) {
+                    return null;
+                  }
                   return (
                     <div
-                      key={p.index}
+                      key={`edge-${p.index}`}
                       className={
                         p.index === pageIndex
-                          ? 'reader-slide-cell is-current'
-                          : 'reader-slide-cell'
+                          ? 'reader-slide-edge-layer is-current'
+                          : 'reader-slide-edge-layer'
                       }
                     >
-                      {palette.ornament &&
-                        !inlineEdgeArt &&
-                        p.kind !== 'cover' &&
-                        p.kind !== 'bookIndex' &&
-                        p.kind !== 'empty' && (
-                          <BookPageMarginArt
-                            index={p.index}
-                            seed={bookArtSeed}
-                            totalPages={pages.length}
-                            forceShow={p.kind === 'title' || p.kind === 'end'}
-                            color={palette.accent}
-                            secondaryColor={palette.accentSecondary}
-                          />
-                        )}
-                      {palette.ornament && p.bottomEdgeArt && (
-                        <div
-                          className="reader-slide-bottom-art"
-                          aria-hidden="true"
-                        >
+                      {hasDesktopMarginArt && (
+                        <BookPageMarginArt
+                          index={p.index}
+                          seed={bookArtSeed}
+                          totalPages={pages.length}
+                          forceShow={p.kind === 'title' || p.kind === 'end'}
+                          color={palette.accent}
+                          secondaryColor={palette.accentSecondary}
+                        />
+                      )}
+                      {hasBottomEdgeArt && p.bottomEdgeArt && (
+                        <div className="reader-slide-bottom-art">
                           <BookPageEdgeMotif
                             motif={p.bottomEdgeArt.motif}
                             side={p.bottomEdgeArt.side}
@@ -4775,10 +4754,7 @@ export function Reader({
                         </div>
                       )}
                       {endEdgeLayout && (
-                        <div
-                          className="reader-slide-bottom-art is-pair"
-                          aria-hidden="true"
-                        >
+                        <div className="reader-slide-bottom-art is-pair">
                           <BookPageEdgeMotif
                             motif={endEdgeLayout.leftMotif}
                             side="left"
@@ -4793,24 +4769,47 @@ export function Reader({
                           />
                         </div>
                       )}
-                      <div
-                        className="reader-slide-page"
-                        style={{ width: viewport.width }}
-                      >
-                        <PageSheetContent
-                          page={p}
-                          totalPages={pages.length}
-                          palette={palette}
-                          artSeed={bookArtSeed}
-                          hasReadableContent={hasReadableContent}
-                          hasChapters={hasChapters}
-                          onEmptyAction={onOpenFirstChapterHighlight}
-                          onSelectChapter={handleSelectBookIndexChapter}
-                        />
-                      </div>
                     </div>
                   );
                 })}
+              </div>
+
+              <div
+                className={
+                  slideOffsetPx !== 0
+                    ? 'reader-slide-track is-dragging'
+                    : 'reader-slide-track'
+                }
+                style={{
+                  transform: `translate3d(calc(${-pageIndex * 100}% + ${slideOffsetPx}px), 0, 0)`,
+                }}
+              >
+                {pages.map(p => (
+                  <div
+                    key={p.index}
+                    className={
+                      p.index === pageIndex
+                        ? 'reader-slide-cell is-current'
+                        : 'reader-slide-cell'
+                    }
+                  >
+                    <div
+                      className="reader-slide-page"
+                      style={{ width: viewport.width }}
+                    >
+                      <PageSheetContent
+                        page={p}
+                        totalPages={pages.length}
+                        palette={palette}
+                        artSeed={bookArtSeed}
+                        hasReadableContent={hasReadableContent}
+                        hasChapters={hasChapters}
+                        onEmptyAction={onOpenFirstChapterHighlight}
+                        onSelectChapter={handleSelectBookIndexChapter}
+                      />
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
           )}

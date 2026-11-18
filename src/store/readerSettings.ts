@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 
+import { PDF_FORMAT_IDS, type PdfFormatId } from '../lib/pdfExport';
 import {
   DEFAULT_TEXT_SCALE_INDEX,
   PAGE_TURNS,
@@ -18,6 +19,7 @@ type StoredReaderSettings = {
   pageTurn: PageTurn;
   pageWidth: PageWidth;
   scaleIndex: number;
+  pdfFormat: PdfFormatId;
 };
 
 const DEFAULT_SETTINGS: StoredReaderSettings = {
@@ -25,6 +27,7 @@ const DEFAULT_SETTINGS: StoredReaderSettings = {
   pageTurn: 'slide',
   pageWidth: 'standard',
   scaleIndex: DEFAULT_TEXT_SCALE_INDEX,
+  pdfFormat: 'a5',
 };
 
 const readSettings = (): StoredReaderSettings => {
@@ -55,8 +58,13 @@ const readSettings = (): StoredReaderSettings => {
       parsed.scaleIndex < TEXT_SCALES.length
         ? parsed.scaleIndex
         : DEFAULT_TEXT_SCALE_INDEX;
+    const pdfFormat =
+      typeof parsed.pdfFormat === 'string' &&
+      (PDF_FORMAT_IDS as readonly string[]).includes(parsed.pdfFormat)
+        ? (parsed.pdfFormat as PdfFormatId)
+        : 'a5';
 
-    return { theme, pageTurn, pageWidth, scaleIndex };
+    return { theme, pageTurn, pageWidth, scaleIndex, pdfFormat };
   } catch {
     return DEFAULT_SETTINGS;
   }
@@ -75,6 +83,7 @@ type ReaderSettingsState = StoredReaderSettings & {
   setPageTurn: (pageTurn: PageTurn) => void;
   setPageWidth: (pageWidth: PageWidth) => void;
   setScaleIndex: (scaleIndex: number) => void;
+  setPdfFormat: (pdfFormat: PdfFormatId) => void;
 };
 
 export const useReaderSettingsStore = create<ReaderSettingsState>()(
@@ -86,6 +95,7 @@ export const useReaderSettingsStore = create<ReaderSettingsState>()(
         pageTurn: get().pageTurn,
         pageWidth: get().pageWidth,
         scaleIndex: get().scaleIndex,
+        pdfFormat: get().pdfFormat,
       };
       persist(next);
       set({ theme });
@@ -96,6 +106,7 @@ export const useReaderSettingsStore = create<ReaderSettingsState>()(
         pageTurn,
         pageWidth: get().pageWidth,
         scaleIndex: get().scaleIndex,
+        pdfFormat: get().pdfFormat,
       };
       persist(next);
       set({ pageTurn });
@@ -106,6 +117,7 @@ export const useReaderSettingsStore = create<ReaderSettingsState>()(
         pageTurn: get().pageTurn,
         pageWidth,
         scaleIndex: get().scaleIndex,
+        pdfFormat: get().pdfFormat,
       };
       persist(next);
       set({ pageWidth });
@@ -120,9 +132,21 @@ export const useReaderSettingsStore = create<ReaderSettingsState>()(
         pageTurn: get().pageTurn,
         pageWidth: get().pageWidth,
         scaleIndex: clamped,
+        pdfFormat: get().pdfFormat,
       };
       persist(next);
       set({ scaleIndex: clamped });
+    },
+    setPdfFormat: pdfFormat => {
+      const next = {
+        theme: get().theme,
+        pageTurn: get().pageTurn,
+        pageWidth: get().pageWidth,
+        scaleIndex: get().scaleIndex,
+        pdfFormat,
+      };
+      persist(next);
+      set({ pdfFormat });
     },
   }),
 );

@@ -302,6 +302,7 @@ export function Home({ user }: { user: User }) {
     isStaged ? 'is-staged' : '',
     mobileStageOpen ? 'is-expanded' : '',
     toolsShown ? 'is-tooled' : '',
+    readingBook ? 'is-reading' : '',
   ]
     .filter(Boolean)
     .join(' ');

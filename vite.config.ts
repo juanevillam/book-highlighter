@@ -19,6 +19,8 @@ export default defineConfig({
     include: ['onnxruntime-web/wasm'],
   },
   server: {
+    port: 5174,
+    strictPort: true,
     host: true,
     allowedHosts: true,
   },

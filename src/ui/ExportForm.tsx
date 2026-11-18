@@ -14,11 +14,7 @@ import {
   bookPairForSlot,
   hashArtSeed,
 } from '../lib/paginator';
-import {
-  PDF_FORMAT_IDS,
-  PDF_FORMATS,
-  type PdfFormatId,
-} from '../lib/pdfExport';
+import { PDF_FORMAT_IDS, PDF_FORMATS } from '../lib/pdfExport';
 import {
   effectiveTheme,
   READER_THEMES,
@@ -52,6 +48,8 @@ export function ExportPanel({
 
   const savedReaderTheme = useReaderSettingsStore(state => state.theme);
   const savedScaleIndex = useReaderSettingsStore(state => state.scaleIndex);
+  const format = useReaderSettingsStore(state => state.pdfFormat);
+  const setFormat = useReaderSettingsStore(state => state.setPdfFormat);
 
   const [scope, setScope] = useState<'book' | 'all'>(
     initialBook ? 'book' : 'all',
@@ -60,7 +58,6 @@ export function ExportPanel({
     effectiveTheme(savedReaderTheme, scheme),
   );
   const [scaleIndex, setScaleIndex] = useState<number>(savedScaleIndex);
-  const [format, setFormat] = useState<PdfFormatId>('a5');
   const [busy, setBusy] = useState(false);
 
   const shelf = selectShelf({ books });
