@@ -6,6 +6,7 @@ import {
   useRef,
   useState,
 } from 'react';
+
 import { createPortal, flushSync } from 'react-dom';
 
 import { useScheme } from '../appearance';
@@ -16,8 +17,10 @@ import {
   type BookBody,
   type ReaderAnchor,
 } from '../books';
-import { t, useLocale } from '../i18n';
 import { UI_STATE_LAB, useUiStateLab } from '../dev/uiStateLab';
+import { t, useLocale } from '../i18n';
+import { BookOpenGlyph, CheckGlyph, CloseGlyph, GearGlyph } from './glyphs';
+import { SidePanel } from './SidePanel';
 import { formatYear } from '../lib/bookFields';
 import { useBookCoverPalette } from '../lib/coverPalette';
 import { genreLabel } from '../lib/genres';
@@ -40,7 +43,6 @@ import {
   type ReaderSection,
 } from '../lib/readerSections';
 import {
-  DEFAULT_TEXT_SCALE_INDEX,
   effectiveTheme,
   PAGE_TURNS,
   PAGE_WIDTHS,
@@ -56,9 +58,6 @@ import { thumbUrl } from '../lib/thumbUrl';
 import { useBodiesStore } from '../store/bodies';
 import { useBooksStore } from '../store/books';
 import { useReaderSettingsStore } from '../store/readerSettings';
-
-import { BookOpenGlyph, CheckGlyph, CloseGlyph, GearGlyph } from './glyphs';
-import { SidePanel } from './SidePanel';
 
 const DESK = '(min-width: 64rem)';
 const LEAVE_MS = 240;

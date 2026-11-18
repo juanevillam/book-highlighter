@@ -2,13 +2,12 @@ import { useEffect, useRef } from 'react';
 
 import { type Book } from '../books';
 import { plural, t } from '../i18n';
-import { formatYear } from '../lib/bookFields';
-import { genreLabel } from '../lib/genres';
-import { useBodiesStore } from '../store/bodies';
-
 import { Artwork } from './Artwork';
 import { GenreGlyph, genreTint } from './genreGlyphs';
 import { CloseGlyph, ContentsGlyph, PencilGlyph, ShareGlyph } from './glyphs';
+import { formatYear } from '../lib/bookFields';
+import { genreLabel } from '../lib/genres';
+import { useBodiesStore } from '../store/bodies';
 
 const DISMISS_PX = 120;
 const DISMISS_VELOCITY = 0.6;

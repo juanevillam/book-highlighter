@@ -9,14 +9,13 @@ import {
   type Theme,
 } from '../appearance';
 import { locale, setLocale, SUPPORTED_LOCALES, t, type Locale } from '../i18n';
+import { ConfirmDialog } from './ConfirmDialog';
+import { ChevronRightGlyph } from './glyphs';
 import { legalUrl } from '../lib/author';
 import { thumbUrl } from '../lib/thumbUrl';
 import { isIosSafari, usePwaInstall } from '../pwa';
 import { signOut } from '../session';
 import { useDevSettingsStore } from '../store/devSettings';
-
-import { ConfirmDialog } from './ConfirmDialog';
-import { ChevronRightGlyph } from './glyphs';
 
 const AVATAR = 55;
 const APP_NAME = 'Book Highlighter';

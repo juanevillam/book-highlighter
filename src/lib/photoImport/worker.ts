@@ -7,9 +7,9 @@
  */
 import * as ort from 'onnxruntime-web/wasm';
 
-import { type PaddleModels, type Rgba } from '../ocr/paddle';
-
+import { type PageAnalysis } from './analyze';
 import { PHOTO_MAX, processPhoto, REC_MAX } from './pipeline';
+import { type PaddleModels, type Rgba } from '../ocr/paddle';
 
 export type WorkerRequest =
   | { type: 'init' }
@@ -21,7 +21,7 @@ export type WorkerResponse =
   | {
       type: 'result';
       id: number;
-      page: import('./analyze').PageAnalysis;
+      page: PageAnalysis;
       preview: Blob;
     }
   | { type: 'error'; id: number | null; message: string };

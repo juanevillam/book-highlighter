@@ -18,11 +18,23 @@ import {
   parseYear,
 } from '../src/lib/bookFields';
 import {
+  extractPaletteFromRgba,
+  interpolatePaletteColor,
+} from '../src/lib/coverPalette';
+import {
   byGridOrder,
   needsPositionRepair,
   positionForMove,
 } from '../src/lib/gridOrder';
 import { pageIndexForAnchor, paginateSections } from '../src/lib/paginator';
+import { type PageAnalysis } from '../src/lib/photoImport/analyze';
+import {
+  extractChaptersFromToc,
+  findHighlightSpan,
+  repairPageNumbers,
+  textBetween,
+} from '../src/lib/photoImport/assemble';
+import { cleanOcr, polishSpanishProse } from '../src/lib/photoImport/clean';
 import { readerSections } from '../src/lib/readerSections';
 import {
   effectiveTheme,
@@ -30,18 +42,6 @@ import {
   readerPalette,
   TEXT_SCALES,
 } from '../src/lib/readerThemes';
-import {
-  extractChaptersFromToc,
-  findHighlightSpan,
-  repairPageNumbers,
-  textBetween,
-} from '../src/lib/photoImport/assemble';
-import {
-  extractPaletteFromRgba,
-  interpolatePaletteColor,
-} from '../src/lib/coverPalette';
-import { type PageAnalysis } from '../src/lib/photoImport/analyze';
-import { cleanOcr, polishSpanishProse } from '../src/lib/photoImport/clean';
 import { shelfEntries } from '../src/lib/shelf';
 
 const makeBook = (overrides: Partial<Book>): Book => ({

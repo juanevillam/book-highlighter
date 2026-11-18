@@ -3,12 +3,17 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
+  "engines": {
+    "node": ">=20.19.4"
+  },
   "scripts": {
     "dev": "vite",
     "eval:photos": "tsx scripts/eval-photos.ts",
     "build": "tsc --noEmit && vite build",
     "deploy": "npm run build && npx --yes wrangler pages deploy dist --project-name=bookhighlighter --branch=main --commit-dirty=true",
     "preview": "vite preview",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "format": "prettier --write .",
@@ -19,7 +24,14 @@
   "devDependencies": {
     "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0",
+    "@typescript-eslint/eslint-plugin": "8.59.3",
+    "@typescript-eslint/parser": "8.59.3",
     "@vitejs/plugin-react": "6.2.1",
+    "eslint": "9.39.4",
+    "eslint-plugin-import": "2.32.0",
+    "eslint-plugin-react": "7.37.5",
+    "eslint-plugin-react-hooks": "7.1.1",
+    "eslint-plugin-unused-imports": "4.4.1",
     "husky": "9.1.7",
     "lint-staged": "17.0.5",
     "onnxruntime-node": "1.23.2",
@@ -39,7 +51,11 @@
     "zustand": "5.0.13"
   },
   "lint-staged": {
-    "*.{ts,tsx,json,md,css,html,js,mjs,cjs,yml,yaml}": [
+    "*.{ts,tsx}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{json,md,css,html,js,mjs,cjs,yml,yaml}": [
       "prettier --write"
     ]
   }

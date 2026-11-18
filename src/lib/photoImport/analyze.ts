@@ -12,9 +12,8 @@
  * underneath stay outside the paper edge; a thumb holding the bottom corner
  * enters from the frame edge and has no bare paper below it.
  */
-import { type OcrLine, type Rgba } from '../ocr/paddle';
-
 import { cleanOcr, polishSpanishProse } from './clean';
+import { type OcrLine, type Rgba } from '../ocr/paddle';
 
 export type PageLine = {
   text: string;
@@ -63,7 +62,6 @@ const RUNNING_HEADER_NUM_RE =
 const TOC_HEADING_RE =
   /^\s*(?:[íi]ndice(?:\s+general)?|contenidos?|sumario|table\s+of\s+contents|contents)\s*$/i;
 const TOC_ENTRY_RE = /^(.*?[A-Za-zÀ-ÿ].*?)[\s.·…_-]*?(\d{1,4})\s*$/;
-const LOWER_START_RE = /^[[«"“']?[a-zà-ÿ]/;
 
 const normDigits = (s: string) =>
   s.trim().replace(/(?<=\d)[Il|]|[Il|](?=\d)/g, '1');

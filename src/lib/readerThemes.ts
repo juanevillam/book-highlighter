@@ -33,13 +33,6 @@ const PALETTES: Record<Exclude<ReaderTheme, 'book'>, ReaderPalette> = {
   paper: { page: '#CFCFCB', text: '#1A1A1A', muted: '#55554F', dark: false },
 };
 
-const ORNAMENT_STYLES: readonly BookOrnamentStyle[] = [
-  'astral',
-  'botanical',
-  'geometric',
-  'classic',
-];
-
 export const bookThemePalette = (
   coverPalette?: CoverPalette | null,
   scheme: 'light' | 'dark' = 'dark',

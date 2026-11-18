@@ -17,11 +17,11 @@ import {
   type PaddleModels,
 } from '../src/lib/ocr/paddle';
 import { analyzePage, type PageAnalysis } from '../src/lib/photoImport/analyze';
+import { assembleBook } from '../src/lib/photoImport/assemble';
 import {
   PHOTO_MAX as PM,
   REC_MAX as RM,
 } from '../src/lib/photoImport/pipeline';
-import { assembleBook } from '../src/lib/photoImport/assemble';
 
 const PHOTO_MAX = PM;
 const REC_MAX = RM;

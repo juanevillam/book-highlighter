@@ -6,6 +6,7 @@ import {
   type CSSProperties,
   type ReactNode,
 } from 'react';
+
 import { flushSync } from 'react-dom';
 
 import {
@@ -15,7 +16,21 @@ import {
   type Chapter,
   type Highlight,
 } from '../books';
+import { UI_STATE_LAB, useUiStateLab } from '../dev/uiStateLab';
 import { plural, t } from '../i18n';
+import { ConfirmDialog } from './ConfirmDialog';
+import {
+  BookOpenGlyph,
+  CheckGlyph,
+  ChevronRightGlyph,
+  CloseGlyph,
+  ContentsGlyph,
+  PencilGlyph,
+  TrashGlyph,
+  UploadGlyph,
+} from './glyphs';
+import { SidePanel } from './SidePanel';
+import { showToast } from './Toast';
 import {
   addChapter,
   addHighlight,
@@ -33,6 +48,7 @@ import {
   useBookCoverPalette,
   type CoverPalette,
 } from '../lib/coverPalette';
+import { type PageAnalysis } from '../lib/photoImport/analyze';
 import {
   extractChaptersFromToc,
   findHighlightSpan,
@@ -42,28 +58,12 @@ import {
   textBetween,
   type Mark,
 } from '../lib/photoImport/assemble';
-import { type PageAnalysis, type TocEntry } from '../lib/photoImport/analyze';
 import {
   runPhotoImport,
   type PhotoImportItem,
   type PhotoImportProgress,
 } from '../lib/photoImport/client';
-import { UI_STATE_LAB, useUiStateLab } from '../dev/uiStateLab';
 import { useBodiesStore } from '../store/bodies';
-
-import { ConfirmDialog } from './ConfirmDialog';
-import {
-  BookOpenGlyph,
-  CheckGlyph,
-  ChevronRightGlyph,
-  CloseGlyph,
-  ContentsGlyph,
-  PencilGlyph,
-  TrashGlyph,
-  UploadGlyph,
-} from './glyphs';
-import { SidePanel } from './SidePanel';
-import { showToast } from './Toast';
 
 const makeId = () =>
   typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'

@@ -1,8 +1,7 @@
 import { type Book } from '../books';
 import { t } from '../i18n';
-import { bySeriesOrder } from '../lib/shelf';
-
 import { Artwork } from './Artwork';
+import { bySeriesOrder } from '../lib/shelf';
 
 export function SeriesSheet({
   books,

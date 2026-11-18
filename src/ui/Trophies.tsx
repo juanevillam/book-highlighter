@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+
 import { createPortal } from 'react-dom';
 
 import platinumChime from '../assets/sounds/trophy-platinum.mp3';
@@ -11,8 +12,9 @@ import {
   TROPHY_IDS,
   TROPHY_TITLES,
 } from '../constants/trophies';
-import { t, useLocale } from '../i18n';
 import { UI_STATE_LAB, useUiStateLab } from '../dev/uiStateLab';
+import { t, useLocale } from '../i18n';
+import { ChevronRightGlyph, CloseGlyph } from './glyphs';
 import { useTrophyStore } from '../trophies/store';
 import { tierColor } from '../trophies/tierColors';
 import {
@@ -21,8 +23,6 @@ import {
   type TrophyTier,
 } from '../trophies/types';
 import { useTrophies } from '../trophies/useTrophies';
-
-import { ChevronRightGlyph, CloseGlyph } from './glyphs';
 
 const COUNTS: Record<string, number> = {
   [TROPHY_IDS.library]: LIBRARY_BOOK_COUNT,

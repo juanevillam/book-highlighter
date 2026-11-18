@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { flushSync } from 'react-dom';
 
 import { type User } from 'firebase/auth';
+import { flushSync } from 'react-dom';
 
 import { markBookRead, type Book } from '../books';
-import { UiStateLabBar } from '../dev/UiStateLabBar';
 import { UI_STATE_LAB, useUiStateLab, type LabScreen } from '../dev/uiStateLab';
+import { UiStateLabBar } from '../dev/UiStateLabBar';
 import { t } from '../i18n';
 import { loadCoverPalette } from '../lib/coverPalette';
 import { shelfEntries } from '../lib/shelf';

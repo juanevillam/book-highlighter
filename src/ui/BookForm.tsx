@@ -10,12 +10,6 @@ import {
   type BookFields,
 } from '../books';
 import { t } from '../i18n';
-import { loadCoverPalette } from '../lib/coverPalette';
-import { genreLabel, GENRES } from '../lib/genres';
-import { uploadFailureKey, uploadImage, type Asset } from '../media';
-import { useBodiesStore } from '../store/bodies';
-import { selectShelf, useBooksStore } from '../store/books';
-
 import { ActionSheet } from './ActionSheet';
 import { ConfirmDialog, useModalDialog } from './ConfirmDialog';
 import {
@@ -26,7 +20,12 @@ import {
   SearchGlyph,
 } from './glyphs';
 import { SidePanel } from './SidePanel';
+import { loadCoverPalette } from '../lib/coverPalette';
+import { genreLabel, GENRES } from '../lib/genres';
+import { uploadFailureKey, uploadImage, type Asset } from '../media';
 import { showToast } from './Toast';
+import { useBodiesStore } from '../store/bodies';
+import { selectShelf, useBooksStore } from '../store/books';
 
 type CoverDraft =
   | { state: 'unchanged'; url: string }

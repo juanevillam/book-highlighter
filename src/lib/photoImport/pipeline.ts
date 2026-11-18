@@ -1,3 +1,4 @@
+import { analyzePage, type PageAnalysis } from './analyze';
 import {
   estimateSkew,
   rotate180,
@@ -11,8 +12,6 @@ import {
   type PaddleModels,
   type Rgba,
 } from '../ocr/paddle';
-
-import { analyzePage, type PageAnalysis } from './analyze';
 
 /** Longest side the page is analysed at (boxes, flags, overlays are in these px). */
 export const PHOTO_MAX = 1600;

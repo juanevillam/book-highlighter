@@ -6,6 +6,7 @@ import {
   useState,
   type ReactNode,
 } from 'react';
+
 import { flushSync } from 'react-dom';
 
 import {
@@ -16,16 +17,12 @@ import {
   type Book,
 } from '../books';
 import { t } from '../i18n';
-import {
-  DRAG_ACTIVE_SCALE,
-  positionForMove,
-  renormalized,
-} from '../lib/gridOrder';
-import { type ShelfEntry } from '../lib/shelf';
 
 import { Artwork } from './Artwork';
 import { PlusGlyph } from './glyphs';
 import { showToast } from './Toast';
+import { positionForMove, renormalized } from '../lib/gridOrder';
+import { type ShelfEntry } from '../lib/shelf';
 
 const TILE_WIDTH = 220;
 

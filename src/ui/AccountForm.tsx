@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
 
 import { type User } from 'firebase/auth';
+import { createPortal } from 'react-dom';
 
 import {
   deleteAccount,
@@ -11,16 +11,16 @@ import {
   setOwnName,
   setOwnPhoto,
 } from '../account';
-import { locale, t } from '../i18n';
 import { UI_STATE_LAB, useUiStateLab } from '../dev/uiStateLab';
+import { locale, t } from '../i18n';
 import { uploadFailureKey } from '../media';
-import { selectShelf, useBooksStore } from '../store/books';
 
 import { ActionSheet } from './ActionSheet';
 import { ConfirmDialog, useModalDialog } from './ConfirmDialog';
 import { ChevronRightGlyph } from './glyphs';
 import { Avatar } from './SettingsForm';
 import { showToast } from './Toast';
+import { selectShelf, useBooksStore } from '../store/books';
 
 const PHOTO = 120;
 

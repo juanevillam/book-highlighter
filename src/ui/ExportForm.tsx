@@ -4,6 +4,10 @@ import { track } from '../analytics';
 import { useScheme } from '../appearance';
 import { EMPTY_BODY, type Book } from '../books';
 import { t } from '../i18n';
+import { CheckGlyph, CloseGlyph } from './glyphs';
+import { BookPageEdgeMotif, BookPageOrnament } from './Reader';
+import { SidePanel } from './SidePanel';
+import { showToast } from './Toast';
 import { loadCoverPalette, useBookCoverPalette } from '../lib/coverPalette';
 import {
   bookOrnamentForSlot,
@@ -16,7 +20,6 @@ import {
   type PdfFormatId,
 } from '../lib/pdfExport';
 import {
-  DEFAULT_TEXT_SCALE_INDEX,
   effectiveTheme,
   READER_THEMES,
   readerPalette,
@@ -26,11 +29,6 @@ import {
 import { useBodiesStore } from '../store/bodies';
 import { selectShelf, useBooksStore } from '../store/books';
 import { useReaderSettingsStore } from '../store/readerSettings';
-
-import { CheckGlyph, CloseGlyph } from './glyphs';
-import { BookPageEdgeMotif, BookPageOrnament } from './Reader';
-import { SidePanel } from './SidePanel';
-import { showToast } from './Toast';
 
 export function ExportPanel({
   open,
