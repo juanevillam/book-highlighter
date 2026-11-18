@@ -78,12 +78,12 @@ const normHeading = (s: string) =>
     .replace(/\s+/g, ' ');
 
 /** Fill missing numbers and fix misreads (`52` read as `2`, `27` read as `2`) from the neighbours and TOC. */
-export function repairPageNumbers(pages: PageAnalysis[], toc?: TocEntry[]): (number | null)[] {
+export function repairPageNumbers(
+  pages: PageAnalysis[],
+  toc?: TocEntry[],
+): (number | null)[] {
   const tocList =
-    toc ??
-    pages
-      .filter(p => p.kind === 'index')
-      .flatMap(p => p.toc);
+    toc ?? pages.filter(p => p.kind === 'index').flatMap(p => p.toc);
   const nums = pages.map(p => {
     if (p.kind !== 'page') return null;
     if (p.pageNumber !== null) return p.pageNumber;
@@ -96,7 +96,8 @@ export function repairPageNumbers(pages: PageAnalysis[], toc?: TocEntry[]): (num
   });
   const isPage = pages.map(p => p.kind === 'page');
   const prevKnown = (i: number) => {
-    for (let j = i - 1; j >= 0; j--) if (isPage[j]) return nums[j] === null ? null : nums[j]! + (i - j);
+    for (let j = i - 1; j >= 0; j--)
+      if (isPage[j]) return nums[j] === null ? null : nums[j]! + (i - j);
     return null;
   };
   const nextKnown = (i: number) => {
@@ -113,11 +114,14 @@ export function repairPageNumbers(pages: PageAnalysis[], toc?: TocEntry[]): (num
       const fSides = new Set(pages[i].flags.map(f => f.side));
       const fSide = fSides.size === 1 ? [...fSides][0] : null;
       const matchesParity = (cand: number | null) =>
-        cand !== null && (fSide === null || (cand % 2 === 1 ? 'R' : 'L') === fSide);
+        cand !== null &&
+        (fSide === null || (cand % 2 === 1 ? 'R' : 'L') === fSide);
       const validPrev = matchesParity(prev) ? prev : null;
       const validNext = matchesParity(next) ? next : null;
       nums[i] =
-        pages[i].headingIndex !== null ? (validNext ?? validPrev) : (validPrev ?? validNext);
+        pages[i].headingIndex !== null
+          ? (validNext ?? validPrev)
+          : (validPrev ?? validNext);
       continue;
     }
     const fitsPrev = prev !== null && cur === prev;
@@ -125,12 +129,14 @@ export function repairPageNumbers(pages: PageAnalysis[], toc?: TocEntry[]): (num
     if (fitsPrev || fitsNext) continue;
     if (
       prev !== null &&
-      (String(prev).endsWith(String(cur)) || String(prev).startsWith(String(cur)))
+      (String(prev).endsWith(String(cur)) ||
+        String(prev).startsWith(String(cur)))
     ) {
       nums[i] = prev;
     } else if (
       next !== null &&
-      (String(next).endsWith(String(cur)) || String(next).startsWith(String(cur)))
+      (String(next).endsWith(String(cur)) ||
+        String(next).startsWith(String(cur)))
     ) {
       nums[i] = next;
     } else if (prev !== null && next !== null && prev === next) {
@@ -141,7 +147,11 @@ export function repairPageNumbers(pages: PageAnalysis[], toc?: TocEntry[]): (num
 }
 
 /** Where to begin inside the flagged line: after a sentence that ends mid-line. */
-const startOffset = (line: string, indented: boolean, prevEnded: boolean): number => {
+const startOffset = (
+  line: string,
+  indented: boolean,
+  prevEnded: boolean,
+): number => {
   if (indented || prevEnded || !LOWER_START.test(line)) return 0;
   const m = /[.!?…][»”"]?\s+(?=[—–-]?\s*[A-ZÀ-Þ¡¿«])/.exec(line);
   return m ? m.index + m[0].length : 0;
@@ -170,14 +180,19 @@ const endCut = (
 ): { line: number; cut: number | null } => {
   const t = lines[from]?.text ?? '';
   const nextLower = (i: number) => LOWER_START.test(lines[i + 1]?.text ?? '');
-  if (SENTENCE_END.test(t) && !HYPHEN_END.test(t) && !nextLower(from)) return { line: from, cut: null };
+  if (SENTENCE_END.test(t) && !HYPHEN_END.test(t) && !nextLower(from))
+    return { line: from, cut: null };
   const c0 = lineCut(t, 0.55);
   if (c0 !== null && !nextLower(from)) return { line: from, cut: c0 };
   if (from + 1 < lines.length) {
     const t1 = lines[from + 1].text;
     const c1 = lineCut(t1, 0.25);
     if (c1 !== null) return { line: from + 1, cut: c1 };
-    if ((SENTENCE_END.test(t1) && !HYPHEN_END.test(t1) && !nextLower(from + 1)) || from + 2 >= lines.length || !nextLower(from + 1)) {
+    if (
+      (SENTENCE_END.test(t1) && !HYPHEN_END.test(t1) && !nextLower(from + 1)) ||
+      from + 2 >= lines.length ||
+      !nextLower(from + 1)
+    ) {
       return { line: from + 1, cut: null };
     }
     const t2 = lines[from + 2].text;
@@ -204,7 +219,9 @@ const pagePieces = (p: PageAnalysis, from: number, to: number): Piece[] => {
 
   const pitches: number[] = [];
   for (let i = 1; i < p.lines.length; i++) {
-    const dy = (p.lines[i].y1 + p.lines[i].y2) / 2 - (p.lines[i - 1].y1 + p.lines[i - 1].y2) / 2;
+    const dy =
+      (p.lines[i].y1 + p.lines[i].y2) / 2 -
+      (p.lines[i - 1].y1 + p.lines[i - 1].y2) / 2;
     if (dy > 0) pitches.push(dy);
   }
   const medPitch = median(pitches) || lh * 1.35;
@@ -212,7 +229,9 @@ const pagePieces = (p: PageAnalysis, from: number, to: number): Piece[] => {
   const isHangingRight = (idx: number) => {
     const l = p.lines[idx];
     if (!l) return false;
-    return l.x1 - p.columnX1 > 0.38 * colW && /^[[(]\s*[A-Za-zÀ-ÿ]/.test(l.text);
+    return (
+      l.x1 - p.columnX1 > 0.38 * colW && /^[[(]\s*[A-Za-zÀ-ÿ]/.test(l.text)
+    );
   };
 
   const isHangingLeft = (idx: number) => {
@@ -231,7 +250,8 @@ const pagePieces = (p: PageAnalysis, from: number, to: number): Piece[] => {
         verseLines.add(j);
         const next = p.lines[j + 1];
         if (!next) break;
-        const dy = (next.y1 + next.y2) / 2 - (p.lines[j].y1 + p.lines[j].y2) / 2;
+        const dy =
+          (next.y1 + next.y2) / 2 - (p.lines[j].y1 + p.lines[j].y2) / 2;
         if (dy > 1.32 * medPitch || SENTENCE_END.test(p.lines[j].text)) break;
       }
     }
@@ -245,15 +265,29 @@ const pagePieces = (p: PageAnalysis, from: number, to: number): Piece[] => {
     // Local column left/right margin in a sliding window so a 1–3° camera tilt never triggers false indents.
     const winX1: number[] = [];
     const winX2: number[] = [];
-    for (let w = Math.max(0, i - 4); w <= Math.min(p.lines.length - 1, i + 4); w++) {
-      if (w === p.headingIndex || isHangingRight(w) || isHangingLeft(w) || verseLines.has(w)) continue;
+    for (
+      let w = Math.max(0, i - 4);
+      w <= Math.min(p.lines.length - 1, i + 4);
+      w++
+    ) {
+      if (
+        w === p.headingIndex ||
+        isHangingRight(w) ||
+        isHangingLeft(w) ||
+        verseLines.has(w)
+      )
+        continue;
       winX1.push(p.lines[w].x1);
       if (p.lines[w].x2 - p.lines[w].x1 > 0.5 * colW) winX2.push(p.lines[w].x2);
     }
     winX1.sort((a, b) => a - b);
     winX2.sort((a, b) => a - b);
-    const localX1 = winX1.length ? winX1[Math.floor(winX1.length * 0.2)] : p.columnX1;
-    const localX2 = winX2.length ? winX2[Math.floor(winX2.length * 0.8)] : p.columnX2;
+    const localX1 = winX1.length
+      ? winX1[Math.floor(winX1.length * 0.2)]
+      : p.columnX1;
+    const localX2 = winX2.length
+      ? winX2[Math.floor(winX2.length * 0.8)]
+      : p.columnX2;
 
     const hangingRight = isHangingRight(i);
     const verse = verseLines.has(i);
@@ -263,9 +297,11 @@ const pagePieces = (p: PageAnalysis, from: number, to: number): Piece[] => {
       : false;
     const pitch = prev ? (l.y1 + l.y2) / 2 - (prev.y1 + prev.y2) / 2 : 0;
     const extraGap = prev ? pitch > 1.32 * medPitch : false;
-    const dialogueStart = /^—/.test(l.text) && (prev ? SENTENCE_END.test(prev.text) : true);
+    const dialogueStart =
+      /^—/.test(l.text) && (prev ? SENTENCE_END.test(prev.text) : true);
     const sectionStart = /^\d{1,3}\.\s/.test(l.text);
-    const endsShort = !verse && localX2 - l.x2 > 1.15 * lh && SENTENCE_END.test(l.text);
+    const endsShort =
+      !verse && localX2 - l.x2 > 1.15 * lh && SENTENCE_END.test(l.text);
 
     out.push({
       text: l.text,
@@ -301,7 +337,9 @@ export const joinPieces = (
     if (!t) continue;
     if (verse) {
       const formattedVerse =
-        verseAlign === 'right' ? `                                  *${t}*` : `*${t}*`;
+        verseAlign === 'right'
+          ? `                                  *${t}*`
+          : `*${t}*`;
       if (!text) {
         text = formattedVerse;
       } else if (prevVerse) {
@@ -320,7 +358,10 @@ export const joinPieces = (
       text = t;
     } else if (prevVerse) {
       text += `\n\n${t}`;
-    } else if (HYPHEN_END.test(text) && (LOWER_START.test(cleanTarget) || /^[A-Za-zÀ-ÿ]+»/.test(cleanTarget))) {
+    } else if (
+      HYPHEN_END.test(text) &&
+      (LOWER_START.test(cleanTarget) || /^[A-Za-zÀ-ÿ]+»/.test(cleanTarget))
+    ) {
       text = text.replace(/[-‐‑\u00ad]["'”»]?\s*$/, '') + cleanTarget;
     } else if (
       !prevEndedShort &&
@@ -338,7 +379,11 @@ export const joinPieces = (
       )
     ) {
       text = text.replace(/\.\s*$/, '') + cleanTarget;
-    } else if ((paraStart || prevEndedShort) && SENTENCE_END.test(text) && !LOWER_START.test(t)) {
+    } else if (
+      (paraStart || prevEndedShort) &&
+      SENTENCE_END.test(text) &&
+      !LOWER_START.test(t)
+    ) {
       text += `\n\n${t}`;
     } else {
       text += ` ${t}`;
@@ -346,7 +391,9 @@ export const joinPieces = (
     prevEndedShort = Boolean(endsShort);
     prevVerse = false;
   }
-  return polishSpanishProse(text.replace(/[ \t]{2,}/g, m => (m.length >= 16 ? m : ' ')).trim());
+  return polishSpanishProse(
+    text.replace(/[ \t]{2,}/g, m => (m.length >= 16 ? m : ' ')).trim(),
+  );
 };
 
 /**
@@ -358,7 +405,8 @@ export const snapStartLine = (p: PageAnalysis, line: number): number => {
   let i = line;
   for (let step = 0; step < 2 && i > 0; step++) {
     const t = p.lines[i].text;
-    const begins = !LOWER_START.test(t) || /[.!?…][»”"]?\s+[—–-]?\s*[A-ZÀ-Þ¡¿«]/.test(t);
+    const begins =
+      !LOWER_START.test(t) || /[.!?…][»”"]?\s+[—–-]?\s*[A-ZÀ-Þ¡¿«]/.test(t);
     if (begins || i - 1 === p.headingIndex) break;
     i -= 1;
   }
@@ -376,7 +424,9 @@ const findParagraphEnd = (p: PageAnalysis, startLine: number): number => {
     ? p.lines.reduce((s, l) => s + (l.y2 - l.y1), 0) / p.lines.length
     : 20;
   const bodyLines = p.lines.filter(l => !/^\d{1,3}\.\s/.test(l.text));
-  const bodyX1 = bodyLines.length ? median(bodyLines.map(l => l.x1)) : p.columnX1;
+  const bodyX1 = bodyLines.length
+    ? median(bodyLines.map(l => l.x1))
+    : p.columnX1;
   const isNumberedSection = /^\d{1,3}\.\s/.test(p.lines[startLine]?.text ?? '');
 
   for (let i = startLine; i < p.lines.length - 1; i++) {
@@ -386,15 +436,23 @@ const findParagraphEnd = (p: PageAnalysis, startLine: number): number => {
       if (/^\d{1,3}\.\s/.test(next.text)) return i;
       continue;
     }
-    const nextIndented = next.x1 - bodyX1 > 0.65 * lh || /^\d{1,3}\.\s/.test(next.text);
-    const curShort = p.columnX2 - cur.x2 > 1.15 * lh && SENTENCE_END.test(cur.text);
+    const nextIndented =
+      next.x1 - bodyX1 > 0.65 * lh || /^\d{1,3}\.\s/.test(next.text);
+    const curShort =
+      p.columnX2 - cur.x2 > 1.15 * lh && SENTENCE_END.test(cur.text);
     if ((nextIndented || curShort) && SENTENCE_END.test(cur.text)) return i;
   }
   return p.lines.length - 1;
 };
 
 export const formatPageSpan = (a: number | null, b: number | null): string =>
-  a === null ? (b === null ? '' : String(b)) : b === null || b === a ? String(a) : `${a}–${b}`;
+  a === null
+    ? b === null
+      ? ''
+      : String(b)
+    : b === null || b === a
+      ? String(a)
+      : `${a}–${b}`;
 
 /**
  * Given the photos of ONE highlight (`1..N` pages in order), find its exact
@@ -418,10 +476,15 @@ export function findHighlightSpan(
 
   if (firstIdx === lastIdx) {
     const flags = outerFlags(firstPage, nums[firstIdx]);
-    const uniqueLines = [...new Set(flags.map(f => f.lineIndex))].sort((a, b) => a - b);
+    const uniqueLines = [...new Set(flags.map(f => f.lineIndex))].sort(
+      (a, b) => a - b,
+    );
     if (uniqueLines.length >= 2) {
       return {
-        start: { photo: firstIdx, line: snapStartLine(firstPage, uniqueLines[0]) },
+        start: {
+          photo: firstIdx,
+          line: snapStartLine(firstPage, uniqueLines[0]),
+        },
         end: { photo: firstIdx, line: uniqueLines[uniqueLines.length - 1] },
         page,
       };
@@ -439,7 +502,10 @@ export function findHighlightSpan(
         page,
       };
     }
-    const firstLine = firstPage.headingIndex === 0 ? Math.min(1, firstPage.lines.length - 1) : 0;
+    const firstLine =
+      firstPage.headingIndex === 0
+        ? Math.min(1, firstPage.lines.length - 1)
+        : 0;
     return {
       start: { photo: firstIdx, line: firstLine },
       end: { photo: firstIdx, line: firstPage.lines.length - 1 },
@@ -544,15 +610,19 @@ export function findMarks(
     const firstFlags = outerFlags(barPages[current[0]], nums[current[0]]);
     const prevFlags = outerFlags(barPages[prevIdx], nums[prevIdx]);
     const curFlags = outerFlags(barPages[idx], curNum);
-    const closedMultiPage =
-      current.length >= 2 && prevFlags.length > 0;
+    const closedMultiPage = current.length >= 2 && prevFlags.length > 0;
     const closedSinglePage =
       current.length === 1 &&
       new Set(firstFlags.map(f => f.lineIndex)).size >= 2;
     const selfContainedCurrent =
       new Set(curFlags.map(f => f.lineIndex)).size >= 2;
 
-    if (pageGap || closedMultiPage || closedSinglePage || selfContainedCurrent) {
+    if (
+      pageGap ||
+      closedMultiPage ||
+      closedSinglePage ||
+      selfContainedCurrent
+    ) {
       slices.push(current);
       current = [idx];
     } else {
@@ -573,11 +643,17 @@ export function findMarks(
     }
   }
 
-  return marks.sort((a, b) => a.start.photo - b.start.photo || a.start.line - b.start.line);
+  return marks.sort(
+    (a, b) => a.start.photo - b.start.photo || a.start.line - b.start.line,
+  );
 }
 
 /** Cut the text between two marks. */
-export function textBetween(pages: PageAnalysis[], start: Mark, end: Mark): string {
+export function textBetween(
+  pages: PageAnalysis[],
+  start: Mark,
+  end: Mark,
+): string {
   const pieces: Piece[] = [];
   for (let i = start.photo; i <= end.photo; i++) {
     const p = pages[i];
@@ -588,7 +664,10 @@ export function textBetween(pages: PageAnalysis[], start: Mark, end: Mark): stri
     if (i === end.photo) ({ line: to, cut } = endCut(p.lines, to));
     const pp = pagePieces(p, from, to);
     if (cut !== null && pp.length) {
-      pp[pp.length - 1] = { ...pp[pp.length - 1], text: p.lines[to].text.slice(0, cut) };
+      pp[pp.length - 1] = {
+        ...pp[pp.length - 1],
+        text: p.lines[to].text.slice(0, cut),
+      };
     }
     if (i === start.photo && pp.length) {
       const l = p.lines[from];
@@ -606,7 +685,13 @@ export function textBetween(pages: PageAnalysis[], start: Mark, end: Mark): stri
 }
 
 const pageLabel = (a: number | null, b: number | null) =>
-  a === null ? (b === null ? null : String(b)) : b === null || b === a ? String(a) : `${a}–${b}`;
+  a === null
+    ? b === null
+      ? null
+      : String(b)
+    : b === null || b === a
+      ? String(a)
+      : `${a}–${b}`;
 
 /**
  * Extract chapters (`name` + `pages` range) from 1..N photos of a book's
@@ -636,7 +721,9 @@ export function extractChaptersFromToc(
     const next = entries[idx + 1];
     const endPage = next && next.page > entry.page ? next.page - 1 : null;
     const pagesLabel =
-      endPage !== null && endPage > entry.page ? `${entry.page}–${endPage}` : String(entry.page);
+      endPage !== null && endPage > entry.page
+        ? `${entry.page}–${endPage}`
+        : String(entry.page);
     return { name: entry.title, pages: pagesLabel };
   });
 }
@@ -660,7 +747,10 @@ export function assembleBook(
     const endNum = nums[m.end.photo];
     const text = textBetween(pages, m.start, m.end);
     if (!text) continue;
-    const entry = startNum === null ? undefined : [...toc].reverse().find(e => e.page <= startNum);
+    const entry =
+      startNum === null
+        ? undefined
+        : [...toc].reverse().find(e => e.page <= startNum);
     const name = entry?.title ?? '';
     let ch = chapters.find(c => c.name === name);
     if (!ch) {
@@ -677,7 +767,8 @@ export function assembleBook(
   }
   for (const ch of chapters) {
     const first = ch.highlights[0]?.page.split('–')[0] ?? '';
-    const last = ch.highlights[ch.highlights.length - 1]?.page.split('–').pop() ?? '';
+    const last =
+      ch.highlights[ch.highlights.length - 1]?.page.split('–').pop() ?? '';
     ch.pages = first && last && first !== last ? `${first}–${last}` : first;
   }
 

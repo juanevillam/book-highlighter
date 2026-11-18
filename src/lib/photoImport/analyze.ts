@@ -65,7 +65,8 @@ const TOC_HEADING_RE =
 const TOC_ENTRY_RE = /^(.*?[A-Za-zÀ-ÿ].*?)[\s.·…_-]*?(\d{1,4})\s*$/;
 const LOWER_START_RE = /^[[«"“']?[a-zà-ÿ]/;
 
-const normDigits = (s: string) => s.trim().replace(/(?<=\d)[Il|]|[Il|](?=\d)/g, '1');
+const normDigits = (s: string) =>
+  s.trim().replace(/(?<=\d)[Il|]|[Il|](?=\d)/g, '1');
 
 const median = (xs: number[]) => {
   if (!xs.length) return 0;
@@ -76,14 +77,18 @@ const median = (xs: number[]) => {
 const percentile = (xs: number[], p: number) => {
   if (!xs.length) return 0;
   const s = [...xs].sort((a, b) => a - b);
-  return s[Math.min(s.length - 1, Math.max(0, Math.round((p / 100) * (s.length - 1))))];
+  return s[
+    Math.min(s.length - 1, Math.max(0, Math.round((p / 100) * (s.length - 1))))
+  ];
 };
 
 /** Merge OCR boxes that sit on the same row into one line, left to right. */
 const groupRows = (boxes: OcrLine[]): PageLine[] => {
   const rows: OcrLine[][] = [];
   const medH = median(boxes.map(b => b.y2 - b.y1)) || 1;
-  for (const b of [...boxes].sort((a, z) => (a.y1 + a.y2) / 2 - (z.y1 + z.y2) / 2)) {
+  for (const b of [...boxes].sort(
+    (a, z) => (a.y1 + a.y2) / 2 - (z.y1 + z.y2) / 2,
+  )) {
     const yc = (b.y1 + b.y2) / 2;
     const bw = Math.max(1, b.x2 - b.x1);
     const row = rows.find(r => {
@@ -105,8 +110,14 @@ const groupRows = (boxes: OcrLine[]): PageLine[] => {
       )[0];
       const junctionDy = neighbour
         ? b.x1 >= neighbour.x1
-          ? Math.abs((b.yLeft ?? yc) - (neighbour.yRight ?? (neighbour.y1 + neighbour.y2) / 2))
-          : Math.abs((neighbour.yLeft ?? (neighbour.y1 + neighbour.y2) / 2) - (b.yRight ?? yc))
+          ? Math.abs(
+              (b.yLeft ?? yc) -
+                (neighbour.yRight ?? (neighbour.y1 + neighbour.y2) / 2),
+            )
+          : Math.abs(
+              (neighbour.yLeft ?? (neighbour.y1 + neighbour.y2) / 2) -
+                (b.yRight ?? yc),
+            )
         : Infinity;
       const ry = r.reduce((s, z) => s + (z.y1 + z.y2) / 2, 0) / r.length;
       return Math.min(junctionDy, Math.abs(ry - yc)) <= 0.48 * medH;
@@ -139,7 +150,10 @@ const groupRows = (boxes: OcrLine[]): PageLine[] => {
         let text = box.text;
         if (prev && prev.x2 - box.x1 > -4 && prev.x2 - box.x1 < 1.2 * medH) {
           const mDup = /^(\S{1,3})\s+(.*)$/.exec(text.trim());
-          if (mDup && prev.text.trim().toLowerCase().endsWith(mDup[1].toLowerCase())) {
+          if (
+            mDup &&
+            prev.text.trim().toLowerCase().endsWith(mDup[1].toLowerCase())
+          ) {
             text = mDup[2];
           }
         }
@@ -162,11 +176,14 @@ const findColumn = (boxes: OcrLine[], W: number) => {
   if (long.length < 3) return null;
   const clusters: OcrLine[][] = [];
   for (const b of [...long].sort((a, z) => a.x1 - z.x1)) {
-    const c = clusters.find(cl => Math.abs(median(cl.map(z => z.x1)) - b.x1) < 0.08 * W);
+    const c = clusters.find(
+      cl => Math.abs(median(cl.map(z => z.x1)) - b.x1) < 0.08 * W,
+    );
     if (c) c.push(b);
     else clusters.push([b]);
   }
-  const centreOf = (c: OcrLine[]) => (median(c.map(z => z.x1)) + median(c.map(z => z.x2))) / 2;
+  const centreOf = (c: OcrLine[]) =>
+    (median(c.map(z => z.x1)) + median(c.map(z => z.x2))) / 2;
   const best = clusters.reduce((a, c) =>
     c.length - (2 * Math.abs(centreOf(c) - W / 2)) / W >
     a.length - (2 * Math.abs(centreOf(a) - W / 2)) / W
@@ -175,8 +192,14 @@ const findColumn = (boxes: OcrLine[], W: number) => {
   );
   if (best.length < 3) return null;
   return {
-    x1: percentile(best.map(b => b.x1), 10),
-    x2: percentile(best.map(b => b.x2), 90),
+    x1: percentile(
+      best.map(b => b.x1),
+      10,
+    ),
+    x2: percentile(
+      best.map(b => b.x2),
+      90,
+    ),
     y1: Math.min(...best.map(b => b.y1)),
     y2: Math.max(...best.map(b => b.y2)),
     lineH: median(best.map(b => b.y2 - b.y1)),
@@ -217,8 +240,14 @@ const findFlags = (
 
   for (const side of ['R', 'L'] as const) {
     // 1) High-saturation neon sticky notes (orange/pink/red/yellow) in the column margin strip
-    const a = Math.max(0, Math.round(side === 'R' ? col.x2 + 0.006 * W : col.x1 - 0.038 * W));
-    const b = Math.min(W, Math.round(side === 'R' ? col.x2 + 0.038 * W : col.x1 - 0.006 * W));
+    const a = Math.max(
+      0,
+      Math.round(side === 'R' ? col.x2 + 0.006 * W : col.x1 - 0.038 * W),
+    );
+    const b = Math.min(
+      W,
+      Math.round(side === 'R' ? col.x2 + 0.038 * W : col.x1 - 0.006 * W),
+    );
     const spanW = b - a;
     if (spanW < Math.max(6, Math.round(0.008 * W))) continue;
 
@@ -299,7 +328,9 @@ const findFlags = (
           const isLShape = bh > 4.0 * col.lineH || fracH > 0.12;
           // An L-flag's horizontal bar sits at the top (or bottom) of its vertical leg;
           // a single horizontal bar points at its vertical midpoint.
-          const targetY = isLShape ? start + Math.min(bh / 2, col.lineH * 0.8) : start + bh / 2;
+          const targetY = isLShape
+            ? start + Math.min(bh / 2, col.lineH * 0.8)
+            : start + bh / 2;
           let best = -1;
           let bestD = Infinity;
           lines.forEach((l, k) => {
@@ -328,8 +359,14 @@ const findFlags = (
     if (!lines.length || usedLines.size > 0) continue;
     const edge = side === 'R' ? col.x2 : leftEdge;
     const makeBand = (d1: number, d2: number) => {
-      const pa = Math.max(0, Math.round(side === 'R' ? edge + d1 * W : edge - d2 * W));
-      const pb = Math.min(W, Math.round(side === 'R' ? edge + d2 * W : edge - d1 * W));
+      const pa = Math.max(
+        0,
+        Math.round(side === 'R' ? edge + d1 * W : edge - d2 * W),
+      );
+      const pb = Math.min(
+        W,
+        Math.round(side === 'R' ? edge + d2 * W : edge - d1 * W),
+      );
       return (y1: number, y2: number) => {
         if (pb - pa < Math.max(6, Math.round(0.008 * W))) {
           return { h: 20, s: 15, v: 200, br: -12 };
@@ -352,12 +389,14 @@ const findFlags = (
             c += 1;
           }
         }
-        return c ? { h: h / c, s: s / c, v: v / c, br: br / c } : { h: 20, s: 15, v: 200, br: -12 };
+        return c
+          ? { h: h / c, s: s / c, v: v / c, br: br / c }
+          : { h: 20, s: 15, v: 200, br: -12 };
       };
     };
 
-    const bandStats = makeBand(0.008, 0.040);
-    const midBand = makeBand(0.040, 0.075);
+    const bandStats = makeBand(0.008, 0.04);
+    const midBand = makeBand(0.04, 0.075);
     const outBand = makeBand(0.075, 0.115);
 
     const ls = lines.map(l => bandStats(l.y1, l.y2));
@@ -368,11 +407,17 @@ const findFlags = (
         ? ls[idx - 1]
         : idx > 0
           ? ls[0]
-          : bandStats(lines[0].y1 - 2.2 * col.lineH, lines[0].y1 - 0.8 * col.lineH);
+          : bandStats(
+              lines[0].y1 - 2.2 * col.lineH,
+              lines[0].y1 - 0.8 * col.lineH,
+            );
     const belowBandOf = (idx: number) =>
       idx + 1 < lines.length
         ? ls[idx + 1]
-        : bandStats(lines[idx].y2 + 0.8 * col.lineH, lines[idx].y2 + 2.2 * col.lineH);
+        : bandStats(
+            lines[idx].y2 + 0.8 * col.lineH,
+            lines[idx].y2 + 2.2 * col.lineH,
+          );
 
     // 2a) Pastel teal sticky bands (cool cyan hue H >= 38 and positive/neutral B-R jump)
     let i = startLi;
@@ -387,7 +432,12 @@ const findFlags = (
           ls[i + 1].h >= 42);
       if (startsTeal) {
         let j = i;
-        while (j + 1 < lines.length && ls[j + 1].br >= -2.0 && ls[j + 1].h >= 38) j += 1;
+        while (
+          j + 1 < lines.length &&
+          ls[j + 1].br >= -2.0 &&
+          ls[j + 1].h >= 38
+        )
+          j += 1;
         const above = aboveBandOf(i);
         const below = belowBandOf(j);
         const peakBR = Math.max(...ls.slice(i, j + 1).map(z => z.br));
@@ -450,7 +500,8 @@ const findFlags = (
               );
               const armLine =
                 botScore > topScore + 8
-                  ? ls[botArmStart].br + ms[botArmStart].br >= ls[j].br + ms[j].br
+                  ? ls[botArmStart].br + ms[botArmStart].br >=
+                    ls[j].br + ms[j].br
                     ? botArmStart
                     : j
                   : i;
@@ -547,8 +598,14 @@ const findFlags = (
           for (let k = s; k <= e; k++) usedLines.add(k);
           const y1 = lines[s].y1;
           const y2 = lines[e].y2;
-          const topScore = Math.max(ls[s].h + ms[s].h, ls[s + 1].h + ms[s + 1].h);
-          const botScore = Math.max(ls[e].h + ms[e].h, ls[e - 1].h + ms[e - 1].h);
+          const topScore = Math.max(
+            ls[s].h + ms[s].h,
+            ls[s + 1].h + ms[s + 1].h,
+          );
+          const botScore = Math.max(
+            ls[e].h + ms[e].h,
+            ls[e - 1].h + ms[e - 1].h,
+          );
           const armLine =
             botScore > topScore + 8
               ? ls[e - 1].h + ms[e - 1].h >= ls[e].h + ms[e].h
@@ -561,7 +618,13 @@ const findFlags = (
             y: (lines[armLine].y1 + lines[armLine].y2) / 2,
             lineIndex: armLine,
             endLineIndex: e,
-            stats: { h: ls[armLine].h, s: ls[armLine].s, v: ls[armLine].v, br: ls[armLine].br, height: (y2 - y1) / H },
+            stats: {
+              h: ls[armLine].h,
+              s: ls[armLine].s,
+              v: ls[armLine].v,
+              br: ls[armLine].br,
+              height: (y2 - y1) / H,
+            },
           });
           break;
         }
@@ -574,21 +637,33 @@ const findFlags = (
         ? ms[idx - 1]
         : idx > 0
           ? ms[0]
-          : midBand(lines[0].y1 - 2.2 * col.lineH, lines[0].y1 - 0.8 * col.lineH);
+          : midBand(
+              lines[0].y1 - 2.2 * col.lineH,
+              lines[0].y1 - 0.8 * col.lineH,
+            );
     const belowMidOf = (idx: number) =>
       idx + 1 < lines.length
         ? ms[idx + 1]
-        : midBand(lines[idx].y2 + 0.8 * col.lineH, lines[idx].y2 + 2.2 * col.lineH);
+        : midBand(
+            lines[idx].y2 + 0.8 * col.lineH,
+            lines[idx].y2 + 2.2 * col.lineH,
+          );
     const aboveOutOf = (idx: number) =>
       idx > startLi
         ? os[idx - 1]
         : idx > 0
           ? os[0]
-          : outBand(lines[0].y1 - 2.2 * col.lineH, lines[0].y1 - 0.8 * col.lineH);
+          : outBand(
+              lines[0].y1 - 2.2 * col.lineH,
+              lines[0].y1 - 0.8 * col.lineH,
+            );
     const belowOutOf = (idx: number) =>
       idx + 1 < lines.length
         ? os[idx + 1]
-        : outBand(lines[idx].y2 + 0.8 * col.lineH, lines[idx].y2 + 2.2 * col.lineH);
+        : outBand(
+            lines[idx].y2 + 0.8 * col.lineH,
+            lines[idx].y2 + 2.2 * col.lineH,
+          );
 
     for (let s = startLi; s < lines.length; s++) {
       if (usedLines.has(s)) continue;
@@ -644,7 +719,10 @@ const findFlags = (
             midTopDV <= -7.0 &&
             midBotDV <= -6.5 &&
             (outTopDV <= -8.0 || outBotDV <= -8.0)) ||
-            (topDV <= -20.0 && botDV <= -5.0 && midTopDV <= -18.0 && topDH >= 3.5));
+            (topDV <= -20.0 &&
+              botDV <= -5.0 &&
+              midTopDV <= -18.0 &&
+              topDH >= 3.5));
 
         if (matchedCool || matchedWarmLit || matchedNeutralStrip) {
           for (let k = s; k <= e; k++) usedLines.add(k);
@@ -656,7 +734,13 @@ const findFlags = (
             y: (y1 + y2) / 2,
             lineIndex: s,
             endLineIndex: e,
-            stats: { h: ls[s].h, s: ls[s].s, v: ls[s].v, br: ls[s].br, height: (y2 - y1) / H },
+            stats: {
+              h: ls[s].h,
+              s: ls[s].s,
+              v: ls[s].v,
+              br: ls[s].br,
+              height: (y2 - y1) / H,
+            },
           });
           break;
         }
@@ -667,15 +751,42 @@ const findFlags = (
     if (!flags.some(f => f.side === side)) {
       const lh = col.lineH || 28;
       for (let s = startLi; s < lines.length; s++) {
-        const subIn = bandStats(lines[s].y2 - 0.25 * lh, lines[s].y2 + 1.25 * lh);
-        const subMid = midBand(lines[s].y2 - 0.25 * lh, lines[s].y2 + 1.25 * lh);
-        const subOut = outBand(lines[s].y2 - 0.25 * lh, lines[s].y2 + 1.25 * lh);
-        const subAbIn = bandStats(lines[s].y1 - 0.9 * lh, lines[s].y1 + 0.1 * lh);
-        const subBlIn = bandStats(lines[s].y2 + 1.55 * lh, lines[s].y2 + 2.55 * lh);
-        const subAbMid = midBand(lines[s].y1 - 0.9 * lh, lines[s].y1 + 0.1 * lh);
-        const subBlMid = midBand(lines[s].y2 + 1.55 * lh, lines[s].y2 + 2.55 * lh);
-        const subAbOut = outBand(lines[s].y1 - 0.9 * lh, lines[s].y1 + 0.1 * lh);
-        const subBlOut = outBand(lines[s].y2 + 1.55 * lh, lines[s].y2 + 2.55 * lh);
+        const subIn = bandStats(
+          lines[s].y2 - 0.25 * lh,
+          lines[s].y2 + 1.25 * lh,
+        );
+        const subMid = midBand(
+          lines[s].y2 - 0.25 * lh,
+          lines[s].y2 + 1.25 * lh,
+        );
+        const subOut = outBand(
+          lines[s].y2 - 0.25 * lh,
+          lines[s].y2 + 1.25 * lh,
+        );
+        const subAbIn = bandStats(
+          lines[s].y1 - 0.9 * lh,
+          lines[s].y1 + 0.1 * lh,
+        );
+        const subBlIn = bandStats(
+          lines[s].y2 + 1.55 * lh,
+          lines[s].y2 + 2.55 * lh,
+        );
+        const subAbMid = midBand(
+          lines[s].y1 - 0.9 * lh,
+          lines[s].y1 + 0.1 * lh,
+        );
+        const subBlMid = midBand(
+          lines[s].y2 + 1.55 * lh,
+          lines[s].y2 + 2.55 * lh,
+        );
+        const subAbOut = outBand(
+          lines[s].y1 - 0.9 * lh,
+          lines[s].y1 + 0.1 * lh,
+        );
+        const subBlOut = outBand(
+          lines[s].y2 + 1.55 * lh,
+          lines[s].y2 + 2.55 * lh,
+        );
         if (subAbIn.v < 180 || subBlIn.v < 180 || subIn.s > 20) continue;
         const sTopDV = subIn.v - subAbIn.v;
         const sBotDV = subIn.v - subBlIn.v;
@@ -719,7 +830,15 @@ const findFlags = (
   return flags.sort((p, q) => p.y - q.y);
 };
 
-const ROMAN_VALUES: Record<string, number> = { I: 1, V: 5, X: 10, L: 50, C: 100, D: 500, M: 1000 };
+const ROMAN_VALUES: Record<string, number> = {
+  I: 1,
+  V: 5,
+  X: 10,
+  L: 50,
+  C: 100,
+  D: 500,
+  M: 1000,
+};
 const fromRoman = (s: string): number | null => {
   const u = s.toUpperCase();
   if (!/^[IVXLCDM]+$/.test(u)) return null;
@@ -733,9 +852,19 @@ const fromRoman = (s: string): number | null => {
 };
 const toRoman = (n: number): string => {
   const pairs: [number, string][] = [
-    [1000, 'M'], [900, 'CM'], [500, 'D'], [400, 'CD'],
-    [100, 'C'], [90, 'XC'], [50, 'L'], [40, 'XL'],
-    [10, 'X'], [9, 'IX'], [5, 'V'], [4, 'IV'], [1, 'I'],
+    [1000, 'M'],
+    [900, 'CM'],
+    [500, 'D'],
+    [400, 'CD'],
+    [100, 'C'],
+    [90, 'XC'],
+    [50, 'L'],
+    [40, 'XL'],
+    [10, 'X'],
+    [9, 'IX'],
+    [5, 'V'],
+    [4, 'IV'],
+    [1, 'I'],
   ];
   let rem = n;
   let out = '';
@@ -755,7 +884,13 @@ const toRoman = (n: number): string => {
  */
 export const parseToc = (boxes: OcrLine[]): TocEntry[] => {
   const NUM_ONLY = /^[\s.·…_-]*(\d{1,4})\s*$/;
-  type Item = { y: number; x1: number; x2: number; title?: string; page?: number };
+  type Item = {
+    y: number;
+    x1: number;
+    x2: number;
+    title?: string;
+    page?: number;
+  };
   const items: Item[] = [];
   for (const b of boxes) {
     const t = polishSpanishProse(cleanOcr(b.text.trim()));
@@ -767,7 +902,12 @@ export const parseToc = (boxes: OcrLine[]): TocEntry[] => {
     }
     const m = TOC_ENTRY_RE.exec(t);
     if (m && /[A-Za-zÀ-ÿ]{2,}/.test(m[1])) {
-      items.push({ y, x1: b.x1, x2: b.x2, title: m[1].replace(/[\s.·…_-]+$/, '').trim() });
+      items.push({
+        y,
+        x1: b.x1,
+        x2: b.x2,
+        title: m[1].replace(/[\s.·…_-]+$/, '').trim(),
+      });
       items.push({ y, x1: b.x1, x2: b.x2, page: Number(m[2]) });
       continue;
     }
@@ -795,9 +935,14 @@ export const parseToc = (boxes: OcrLine[]): TocEntry[] => {
       titles = titles.filter(i => i.title !== i.title!.toUpperCase());
     }
   }
-  const out: TocEntry[] = complete.map(i => ({ title: i.title!, page: i.page! }));
+  const out: TocEntry[] = complete.map(i => ({
+    title: i.title!,
+    page: i.page!,
+  }));
   if (titles.length === pages.length) {
-    titles.forEach((t, k) => out.push({ title: t.title!, page: pages[k].page! }));
+    titles.forEach((t, k) =>
+      out.push({ title: t.title!, page: pages[k].page! }),
+    );
   } else {
     const used = new Set<number>();
     for (const t of titles) {
@@ -859,7 +1004,10 @@ export function analyzePage(img: Rgba, boxes: OcrLine[]): PageAnalysis {
   }
 
   const col = findColumn(boxes, W);
-  const letters = boxes.reduce((n, b) => n + (b.text.match(/[A-Za-zÀ-ÿ]/g)?.length ?? 0), 0);
+  const letters = boxes.reduce(
+    (n, b) => n + (b.text.match(/[A-Za-zÀ-ÿ]/g)?.length ?? 0),
+    0,
+  );
   if (!col || letters < 120) {
     if (letters >= 120) {
       return { ...empty, kind: 'page', lines: all };
@@ -940,7 +1088,8 @@ export function analyzePage(img: Rgba, boxes: OcrLine[]): PageAnalysis {
     const r0 = rows[0];
     const r1 = rows[1];
     const centred =
-      r0.x1 > col.x1 + 0.08 * (col.x2 - col.x1) && r0.x2 < col.x2 - 0.08 * (col.x2 - col.x1);
+      r0.x1 > col.x1 + 0.08 * (col.x2 - col.x1) &&
+      r0.x2 < col.x2 - 0.08 * (col.x2 - col.x1);
     if (
       centred &&
       r0.text.length <= 60 &&

@@ -18,10 +18,17 @@ export type WorkerRequest =
 export type WorkerResponse =
   | { type: 'ready' }
   | { type: 'progress'; loaded: number; total: number }
-  | { type: 'result'; id: number; page: import('./analyze').PageAnalysis; preview: Blob }
+  | {
+      type: 'result';
+      id: number;
+      page: import('./analyze').PageAnalysis;
+      preview: Blob;
+    }
   | { type: 'error'; id: number | null; message: string };
 
-ort.env.wasm.numThreads = self.crossOriginIsolated ? Math.min(4, navigator.hardwareConcurrency || 2) : 1;
+ort.env.wasm.numThreads = self.crossOriginIsolated
+  ? Math.min(4, navigator.hardwareConcurrency || 2)
+  : 1;
 
 let models: PaddleModels | null = null;
 let loading: Promise<PaddleModels> | null = null;
@@ -64,7 +71,9 @@ const load = () => {
       fetchBytes('/models/rec-latin.onnx', tick),
       fetch('/models/rec-latin.txt').then(r => r.text()),
     ]);
-    const opts: ort.InferenceSession.SessionOptions = { executionProviders: ['wasm'] };
+    const opts: ort.InferenceSession.SessionOptions = {
+      executionProviders: ['wasm'],
+    };
     const [det, rec] = await Promise.all([
       ort.InferenceSession.create(detBytes, opts),
       ort.InferenceSession.create(recBytes, opts),
@@ -80,7 +89,10 @@ const load = () => {
   return loading;
 };
 
-const draw = (bitmap: ImageBitmap, max: number): { canvas: OffscreenCanvas; img: Rgba } => {
+const draw = (
+  bitmap: ImageBitmap,
+  max: number,
+): { canvas: OffscreenCanvas; img: Rgba } => {
   const s = Math.min(1, max / Math.max(bitmap.width, bitmap.height));
   const w = Math.round(bitmap.width * s);
   const h = Math.round(bitmap.height * s);
@@ -112,8 +124,19 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
     const out = new OffscreenCanvas(level.width, level.height);
     out
       .getContext('2d')!
-      .putImageData(new ImageData(new Uint8ClampedArray(level.data), level.width, level.height), 0, 0);
-    const preview = await out.convertToBlob({ type: 'image/jpeg', quality: 0.82 });
+      .putImageData(
+        new ImageData(
+          new Uint8ClampedArray(level.data),
+          level.width,
+          level.height,
+        ),
+        0,
+        0,
+      );
+    const preview = await out.convertToBlob({
+      type: 'image/jpeg',
+      quality: 0.82,
+    });
     post({ type: 'result', id: msg.id, page, preview });
   } catch (error) {
     post({ type: 'error', id: msg.id, message: String(error) });

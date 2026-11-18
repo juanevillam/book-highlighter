@@ -473,6 +473,13 @@ export const translations = {
         title: 'About',
         appVersion: 'Book Highlighter Version',
       },
+      install: {
+        label: 'Install App',
+        title: 'Install Book Highlighter',
+        ios: 'Tap Share in Safari, then choose "Add to Home Screen".',
+        mac: 'In Safari, open File in the menu bar and choose "Add to Dock…", or open in Chrome to install.',
+        done: 'OK',
+      },
     },
     snackbar: {
       'export-done': 'PDF exported',
@@ -989,6 +996,13 @@ export const translations = {
         title: 'Acerca de',
         appVersion: 'Versión de Book Highlighter',
       },
+      install: {
+        label: 'Instalar aplicación',
+        title: 'Instalar Book Highlighter',
+        ios: 'Toca Compartir en Safari y elige «Agregar a pantalla de inicio».',
+        mac: 'En Safari, abre Archivo en la barra de menú y elige «Agregar al Dock…», o ábrela en Chrome para instalarla.',
+        done: 'OK',
+      },
     },
     snackbar: {
       'export-done': 'PDF exportado',
@@ -1487,6 +1501,13 @@ export const translations = {
       about: {
         title: '关于',
         appVersion: 'Book Highlighter 版本',
+      },
+      install: {
+        label: '安装应用',
+        title: '安装 Book Highlighter',
+        ios: '在 Safari 浏览器中轻点“共享”，然后选择“添加到主屏幕”。',
+        mac: '在 Safari 菜单栏中打开“文件”并选择“添加到程序坞…”，或使用 Chrome 安装。',
+        done: '好',
       },
     },
     snackbar: {

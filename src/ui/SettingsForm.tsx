@@ -8,15 +8,10 @@ import {
   useTheme,
   type Theme,
 } from '../appearance';
-import {
-  locale,
-  setLocale,
-  SUPPORTED_LOCALES,
-  t,
-  type Locale,
-} from '../i18n';
+import { locale, setLocale, SUPPORTED_LOCALES, t, type Locale } from '../i18n';
 import { legalUrl } from '../lib/author';
 import { thumbUrl } from '../lib/thumbUrl';
+import { isIosSafari, usePwaInstall } from '../pwa';
 import { signOut } from '../session';
 import { useDevSettingsStore } from '../store/devSettings';
 
@@ -58,9 +53,16 @@ export function SettingsForm({
   onAccount: () => void;
 }) {
   const [confirming, setConfirming] = useState(false);
+  const [installGuideOpen, setInstallGuideOpen] = useState(false);
   const theme = useTheme();
   const stateLabBar = useDevSettingsStore(s => s.stateLabBar);
   const setStateLabBar = useDevSettingsStore(s => s.setStateLabBar);
+  const { isInstalled, promptInstall } = usePwaInstall();
+
+  const onInstall = async () => {
+    const result = await promptInstall();
+    if (result === 'manual') setInstallGuideOpen(true);
+  };
 
   return (
     <>
@@ -110,6 +112,18 @@ export function SettingsForm({
               ))}
             </select>
           </label>
+          {!isInstalled && (
+            <button
+              type="button"
+              className="cell link-row"
+              onClick={() => void onInstall()}
+            >
+              <span className="cell-name">{t('settings.install.label')}</span>
+              <span className="chevron">
+                <ChevronRightGlyph />
+              </span>
+            </button>
+          )}
         </div>
       </section>
 
@@ -186,6 +200,18 @@ export function SettingsForm({
           void signOut();
         }}
         onClose={() => setConfirming(false)}
+      />
+
+      <ConfirmDialog
+        open={installGuideOpen}
+        title={t('settings.install.title')}
+        message={
+          isIosSafari() ? t('settings.install.ios') : t('settings.install.mac')
+        }
+        confirm={t('settings.install.done')}
+        destructive={false}
+        onConfirm={() => setInstallGuideOpen(false)}
+        onClose={() => setInstallGuideOpen(false)}
       />
     </>
   );

@@ -8,8 +8,10 @@ import {
   authorUrl,
   legalUrl,
 } from '../lib/author';
+import { isIosSafari, usePwaInstall } from '../pwa';
 import { signInWithGoogle } from '../session';
 import { BrandTile } from '../ui/brand';
+import { ConfirmDialog } from '../ui/ConfirmDialog';
 import {
   GoogleG,
   HighlightsFeatureIcon,
@@ -30,6 +32,13 @@ export function Welcome() {
   const [errorKey, setErrorKey] = useState<
     'errors.message' | 'errors.firebaseMissing' | null
   >(null);
+  const [installGuideOpen, setInstallGuideOpen] = useState(false);
+  const { isInstalled, promptInstall } = usePwaInstall();
+
+  const onInstall = async () => {
+    const result = await promptInstall();
+    if (result === 'manual') setInstallGuideOpen(true);
+  };
 
   const signIn = async () => {
     if (!isFirebaseConfigured) {
@@ -57,8 +66,7 @@ export function Welcome() {
         <BrandTile size={88} />
         <h1>{APP_NAME}</h1>
         <p className="byline">
-          {AUTHOR_CREDIT_PREFIX}{' '}
-          <a href={authorUrl(APP_NAME)}>{AUTHOR_NAME}</a>
+          {AUTHOR_CREDIT_PREFIX} <a href={authorUrl(APP_NAME)}>{AUTHOR_NAME}</a>
         </p>
         <ul className="features">
           {FEATURES.map(({ key, Icon }) => (
@@ -93,6 +101,15 @@ export function Welcome() {
             ? t('welcome.button.google.loadingLabel')
             : t('welcome.button.google.label')}
         </button>
+        {!isInstalled && (
+          <button
+            type="button"
+            className="welcome-install"
+            onClick={() => void onInstall()}
+          >
+            {t('settings.install.label')}
+          </button>
+        )}
         {errorKey && (
           <p className="error" role="alert">
             {t(errorKey)}
@@ -110,6 +127,18 @@ export function Welcome() {
           {after}
         </p>
       </footer>
+
+      <ConfirmDialog
+        open={installGuideOpen}
+        title={t('settings.install.title')}
+        message={
+          isIosSafari() ? t('settings.install.ios') : t('settings.install.mac')
+        }
+        confirm={t('settings.install.done')}
+        destructive={false}
+        onConfirm={() => setInstallGuideOpen(false)}
+        onClose={() => setInstallGuideOpen(false)}
+      />
     </main>
   );
 }

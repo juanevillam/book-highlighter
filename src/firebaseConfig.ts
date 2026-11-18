@@ -4,7 +4,9 @@
  * by design: what protects the data is `firestore.rules` (owner-only), App
  * Check, and the API key's HTTP-referrer restriction in Google Cloud.
  */
-const env = (typeof import.meta !== 'undefined' && import.meta.env) || ({} as Record<string, string | undefined>);
+const env =
+  (typeof import.meta !== 'undefined' && import.meta.env) ||
+  ({} as Record<string, string | undefined>);
 
 const projectId =
   (env.VITE_FIREBASE_PROJECT_ID ?? '').trim() || 'book-highlighter-juanevillam';
@@ -46,4 +48,3 @@ export const mediaWorkerUrl = (
   (env.VITE_MEDIA_WORKER_URL ?? '').trim() ||
   'https://book-highlighter-media-worker.juanesvillamendoza.workers.dev'
 ).replace(/\/+$/, '');
-

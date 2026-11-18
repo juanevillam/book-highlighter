@@ -79,9 +79,7 @@ export const useSession = (): Session => {
 
     return onAuthStateChanged(auth, user => {
       writeSignedInHint(Boolean(user));
-      setSession(
-        user ? { state: 'signed-in', user } : { state: 'signed-out' },
-      );
+      setSession(user ? { state: 'signed-in', user } : { state: 'signed-out' });
       if (user) {
         upsertOwnProfile(user).catch(error =>
           console.warn('upsertOwnProfile', error),

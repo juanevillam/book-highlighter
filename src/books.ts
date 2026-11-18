@@ -271,8 +271,7 @@ export const updateBook = async ({
   const ref = bookDoc(bookId);
 
   if (cover !== undefined) {
-    const previous =
-      ((await getDoc(ref)).data()?.artPublicId as string) ?? '';
+    const previous = ((await getDoc(ref)).data()?.artPublicId as string) ?? '';
 
     if (previous && previous !== cover?.publicId) {
       await destroyAsset(previous, 'image');
@@ -320,8 +319,7 @@ export const markBookRead = (
 
 export const deleteBook = async (bookId: string): Promise<void> => {
   const ref = bookDoc(bookId);
-  const artPublicId =
-    ((await getDoc(ref)).data()?.artPublicId as string) ?? '';
+  const artPublicId = ((await getDoc(ref)).data()?.artPublicId as string) ?? '';
 
   if (artPublicId) {
     await destroyAsset(artPublicId, 'image');

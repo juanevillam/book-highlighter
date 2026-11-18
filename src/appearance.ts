@@ -20,14 +20,19 @@ const readTheme = (): Theme => {
   }
 };
 
-export let theme: Theme = typeof window !== 'undefined' ? readTheme() : DEFAULT_THEME;
+export let theme: Theme =
+  typeof window !== 'undefined' ? readTheme() : DEFAULT_THEME;
 export let scheme: 'light' | 'dark' = 'dark';
 
 const listeners = new Set<() => void>();
 
 const apply = () => {
   scheme =
-    theme === 'system' ? (darkQuery?.matches ?? true ? 'dark' : 'light') : theme;
+    theme === 'system'
+      ? (darkQuery?.matches ?? true)
+        ? 'dark'
+        : 'light'
+      : theme;
   if (typeof document !== 'undefined') {
     document.documentElement.dataset.theme = scheme;
     document

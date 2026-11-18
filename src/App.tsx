@@ -3,11 +3,7 @@ import { lazy, Suspense, useEffect, useState } from 'react';
 import { trackScreen } from './analytics';
 import { useTheme } from './appearance';
 import { t, useLocale } from './i18n';
-import {
-  AUTHOR_CREDIT_PREFIX,
-  AUTHOR_NAME,
-  authorUrl,
-} from './lib/author';
+import { AUTHOR_CREDIT_PREFIX, AUTHOR_NAME, authorUrl } from './lib/author';
 import { Welcome } from './screens/Welcome';
 import { signOut, useSession } from './session';
 import { BrandTile } from './ui/brand';
@@ -38,8 +34,7 @@ export function App() {
   if (session.state === 'signed-out') return <Welcome />;
 
   const email = (session.user.email ?? '').trim().toLowerCase();
-  const isOwner =
-    OWNER_UIDS.has(session.user.uid) || OWNER_EMAILS.has(email);
+  const isOwner = OWNER_UIDS.has(session.user.uid) || OWNER_EMAILS.has(email);
 
   if (!import.meta.env.DEV && (!isOwner || !ownerBypassed)) {
     return (

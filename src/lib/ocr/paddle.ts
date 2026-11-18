@@ -16,7 +16,11 @@
  * single-line strip with zero bleed from neighbouring lines.
  */
 
-export type Rgba = { data: Uint8ClampedArray | Uint8Array; width: number; height: number };
+export type Rgba = {
+  data: Uint8ClampedArray | Uint8Array;
+  width: number;
+  height: number;
+};
 
 export type OcrLine = {
   x1: number;
@@ -30,7 +34,10 @@ export type OcrLine = {
   score: number;
 };
 
-type Tensor = { data: Float32Array | ArrayLike<number>; dims: readonly number[] };
+type Tensor = {
+  data: Float32Array | ArrayLike<number>;
+  dims: readonly number[];
+};
 
 export type OrtLike = {
   Tensor: new (type: 'float32', data: Float32Array, dims: number[]) => unknown;
@@ -111,7 +118,8 @@ const sampleRgb = (
         const b = data[(y0 * width + x1) * 4 + c];
         const cc = data[(y1 * width + x0) * 4 + c];
         const d = data[(y1 * width + x1) * 4 + c];
-        out[o + c] = (a * (1 - wx) + b * wx) * (1 - wy) + (cc * (1 - wx) + d * wx) * wy;
+        out[o + c] =
+          (a * (1 - wx) + b * wx) * (1 - wy) + (cc * (1 - wx) + d * wx) * wy;
       }
     }
   }
@@ -145,7 +153,11 @@ type CurvedBox = {
 };
 
 /** DB post-process: threshold, connected components, per-column centreline & thickness. */
-const detCurvedBoxes = (prob: ArrayLike<number>, w: number, h: number): CurvedBox[] => {
+const detCurvedBoxes = (
+  prob: ArrayLike<number>,
+  w: number,
+  h: number,
+): CurvedBox[] => {
   const mask = new Uint8Array(w * h);
   for (let i = 0; i < w * h; i++) mask[i] = prob[i] > DET_THRESH ? 1 : 0;
   const labels = new Int32Array(w * h);
@@ -412,7 +424,12 @@ export async function runPaddleOcr(
     });
 
     const out = await rec.run({
-      [rec.inputNames[0]]: new ort.Tensor('float32', input, [batch.length, 3, REC_H, padW]),
+      [rec.inputNames[0]]: new ort.Tensor('float32', input, [
+        batch.length,
+        3,
+        REC_H,
+        padW,
+      ]),
     });
     const t = out[rec.outputNames[0]];
     const [, steps, classes] = t.dims as number[];

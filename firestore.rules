@@ -1,29 +1,51 @@
 rules_version = '2';
 
-// Personal-only rules: Book Highlighter has no social surface, so everything
+// Personal-only rules: Book Highlighter has zero social surface, so everything
 // under a user is readable and writable by that user alone. Library metadata
 // lives at users/{uid}/books and each book's long text at users/{uid}/bodies
 // under the same id.
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    function isUser(uid) {
-      return request.auth != null && request.auth.uid == uid;
+    function isSignedIn() {
+      return request.auth != null;
     }
 
+    function isUser(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+
+    // Personal profile (name, photo, where the add tile sits on the shelf).
     match /users/{uid} {
-      allow read, write: if isUser(uid);
+      allow read, delete: if isUser(uid);
+      allow create, update: if isUser(uid)
+        && request.resource.data.keys().size() <= 12;
 
+      // Book shelf metadata (1:1 with bodies/{bookId}).
       match /books/{bookId} {
-        allow read, write: if isUser(uid);
+        allow read, delete: if isUser(uid);
+        allow create, update: if isUser(uid)
+          && request.resource.data.keys().size() <= 20
+          && (!('name' in request.resource.data) || request.resource.data.name is string)
+          && (!('chapterCount' in request.resource.data) || (request.resource.data.chapterCount is number && request.resource.data.chapterCount >= 0))
+          && (!('highlightCount' in request.resource.data) || (request.resource.data.highlightCount is number && request.resource.data.highlightCount >= 0));
       }
 
+      // Book body (summary + chapters array, loaded on demand).
       match /bodies/{bookId} {
-        allow read, write: if isUser(uid);
+        allow read, delete: if isUser(uid);
+        allow create, update: if isUser(uid)
+          && request.resource.data.keys().hasOnly(['summary', 'chapters'])
+          && request.resource.data.summary is string
+          && request.resource.data.chapters is list;
       }
 
+      // Earned trophies — one doc per trophy id holding its `achievedAt`.
       match /trophies/{trophyId} {
-        allow read, write: if isUser(uid);
+        allow read, delete: if isUser(uid);
+        allow create, update: if isUser(uid)
+          && request.resource.data.keys().hasOnly(['achievedAt'])
+          && (request.resource.data.achievedAt is timestamp || request.resource.data.achievedAt is number);
       }
     }
   }

@@ -91,7 +91,9 @@ const sweep = async (uid: string) => {
     BOOKS_SUBCOLLECTION,
     TROPHIES_SUBCOLLECTION,
   ]) {
-    const snap = await getDocs(collection(firestore, USERS_COLLECTION, uid, sub));
+    const snap = await getDocs(
+      collection(firestore, USERS_COLLECTION, uid, sub),
+    );
     await Promise.all(snap.docs.map(entry => deleteDoc(entry.ref)));
   }
 

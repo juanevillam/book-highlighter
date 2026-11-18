@@ -709,18 +709,33 @@ export const polishSpanishProse = (s: string): string => {
   // Strip stray mid-word apostrophes (`ver'so` -> `verso`), inline footnote superscripts glued to words/punctuation (`levas20`, `población.21`, `venza.4s`, `potencia.6s`, `sirvientes;1*8`), and split glued `c`/`s` (`cpodrias` -> `¿podrias`) before word lookup
   let out = s
     .replace(/([A-Za-zÀ-ÿ])['’]([a-zà-ÿ])/g, '$1$2')
-    .replace(/\bse\s+destruye20\s+si\s+la\s+riqueza\b/g, 'se destruye; si la riqueza')
+    .replace(
+      /\bse\s+destruye20\s+si\s+la\s+riqueza\b/g,
+      'se destruye; si la riqueza',
+    )
     .replace(/\bun\s+dana:\s+de\b/g, 'un dàn de')
     .replace(/\b(un|veinte)\s+dan\b/g, '$1 dàn')
     .replace(/\bzh[oó]ng(?:\d+)?\b/g, 'zhōng')
     .replace(/\bcultiva\s+el\s+dao\b/g, 'cultiva el dào')
     .replace(/\bEl\s+maestro\s+Sun\s+dijo:/g, 'El maestro Sūn dijo:')
-    .replace(/\btampoco\s+es\s+lo\s+mejor\s+por\s+ello,/g, 'tampoco es lo mejor; por ello,')
+    .replace(
+      /\btampoco\s+es\s+lo\s+mejor\s+por\s+ello,/g,
+      'tampoco es lo mejor; por ello,',
+    )
     .replace(/\bplum[oó]n\s+oto[ñn]al,\s*s\s+no\b/g, 'plumón otoñal, no')
     .replace(/\bpreclaro\."\s*/g, 'preclaro.')
-    .replace(/\bQuien\s+no\s+sea\s+un\s+Santo(?:\d+)?\s+sabio\b/g, 'Quien no sea un Santo o sabio')
-    .replace(/\bSutileza!\s*\.?\s*Sutileza!,\s*sin\s+ella\s+no\s+se\s+puede\s+emplear\s+a\s+los\s+esp[ií]as!/g, '¡Sutileza! ¡Sutileza!, ¡sin ella no se puede emplear a los espías!')
-    .replace(/\bde\s+sus\s+cortesanos,\s*0\s+de\s+su\s+ordenanza,\s*\*{1,2}\s+de\s+sus\b/g, 'de sus cortesanos, de su ordenanza, de sus')
+    .replace(
+      /\bQuien\s+no\s+sea\s+un\s+Santo(?:\d+)?\s+sabio\b/g,
+      'Quien no sea un Santo o sabio',
+    )
+    .replace(
+      /\bSutileza!\s*\.?\s*Sutileza!,\s*sin\s+ella\s+no\s+se\s+puede\s+emplear\s+a\s+los\s+esp[ií]as!/g,
+      '¡Sutileza! ¡Sutileza!, ¡sin ella no se puede emplear a los espías!',
+    )
+    .replace(
+      /\bde\s+sus\s+cortesanos,\s*0\s+de\s+su\s+ordenanza,\s*\*{1,2}\s+de\s+sus\b/g,
+      'de sus cortesanos, de su ordenanza, de sus',
+    )
     .replace(/\bhar[aá]\s+use\.?(?=\s)/g, 'hará uso')
     .replace(/([A-Za-zÀ-ÿ]{2,})\d{1,3}[a-z]?(?=[,.;:?!»\s]|$)/g, '$1')
     .replace(/([A-Za-zÀ-ÿ][,.;:])\d[\d*a-z]{0,2}\.?(?=[ \t]|$)/g, '$1')
@@ -779,7 +794,10 @@ export const polishSpanishProse = (s: string): string => {
     .replace(/([a-zà-ÿ])\.([a-zà-ÿ])/g, '$1 $2')
     // Remove stray single period followed by lowercase continuation on the same line (`en. polvo`, `ilusión. al`, `sonar . siempre`, `tu .objetivo`)
     // Exclude `[a-z][A-Z]` OCR prefix artifacts like `jA` (`¡A`)
-    .replace(/(?<![.\d\n])[ \t]*\.[ \t]+(?=[a-zà-ÿ](?:[a-zà-ÿ \t,.;:?!]|$))/g, ' ')
+    .replace(
+      /(?<![.\d\n])[ \t]*\.[ \t]+(?=[a-zà-ÿ](?:[a-zà-ÿ \t,.;:?!]|$))/g,
+      ' ',
+    )
     .replace(/[ \t]+\.(?=[a-zà-ÿ](?:[a-zà-ÿ \t,.;:?!]|$))/g, ' ')
     // Remove stray single period after short prepositions/determiners before capitalized noun (`al. Venerable`)
     .replace(
@@ -813,29 +831,48 @@ export const polishSpanishProse = (s: string): string => {
       /([A-Za-zÀ-ÿ¡!¿?])\s*[-—]\s*((?:pens[oó]|dijo|replic[oó]|repuso|pregunt[oó]|contest[oó]|exclam[oó]|murmur[oó]|respondi[oó]|a[ñn]adi[oó]|grit[oó]|susurr[oó]|habl[oó]|continu[oó]|le\s+dijo|le\s+susurr[oó]|y\s+a[uú]n|en\s+el\s+curso)(?![A-Za-zÀ-ÿ]))/gi,
       '$1 —$2',
     )
-    .replace(/\b(Govinda|Siddhartha)(dijo|replic[oó]|repuso|pregunt[oó]|contest[oó]|exclam[oó]|murmur[oó]|respondi[oó])—/g, '$1 —$2—')
+    .replace(
+      /\b(Govinda|Siddhartha)(dijo|replic[oó]|repuso|pregunt[oó]|contest[oó]|exclam[oó]|murmur[oó]|respondi[oó])—/g,
+      '$1 —$2—',
+    )
     .replace(/([A-Za-zÀ-ÿ])—(?=[A-Za-zÀ-ÿ])/g, '$1 —')
     // Parenthetical `- ... -` or `— ... -` in Spanish prose -> `—...—`
     .replace(/\s+-(?=que\s+además\b[^-\n]+-\s)/g, ' —')
     .replace(/(?<=que\s+además\b[^-\n]+)-\s+/g, '— ')
-    .replace(/([a-zà-ÿ])\s*[-—]\s*([a-zà-ÿ]+(?:\s+[a-zà-ÿ]+){1,4})\s*[-—]\s*(?=[a-zà-ÿ])/g, '$1 —$2— ')
+    .replace(
+      /([a-zà-ÿ])\s*[-—]\s*([a-zà-ÿ]+(?:\s+[a-zà-ÿ]+){1,4})\s*[-—]\s*(?=[a-zà-ÿ])/g,
+      '$1 —$2— ',
+    )
     .replace(/(—[A-Za-zÀ-ÿ]+(?:\s+[A-Za-zÀ-ÿ]+){0,4})-\s+(?=[a-zà-ÿ])/g, '$1— ')
     .replace(/(\?\s+)(?=pregunt[oó]\s+[A-Za-zÀ-ÿ])/g, '$1—')
     // Subjunctive `como si ... quedaran` vs future `quedarán`
-    .replace(/\b(como\s+si(?:\s+(?:te|le|les|nos|se|me))?\s+)quedarán\b/gi, '$1quedaran')
+    .replace(
+      /\b(como\s+si(?:\s+(?:te|le|les|nos|se|me))?\s+)quedarán\b/gi,
+      '$1quedaran',
+    )
     .replace(/\bte\s+bastaran\s+para\b/g, 'te bastarán para')
     .replace(/\by\s+veras\s+que\b/g, 'y verás que')
     .replace(/\bcon\s+unas\s+y\s+dientes\b/g, 'con uñas y dientes')
     .replace(/\b(Las|las|Unas|unas)\s+criticas\b/g, '$1 críticas')
     .replace(/\b(el|del)\s+calculo\b/gi, '$1 cálculo')
     .replace(/\bpero\s+si\s+a\s+si\s+mismo\b/gi, 'pero sí a sí mismo')
-    .replace(/\b(puesto|poner|los|las|sus|mis|tus|sin)\s+limites\b/gi, '$1 límites')
-    .replace(/\bsi\s+que\s+(?=resulta|es\b|son\b|tiene|hay\b|está|están|puede)/gi, m =>
-      m[0] === 'S' ? 'Sí que ' : 'sí que ',
+    .replace(
+      /\b(puesto|poner|los|las|sus|mis|tus|sin)\s+limites\b/gi,
+      '$1 límites',
+    )
+    .replace(
+      /\bsi\s+que\s+(?=resulta|es\b|son\b|tiene|hay\b|está|están|puede)/gi,
+      m => (m[0] === 'S' ? 'Sí que ' : 'sí que '),
     )
     .replace(/;\s+cuantos\s+(?=[a-zà-ÿ]+,\s+tras\b)/g, '; cuántos ')
-    .replace(/\bayer,\s+mucosidad\s+mañana,\s+momia\b/g, 'ayer, mucosidad; mañana, momia')
-    .replace(/\bfugaz\s+intervalo\s+el\s+destino\b/g, 'fugaz intervalo; el destino')
+    .replace(
+      /\bayer,\s+mucosidad\s+mañana,\s+momia\b/g,
+      'ayer, mucosidad; mañana, momia',
+    )
+    .replace(
+      /\bfugaz\s+intervalo\s+el\s+destino\b/g,
+      'fugaz intervalo; el destino',
+    )
     .replace(
       /\b(41\.\s+)(Eres\s+una\s+pobre\s+alma\s+con\s+un\s+cadáver\s+a\s+cuestas)(,\s+como\s+decía\s+Epicteto\.)/g,
       '$1*$2*$3',
@@ -856,7 +893,10 @@ export const polishSpanishProse = (s: string): string => {
       '$1Sí',
     )
     .replace(/(;\s*)si(?=,)/g, '$1sí')
-    .replace(/\b(He\s+tenido\s+ideas,\s+|puede\s+que\s+)si(?=[.,;:?!»\s])/gi, '$1sí')
+    .replace(
+      /\b(He\s+tenido\s+ideas,\s+|puede\s+que\s+)si(?=[.,;:?!»\s])/gi,
+      '$1sí',
+    )
     .replace(/\bPero\s+si\s+s[eé](?![A-Za-zÀ-ÿ])/g, 'Pero sí sé')
     // Fix comma misread for period before capitalized sentence starter after vocative (`señor, Cuando` -> `señor. Cuando`)
     .replace(
@@ -870,27 +910,45 @@ export const polishSpanishProse = (s: string): string => {
     )
     .replace(/\bburlona\s+acaso,\s+sabía,/g, 'burlona acaso, sabia,')
     // Reflexive `sí mismo` / `en sí` / `entre sí` and prepositional `de mí` / `a mí` / `en mí` / `hacia mí` / `por mí`
-    .replace(/\b(para|en|a|por|contra|sobre|de|hacia|entre)\s+si\s+mism([oa]s?)\b/gi, '$1 sí mism$2')
+    .replace(
+      /\b(para|en|a|por|contra|sobre|de|hacia|entre)\s+si\s+mism([oa]s?)\b/gi,
+      '$1 sí mism$2',
+    )
     .replace(/\bentre\s+si(?=[,.;:?!»\s])/g, 'entre sí')
     .replace(/\b(lleva|contiene|encierra)\s+en\s+si\b/gi, '$1 en sí')
-    .replace(/\b(burla|habla|piensa|dentro|cerca|lejos|detrás|delante|alrededor|sepa|aprender)\s+de\s+mi(?=[.,;:?!»\s])/gi, '$1 de mí')
-    .replace(/\b(en|a|para|por|contra|sin|hacia)\s+mi(?=[.,;:?!»—\s]+\b(?:mismo|misma|le\s+|y\s+ahora\b)|[.,;:?!»—])/gi, '$1 mí')
+    .replace(
+      /\b(burla|habla|piensa|dentro|cerca|lejos|detrás|delante|alrededor|sepa|aprender)\s+de\s+mi(?=[.,;:?!»\s])/gi,
+      '$1 de mí',
+    )
+    .replace(
+      /\b(en|a|para|por|contra|sin|hacia)\s+mi(?=[.,;:?!»—\s]+\b(?:mismo|misma|le\s+|y\s+ahora\b)|[.,;:?!»—])/gi,
+      '$1 mí',
+    )
     // Subject pronoun `tú` and 3rd-person sacred `Él` in unambiguous contexts
-    .replace(/\bcomo\s+tu\s+(dices|crees|piensas|sabes|quieres)\b/gi, 'como tú $1')
+    .replace(
+      /\bcomo\s+tu\s+(dices|crees|piensas|sabes|quieres)\b/gi,
+      'como tú $1',
+    )
     .replace(/\by\s+tu\s+y\s+yo\b/gi, 'y tú y yo')
     .replace(/\bmás\s+que\s+tu\s+y\s+que\s+yo\b/gi, 'más que tú y que yo')
     .replace(/\bde\s+El,\s+el\b/g, 'de Él, el')
     .replace(/\b(cree|también|También)\s+en\s+El(?=[,.;:?!»\s])/g, '$1 en Él')
     .replace(/\bpodr[ií]a\s+El\s+ignorar\b/g, 'podría Él ignorar')
     .replace(/(^|\n\n|[.!?]\s+)El,\s+que\s+supo\b/g, '$1Él, que supo')
-    .replace(/\bcomo\s+El\s+hab[ií]a\s+sonre[ií]do\b/g, 'como Él había sonreído')
+    .replace(
+      /\bcomo\s+El\s+hab[ií]a\s+sonre[ií]do\b/g,
+      'como Él había sonreído',
+    )
     // Verb `está` + adjective/adverb (`está perfectamente`, `ya está ahí`, `que está en`, `ya está muerto`, `no está en`)
     .replace(
       /\b(que\s+|ya\s+|no\s+|tambi[eé]n\s+|a[uú]n\s+|todav[ií]a\s+|siempre\s+)esta\s+(?=(?:en\b|ah[ií]|aqu[ií]|all[ií]|muerto|muerta|vivo|viva|bien|mal|presente|ausente|solo|sola|seguro|segura|dispuesto|dispuesta|obligado|obligada|motivado|motivada)(?![A-Za-zÀ-ÿ]))/g,
       '$1está ',
     )
     .replace(/\besta\s+perfectamente\b/g, 'está perfectamente')
-    .replace(/\bcuando\s+ata[ñn]e\s+al\s+ser\s+humano\b/g, 'cuanto atañe al ser humano')
+    .replace(
+      /\bcuando\s+ata[ñn]e\s+al\s+ser\s+humano\b/g,
+      'cuanto atañe al ser humano',
+    )
     // Preterite speech verbs after subject (`Govinda contestó:`, `Govinda replicó:`, `Siddhartha contestó`)
     .replace(/\b(Govinda|Siddhartha)\s+contesto(?![A-Za-zÀ-ÿ])/g, '$1 contestó')
     .replace(/\b(Govinda|Siddhartha)\s+replico(?![A-Za-zÀ-ÿ])/g, '$1 replicó')
@@ -899,7 +957,9 @@ export const polishSpanishProse = (s: string): string => {
     .replace(/\bdadoescuchar\b/g, 'dado escuchar')
     .replace(/\bun\s+feli\s+augurio\b/g, 'un feliz augurio')
     // Fix context-sensitive Spanish words (`las unas` -> `las uñas`, `aun lo sigo` -> `aún lo sigo`, `mas` -> `más`)
-    .replace(/\blas\s+(?:unas|ufas)\b/gi, m => (m[0] === 'L' ? 'Las uñas' : 'las uñas'))
+    .replace(/\blas\s+(?:unas|ufas)\b/gi, m =>
+      m[0] === 'L' ? 'Las uñas' : 'las uñas',
+    )
     .replace(/\by\s+aun\b/gi, 'y aún')
     .replace(
       /\baun\s+(?=(?:lo|la|los|las|le|les|me|te|se|nos|os|sigo|sigue|queda|quedan|no|más|mas|cuando)(?![A-Za-zÀ-ÿ]))/gi,
@@ -929,7 +989,10 @@ export const polishSpanishProse = (s: string): string => {
     // `. ; En qué ... ?` or `? ; Entregarme ... ?` -> `. ¿En qué ... ?`
     .replace(/([.!?…])\s*;\s*(?=[A-ZÀ-Þ][^?!.\n]*\?)/g, '$1 ¿')
     // `Pero: no has ... ?`, `Entonces: por qué ... ?`, `pues: quién ... ?`, `Porque; cual ... ?`
-    .replace(/\b(Pero|Entonces|Pues|Porque|pues|pero|entonces|porque)\s*[:;]\s*(?=[a-zà-ÿ][^?!.\n]*\?)/g, '$1 ¿')
+    .replace(
+      /\b(Pero|Entonces|Pues|Porque|pues|pero|entonces|porque)\s*[:;]\s*(?=[a-zà-ÿ][^?!.\n]*\?)/g,
+      '$1 ¿',
+    )
     // `dime: qué es ... ?` or `pregunta: qué hay ... ?` or `inmortal: qué te ... ?` -> `: ¿qué ... ?`
     .replace(/(\bdime:\s*)(?=[A-ZÀ-Þa-zà-ÿ][^?!.\n]*\?)/gi, '$1¿')
     .replace(
@@ -968,8 +1031,14 @@ export const polishSpanishProse = (s: string): string => {
       /(—,\s*|,\s+)(?=(?:qu[eé]\s+(?:quedar[ií]a|ser[ií]a|edad|es\b|significa|idioma)|c[oó]mo\s+(?:saber|es\s+posible|habr[ií]as|la\s+doctrina)|no\s+deber[ií]amos|crees\s+que)\b[^.?!\n:;]*\?)/g,
       '$1¿',
     )
-    .replace(/(^|\n\n|[.!?]\s+|—\s*)Pero\s+(?=no\s+(?:se\s+ha\s+despertado|has\s+encontrado)[^.?!\n:;]*\?)/gm, '$1Pero ¿')
-    .replace(/([.?!]\s+)(?=De\s+modo,\s+querido\s+amigo,\s+que\s+ahora[^.?!\n:;]*\?)/g, '$1¿')
+    .replace(
+      /(^|\n\n|[.!?]\s+|—\s*)Pero\s+(?=no\s+(?:se\s+ha\s+despertado|has\s+encontrado)[^.?!\n:;]*\?)/gm,
+      '$1Pero ¿',
+    )
+    .replace(
+      /([.?!]\s+)(?=De\s+modo,\s+querido\s+amigo,\s+que\s+ahora[^.?!\n:;]*\?)/g,
+      '$1¿',
+    )
     // Remove duplicate nested `¿` inside the same question (`¿Y crees tú, samana forastero, ¿crees que`)
     .replace(/(¿[^?!\n]*?,\s*)¿(?=[a-zà-ÿ])/g, '$1')
     // Fix accented interrogative pronouns right after `¿` (both uppercase and lowercase)

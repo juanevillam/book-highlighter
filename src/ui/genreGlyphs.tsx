@@ -94,7 +94,10 @@ const PATHS: Record<Family, React.ReactNode> = {
         d="M14.5 4.5c2.6-.9 4.4-.7 5-.1.6.6.8 2.4-.1 5-1 2.8-3.6 5.4-6.4 6.9l-4.3-4.3c1.5-2.8 4.1-5.4 6.8-6.5Z"
         {...stroke}
       />
-      <path d="M8.7 12 5 12.5l2-3.3h3.4M12 15.3l-.5 3.7 3.3-2v-3.4" {...stroke} />
+      <path
+        d="M8.7 12 5 12.5l2-3.3h3.4M12 15.3l-.5 3.7 3.3-2v-3.4"
+        {...stroke}
+      />
       <path d="M6.5 17.5 4 20" {...stroke} />
     </>
   ),
@@ -210,7 +213,10 @@ const PATHS: Record<Family, React.ReactNode> = {
   society: (
     <>
       <path d="M3.5 9 12 4l8.5 5h-17ZM4 19.5h16" {...stroke} />
-      <path d="M6.5 11.5v5.5M10.5 11.5v5.5M13.5 11.5v5.5M17.5 11.5v5.5" {...stroke} />
+      <path
+        d="M6.5 11.5v5.5M10.5 11.5v5.5M13.5 11.5v5.5M17.5 11.5v5.5"
+        {...stroke}
+      />
     </>
   ),
   art: (

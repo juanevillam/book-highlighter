@@ -23,7 +23,10 @@ export type PhotoImportProgress = {
   items: PhotoImportItem[];
 };
 
-const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
+const collator = new Intl.Collator(undefined, {
+  numeric: true,
+  sensitivity: 'base',
+});
 
 /** Sort uploaded files in natural filename order (e.g. IMG_2459 .. IMG_2475), falling back to timestamp. */
 export function sortPhotoFiles(files: File[]): File[] {
@@ -123,7 +126,8 @@ export function runPhotoImport(
         const handler = (event: MessageEvent<WorkerResponse>) => {
           const msg = event.data;
           if (msg.type === 'progress') {
-            modelProgress = msg.total > 0 ? Math.min(1, msg.loaded / msg.total) : 0;
+            modelProgress =
+              msg.total > 0 ? Math.min(1, msg.loaded / msg.total) : 0;
             emit('models');
           } else if (msg.type === 'ready') {
             modelProgress = 1;

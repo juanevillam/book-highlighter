@@ -134,7 +134,11 @@ export const SearchGlyph = () => (
 
 export const UploadGlyph = () => (
   <svg viewBox="0 0 24 24" aria-hidden="true">
-    <path d="M12 15.5V4M7.5 8.5 12 4l4.5 4.5" {...strokeProps} strokeWidth={1.9} />
+    <path
+      d="M12 15.5V4M7.5 8.5 12 4l4.5 4.5"
+      {...strokeProps}
+      strokeWidth={1.9}
+    />
     <path
       d="M4.5 14.5v3.2A1.8 1.8 0 0 0 6.3 19.5h11.4a1.8 1.8 0 0 0 1.8-1.8v-3.2"
       {...strokeProps}

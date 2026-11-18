@@ -1,11 +1,6 @@
 import { create } from 'zustand';
 
-import {
-  EMPTY_BODY,
-  getBookBody,
-  saveBookBody,
-  type BookBody,
-} from '../books';
+import { EMPTY_BODY, getBookBody, saveBookBody, type BookBody } from '../books';
 
 type BodyEntry = {
   body: BookBody;

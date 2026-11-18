@@ -70,10 +70,9 @@ export const t = (
 ): string => {
   const found = key
     .split('.')
-    .reduce<string | Tree | undefined>(
-      (node, part) => (typeof node === 'object' ? node[part] : undefined),
-      translations[locale] as Tree,
-    );
+    .reduce<
+      string | Tree | undefined
+    >((node, part) => (typeof node === 'object' ? node[part] : undefined), translations[locale] as Tree);
   const text = typeof found === 'string' ? found : key;
 
   return values
