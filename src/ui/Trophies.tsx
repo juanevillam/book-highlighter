@@ -30,8 +30,9 @@ const COUNTS: Record<string, number> = {
   [TROPHY_IDS.rereads]: FINISHED_BOOK_COUNT,
 };
 
-const buildCopy = (): Record<string, TrophyCopy> =>
-  Object.fromEntries(
+const buildCopy = (currentLocale: string): Record<string, TrophyCopy> => {
+  void currentLocale;
+  return Object.fromEntries(
     TROPHY_CONFIGS.map(({ id }) => [
       id,
       {
@@ -42,6 +43,7 @@ const buildCopy = (): Record<string, TrophyCopy> =>
       },
     ]),
   );
+};
 
 const tierName = (tier: TrophyTier) => t(`trophies.tier.${tier}`);
 
@@ -180,7 +182,7 @@ function Ring({ fraction, label }: { fraction: number; label: string }) {
 
 export function TrophiesForm() {
   const activeLocale = useLocale();
-  const copy = useMemo(() => buildCopy(), [activeLocale]);
+  const copy = useMemo(() => buildCopy(activeLocale), [activeLocale]);
   const { trophies, earned, total, hydrated: realHydrated } = useTrophies(copy);
   const trophiesLab = useUiStateLab(s => (UI_STATE_LAB ? s.trophies : 'live'));
   const hydrated = trophiesLab === 'skeleton' ? false : realHydrated;
@@ -289,6 +291,23 @@ function TrophyDetail({
   }, []);
 
   useEffect(() => {
+    if (!host) return;
+    const bar = host.querySelector<HTMLElement>('.side-bar');
+    const form = host.querySelector<HTMLElement>('.form');
+    if (open) {
+      bar?.setAttribute('inert', '');
+      form?.setAttribute('inert', '');
+    } else {
+      bar?.removeAttribute('inert');
+      form?.removeAttribute('inert');
+    }
+    return () => {
+      bar?.removeAttribute('inert');
+      form?.removeAttribute('inert');
+    };
+  }, [host, open]);
+
+  useEffect(() => {
     if (!open) return;
     sheet.current?.focus({ preventScroll: true });
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
@@ -312,6 +331,7 @@ function TrophyDetail({
         aria-modal="true"
         aria-label={view?.title}
         aria-hidden={!open}
+        inert={!open}
         tabIndex={-1}
         onPointerDown={e => {
           if ((e.target as HTMLElement).closest('button')) return;
@@ -405,7 +425,7 @@ const playChime = (platinum: boolean) => {
 
 export function TrophyBanner({ onOpen }: { onOpen: () => void }) {
   const activeLocale = useLocale();
-  const copyMap = useMemo(() => buildCopy(), [activeLocale]);
+  const copyMap = useMemo(() => buildCopy(activeLocale), [activeLocale]);
   const head = useTrophyStore(state => state.queue[0] ?? null);
   const dequeue = useTrophyStore(state => state.dequeue);
   const [leaving, setLeaving] = useState(false);

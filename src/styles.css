@@ -5,7 +5,7 @@
   --ground: #0d0d0d;
   --ink: #f5f5f5;
   --ink-2: #a3a3a3;
-  --ink-3: #7a7a7a;
+  --ink-3: #808080;
   --surface: #161616;
   --hairline: #262626;
   --glass-ink: #2a2a2a;
@@ -836,6 +836,10 @@ button {
   text-align: start;
   cursor: pointer;
   transition: transform 380ms var(--ios-curve);
+}
+
+.tile.is-bone {
+  pointer-events: none;
 }
 
 /* Book covers are 2:3 rectangles (taller vertically than Sound Shaper's 1:1
@@ -4305,15 +4309,15 @@ button {
   align-items: center;
   justify-content: space-between;
   gap: 0.375rem;
-  padding-inline: 0.375rem;
+  padding-inline: 0.125rem;
 }
 
 .scale-dot {
   position: relative;
   display: grid;
   place-items: center;
-  width: 1.25rem;
-  height: 1.375rem;
+  width: 1.75rem;
+  height: 2rem;
   padding: 0;
   border: 0;
   border-radius: 50%;
@@ -5270,6 +5274,7 @@ button {
   display: inline-flex;
   align-items: center;
   gap: 0.75rem;
+  max-width: calc(100vw - 2rem);
   margin: 0;
   padding: 0.75rem 1.125rem;
   border: 1px solid var(--hairline);
@@ -5278,7 +5283,8 @@ button {
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   font-size: 0.9375rem;
-  white-space: nowrap;
+  text-align: center;
+  white-space: normal;
   pointer-events: auto;
   animation: toast-in 380ms var(--ease) both;
 }
@@ -5314,11 +5320,13 @@ button {
 }
 
 .toast-action {
+  flex: none;
   padding: 0;
   border: 0;
   background: none;
   color: var(--accent);
   font-weight: 600;
+  white-space: nowrap;
 }
 
 @media (min-width: 64rem) {
@@ -5485,6 +5493,16 @@ button {
   height: var(--ring-size);
 }
 
+@container (max-width: 18.5rem) {
+  .trophy-summary > * {
+    --ring-size: 4rem;
+  }
+
+  .ring-label {
+    font-size: 1rem;
+  }
+}
+
 .ring {
   position: relative;
   display: grid;
@@ -5539,11 +5557,16 @@ button {
   text-overflow: ellipsis;
 }
 
+.trophy-copy .bone.line {
+  height: 0.75rem;
+  margin: 0.1875rem 0;
+}
+
 .sub-scrim {
   position: absolute;
   inset: 0;
   z-index: 6;
-  background: rgb(0 0 0 / 0.45);
+  background: rgb(0 0 0 / 0.4);
   opacity: 0;
   pointer-events: none;
   transition: opacity var(--dur-quick) var(--ease);
@@ -5562,7 +5585,7 @@ button {
   overflow-y: auto;
   padding: 2.25rem 1.5rem max(2rem, env(safe-area-inset-bottom));
   border-top: 1px solid var(--hairline);
-  border-radius: 2.125rem 2.125rem 0 0;
+  border-radius: var(--sheet-r, 2.125rem) var(--sheet-r, 2.125rem) 0 0;
   background: var(--surface);
   outline: none;
   touch-action: none;

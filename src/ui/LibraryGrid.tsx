@@ -468,11 +468,11 @@ export function LibraryGrid({
       <ul className="grid" aria-busy="true">
         {Array.from({ length: 6 }).map((_, idx) => (
           <li key={idx}>
-            <div className="tile">
+            <span className="tile is-bone">
               <span className="tile-art bone" />
               <span className="bone line" />
               <span className="bone line short" />
-            </div>
+            </span>
           </li>
         ))}
       </ul>
@@ -500,6 +500,7 @@ export function LibraryGrid({
         <button
           type="button"
           className={active ? 'tile is-active' : 'tile'}
+          aria-current={active || undefined}
           onClick={() => onSelectBook(book)}
         >
           <span className="tile-art">
@@ -520,6 +521,7 @@ export function LibraryGrid({
       <button
         type="button"
         className={containsSelected ? 'tile is-active' : 'tile'}
+        aria-current={containsSelected || undefined}
         onClick={() => onSelectSeries(name)}
       >
         <span

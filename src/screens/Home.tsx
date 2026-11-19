@@ -534,9 +534,23 @@ export function Home({ user }: { user: User }) {
     (isDesk ||
       (mobileStageOpen && liveTools.length === 0 && liveModals.length === 0));
 
+  const modalOpen = liveModals.length > 0;
+  const readerOpen = Boolean(readingBook);
+  const libraryInert =
+    readerOpen ||
+    modalOpen ||
+    (!isDesk && (mobileStageOpen || liveTools.length > 0));
+  const stageInert =
+    readerOpen ||
+    modalOpen ||
+    !selectedBook ||
+    (!isDesk && (!mobileStageOpen || liveTools.length > 0));
+  const toolsInert = readerOpen || modalOpen || liveTools.length === 0;
+  const modalsInert = readerOpen || modalLayers.length === 0;
+
   return (
     <div className={className}>
-      <main className="library">
+      <main className="library" inert={libraryInert || undefined}>
         <header className={titled ? 'bar is-edge is-titled' : 'bar'}>
           <span className="bar-lead" aria-hidden="true" />
 
@@ -575,7 +589,7 @@ export function Home({ user }: { user: User }) {
         />
       </main>
 
-      <div className="stage">
+      <div className="stage" inert={stageInert || undefined}>
         <div className="now-column">
           <PlayerBackdrop
             artUrl={selectedBook?.artUrl ?? ''}
@@ -607,11 +621,11 @@ export function Home({ user }: { user: User }) {
         </div>
       </div>
 
-      <div className="tools">
+      <div className="tools" inert={toolsInert || undefined}>
         {renderStack(toolLayers, popTool, closeTools)}
       </div>
 
-      <div className="modals">
+      <div className="modals" inert={modalsInert || undefined}>
         <div
           className={liveModals.length ? 'modal-scrim is-open' : 'modal-scrim'}
           aria-hidden="true"

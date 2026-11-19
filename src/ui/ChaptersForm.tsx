@@ -2277,8 +2277,11 @@ function HighlightEditorPanel({
     const strip = photoStripRef.current;
     if (!strip) return;
     const activeBtn = strip.children[activePhotoIdx] as HTMLElement | undefined;
+    const reduce =
+      typeof window !== 'undefined' &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     activeBtn?.scrollIntoView({
-      behavior: 'smooth',
+      behavior: reduce ? 'auto' : 'smooth',
       inline: 'center',
       block: 'nearest',
     });
@@ -2288,8 +2291,11 @@ function HighlightEditorPanel({
     const strip = marksStripRef.current;
     if (!strip) return;
     const activeBtn = strip.children[activeMarkIdx] as HTMLElement | undefined;
+    const reduce =
+      typeof window !== 'undefined' &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     activeBtn?.scrollIntoView({
-      behavior: 'smooth',
+      behavior: reduce ? 'auto' : 'smooth',
       inline: 'center',
       block: 'nearest',
     });
@@ -2845,6 +2851,7 @@ function HighlightEditorPanel({
                               ? 'is-active is-start-mode'
                               : 'is-start-mode'
                           }
+                          aria-pressed={tapTarget === 'start'}
                           onClick={() => {
                             setTapTarget('start');
                             if (markRange) {
@@ -2852,7 +2859,10 @@ function HighlightEditorPanel({
                             }
                           }}
                         >
-                          <span className="scanner-mode-dot is-start" />
+                          <span
+                            className="scanner-mode-dot is-start"
+                            aria-hidden="true"
+                          />
                           <span>{t('highlightEdit.tapModeStart')}</span>
                         </button>
                         <button
@@ -2862,6 +2872,7 @@ function HighlightEditorPanel({
                               ? 'is-active is-end-mode'
                               : 'is-end-mode'
                           }
+                          aria-pressed={tapTarget === 'end'}
                           onClick={() => {
                             setTapTarget('end');
                             if (markRange) {
@@ -2869,7 +2880,10 @@ function HighlightEditorPanel({
                             }
                           }}
                         >
-                          <span className="scanner-mode-dot is-end" />
+                          <span
+                            className="scanner-mode-dot is-end"
+                            aria-hidden="true"
+                          />
                           <span>{t('highlightEdit.tapModeEnd')}</span>
                         </button>
                       </div>

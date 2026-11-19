@@ -234,7 +234,11 @@ export function BookFormPanel({
             disabled={!canSave}
             onClick={() => void handleSave()}
           >
-            {busy ? <span className="spinner" /> : <CheckGlyph />}
+            {busy ? (
+              <span className="spinner" aria-hidden="true" />
+            ) : (
+              <CheckGlyph />
+            )}
             <span className="sr">
               {t(book ? 'bookEdit.saveExisting' : 'bookEdit.save')}
             </span>
@@ -409,6 +413,7 @@ export function BookFormPanel({
               <div className="stepper">
                 <button
                   type="button"
+                  aria-label={t('bookEdit.series.decreaseNumber')}
                   disabled={busy || seriesNumber <= 1}
                   onClick={() => setSeriesNumber(n => Math.max(1, n - 1))}
                 >
@@ -416,6 +421,7 @@ export function BookFormPanel({
                 </button>
                 <button
                   type="button"
+                  aria-label={t('bookEdit.series.increaseNumber')}
                   disabled={busy || seriesNumber >= 99}
                   onClick={() => setSeriesNumber(n => Math.min(99, n + 1))}
                 >
@@ -493,6 +499,7 @@ export function BookFormPanel({
             className="dialog-field"
             value={newSeriesInput}
             placeholder={t('bookEdit.series.newPlaceholder')}
+            aria-label={t('bookEdit.series.newPlaceholder')}
             onChange={e => setNewSeriesInput(e.target.value)}
           />
           <div className="confirm-actions">
@@ -561,6 +568,7 @@ export function GenresPickerSheet({
         <input
           value={queryText}
           placeholder={t('bookEdit.genres.search')}
+          aria-label={t('bookEdit.genres.search')}
           onChange={e => setQueryText(e.target.value)}
         />
       </div>
@@ -573,6 +581,7 @@ export function GenresPickerSheet({
               key={key}
               type="button"
               className="cell link-row"
+              aria-pressed={active}
               onClick={() => toggle(key)}
             >
               <span className="cell-name">{genreLabel(k => t(k), key)}</span>

@@ -21,6 +21,7 @@ export function SeriesSheet({
           <button
             type="button"
             className={book.id === selectedBookId ? 'tile is-active' : 'tile'}
+            aria-current={book.id === selectedBookId || undefined}
             onClick={() => onSelectBook(book)}
           >
             <span className="tile-art">

@@ -4521,12 +4521,15 @@ export function Reader({
       const viewTop = host.scrollTop;
       const viewBottom = viewTop + host.clientHeight;
       if (top < viewTop || bottom > viewBottom) {
+        const reduce =
+          typeof window !== 'undefined' &&
+          window.matchMedia('(prefers-reduced-motion: reduce)').matches;
         host.scrollTo({
           top: Math.max(
             0,
             top - host.clientHeight / 2 + activeBtn.offsetHeight / 2,
           ),
-          behavior: 'smooth',
+          behavior: reduce ? 'auto' : 'smooth',
         });
       }
     }, 90);
@@ -4584,13 +4587,16 @@ export function Reader({
 
       const el = scrollRef.current;
       if (el) {
+        const reduce =
+          typeof window !== 'undefined' &&
+          window.matchMedia('(prefers-reduced-motion: reduce)').matches;
         programmaticScrollRef.current = {
           active: true,
           startedAt: performance.now(),
         };
         if (sectionId === sections[0]?.id) {
           if (el.scrollTop > 2) {
-            el.scrollTo({ top: 0, behavior: 'smooth' });
+            el.scrollTo({ top: 0, behavior: reduce ? 'auto' : 'smooth' });
           }
         } else {
           const nodes = el.querySelectorAll<HTMLElement>('[data-section-id]');
@@ -4601,7 +4607,10 @@ export function Reader({
           if (target) {
             const targetTop = Math.max(0, target.offsetTop - firstTop);
             if (Math.abs(el.scrollTop - targetTop) > 2) {
-              el.scrollTo({ top: targetTop, behavior: 'smooth' });
+              el.scrollTo({
+                top: targetTop,
+                behavior: reduce ? 'auto' : 'smooth',
+              });
             }
           }
         }
@@ -4627,6 +4636,10 @@ export function Reader({
   };
 
   const isScrollSurface = pageTurn === 'scroll' || readerLab === 'decorations';
+  const isMobileSettingsOpen =
+    panelOpen &&
+    typeof window !== 'undefined' &&
+    !window.matchMedia(DESK).matches;
 
   const barCls = [
     'reader-bar',
@@ -4676,6 +4689,7 @@ export function Reader({
     >
       <div
         className="reader-main"
+        inert={isMobileSettingsOpen || undefined}
         onPointerMove={e => {
           if (e.clientY <= 68 && barTucked) {
             revealHeader(true);
@@ -4735,7 +4749,7 @@ export function Reader({
             </div>
           ) : !effectiveLoaded ? (
             <div className="reader-loading">
-              <span className="spinner" />
+              <span className="spinner" aria-hidden="true" />
             </div>
           ) : readerLab === 'decorations' ? (
             <ReaderDecorationsCatalog
@@ -4984,6 +4998,7 @@ export function Reader({
                   <button
                     type="button"
                     className="scale-step small"
+                    aria-label={t('reader.settings.decreaseTextSize')}
                     disabled={scaleIndex <= 0}
                     onClick={() => {
                       if (scaleIndex <= 0) return;
@@ -4992,7 +5007,11 @@ export function Reader({
                   >
                     A
                   </button>
-                  <div className="scale-dots" role="group">
+                  <div
+                    className="scale-dots"
+                    role="group"
+                    aria-label={t('reader.settings.textSize')}
+                  >
                     {TEXT_SCALES.map((step, idx) => (
                       <button
                         key={step}
@@ -5003,6 +5022,7 @@ export function Reader({
                             : 'scale-dot'
                         }
                         aria-label={`${Math.round(step * 100)}%`}
+                        aria-pressed={idx === scaleIndex}
                         onClick={() => setScaleIndex(idx)}
                       />
                     ))}
@@ -5010,6 +5030,7 @@ export function Reader({
                   <button
                     type="button"
                     className="scale-step large"
+                    aria-label={t('reader.settings.increaseTextSize')}
                     disabled={scaleIndex >= TEXT_SCALES.length - 1}
                     onClick={() => {
                       if (scaleIndex >= TEXT_SCALES.length - 1) return;
@@ -5033,6 +5054,7 @@ export function Reader({
                       key={w}
                       type="button"
                       className={pageWidth === w ? 'is-active' : undefined}
+                      aria-pressed={pageWidth === w}
                       onClick={() => setPageWidth(w as PageWidth)}
                     >
                       {t(`reader.settings.widths.${w}`)}
@@ -5051,6 +5073,7 @@ export function Reader({
                       key={mode}
                       type="button"
                       className={pageTurn === mode ? 'is-active' : undefined}
+                      aria-pressed={pageTurn === mode}
                       onClick={() => setPageTurn(mode as PageTurn)}
                     >
                       {t(`reader.settings.turns.${mode}`)}
@@ -5077,6 +5100,7 @@ export function Reader({
                       ]
                         .filter(Boolean)
                         .join(' ')}
+                      aria-pressed={selected}
                       style={{
                         backgroundColor: sw.page,
                         color: sw.text,
@@ -5086,7 +5110,9 @@ export function Reader({
                       }}
                       onClick={() => setReaderTheme(th)}
                     >
-                      <span className="swatch-aa">Aa</span>
+                      <span className="swatch-aa" aria-hidden="true">
+                        Aa
+                      </span>
                       <span className="swatch-name">
                         {t(`reader.settings.names.${th}`)}
                       </span>

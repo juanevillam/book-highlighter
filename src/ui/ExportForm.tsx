@@ -188,7 +188,11 @@ export function ExportPanel({
           disabled={busy || targetBooks.length === 0}
           onClick={() => void handleExport()}
         >
-          {busy ? <span className="spinner" /> : <CheckGlyph />}
+          {busy ? (
+            <span className="spinner" aria-hidden="true" />
+          ) : (
+            <CheckGlyph />
+          )}
           <span className="sr">{t('export.action')}</span>
         </button>
       }
@@ -201,6 +205,7 @@ export function ExportPanel({
             <button
               type="button"
               className={scope === 'book' ? 'is-active' : undefined}
+              aria-pressed={scope === 'book'}
               disabled={busy}
               onClick={() => setScope('book')}
             >
@@ -209,6 +214,7 @@ export function ExportPanel({
             <button
               type="button"
               className={scope === 'all' ? 'is-active' : undefined}
+              aria-pressed={scope === 'all'}
               disabled={busy}
               onClick={() => setScope('all')}
             >
@@ -320,6 +326,7 @@ export function ExportPanel({
             <button
               type="button"
               className="scale-step small"
+              aria-label={t('reader.settings.decreaseTextSize')}
               disabled={busy || scaleIndex <= 0}
               onClick={() => {
                 if (scaleIndex <= 0) return;
@@ -328,7 +335,11 @@ export function ExportPanel({
             >
               A
             </button>
-            <div className="scale-dots" role="group">
+            <div
+              className="scale-dots"
+              role="group"
+              aria-label={t('reader.settings.textSize')}
+            >
               {TEXT_SCALES.map((step, idx) => (
                 <button
                   key={step}
@@ -338,6 +349,7 @@ export function ExportPanel({
                     idx === scaleIndex ? 'scale-dot is-active' : 'scale-dot'
                   }
                   aria-label={`${Math.round(step * 100)}%`}
+                  aria-pressed={idx === scaleIndex}
                   onClick={() => {
                     if (idx === scaleIndex) return;
                     setScaleIndex(idx);
@@ -348,6 +360,7 @@ export function ExportPanel({
             <button
               type="button"
               className="scale-step large"
+              aria-label={t('reader.settings.increaseTextSize')}
               disabled={busy || scaleIndex >= TEXT_SCALES.length - 1}
               onClick={() => {
                 if (scaleIndex >= TEXT_SCALES.length - 1) return;
@@ -369,6 +382,7 @@ export function ExportPanel({
               type="button"
               disabled={busy}
               className={format === fmt ? 'is-active' : undefined}
+              aria-pressed={format === fmt}
               onClick={() => {
                 if (format === fmt) return;
                 setFormat(fmt);
@@ -397,6 +411,7 @@ export function ExportPanel({
                 ]
                   .filter(Boolean)
                   .join(' ')}
+                aria-pressed={active}
                 style={{
                   backgroundColor: pal.page,
                   color: pal.text,
@@ -410,7 +425,9 @@ export function ExportPanel({
                   setChosenTheme(themeKey);
                 }}
               >
-                <span className="swatch-aa">Aa</span>
+                <span className="swatch-aa" aria-hidden="true">
+                  Aa
+                </span>
                 <span className="swatch-name">
                   {t(`reader.settings.names.${themeKey}`)}
                 </span>
