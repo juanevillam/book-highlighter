@@ -109,19 +109,23 @@ export const signInWithGoogle = async (): Promise<boolean> => {
 };
 
 export const signOut = async () => {
+  const uid = auth?.currentUser?.uid;
   const [
     { forgetMemberSince },
     { clearCoverPalettes },
     { useBodiesStore },
+    { forgetAddTilePosition },
     { flushTrophies },
   ] = await Promise.all([
     import('./account'),
     import('./lib/coverPalette'),
     import('./store/bodies'),
+    import('./store/books'),
     import('./trophies'),
   ]);
   await flushTrophies();
   forgetMemberSince();
+  forgetAddTilePosition(uid);
   clearCoverPalettes();
   useBodiesStore.getState().reset();
   writeSignedInHint(false);

@@ -82,6 +82,15 @@ export const useBooksSubscription = (uid: string) => {
 
 const addTileCacheKey = (uid: string) => `bookhighlighter.addTilePos.${uid}`;
 
+export const forgetAddTilePosition = (uid?: string) => {
+  if (!uid) return;
+  try {
+    localStorage.removeItem(addTileCacheKey(uid));
+  } catch {
+    // Ignore storage errors.
+  }
+};
+
 const readCachedAddTilePos = (uid: string): number | null => {
   try {
     const raw = localStorage.getItem(addTileCacheKey(uid));

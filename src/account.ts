@@ -138,6 +138,8 @@ export const deleteAccount = async () => {
   try {
     await cleanupMyMedia();
     await sweep(user.uid);
+    const { forgetAddTilePosition } = await import('./store/books');
+    forgetAddTilePosition(user.uid);
     forgetMemberSince();
     clearCoverPalettes();
     useBodiesStore.getState().reset();

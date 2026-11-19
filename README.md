@@ -20,17 +20,17 @@ Shaper.
 
 ## Layout
 
-| path           | what it is                                                                                                                                                                                                                   |
-| -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `src/screens`  | the two root screens: `Welcome` and `Home` (3-column desktop stage, mobile shelf and sheets)                                                                                                                                 |
-| `src/ui`       | the UI kit — shelf grid, book stage, reader (`Reader.tsx`), chapter/highlight photo editors, sheets, trophies, and `StateLab`                                                                                                |
-| `src/lib`      | on-device neural OCR & sticky-note highlight detector (`ocr/`, `photoImport/`), pagination (`paginator.ts`), vector PDF export (`pdfExport.ts`), reader sections and themes, cover palette extraction, shelf sorting, genres |
-| `src/store`    | persisted stores for books, on-demand book bodies, shelf sort, and per-device reader settings                                                                                                                                |
-| `src/trophies` | the PlayStation-style trophy engine and its banner                                                                                                                                                                           |
-| `src/i18n`     | translations (`en`, `es`, `zh`)                                                                                                                                                                                              |
-| `public/`      | PWA manifest (`manifest.webmanifest`), offline Service Worker (`sw.js`), ONNX OCR models (`models/`), icons, and Cloudflare Pages `_headers`                                                                                 |
-| `scripts/`     | local Firebase environment setup helper (`setup-firebase.sh`) and CLI photo pipeline evaluator (`eval-photos.ts`)                                                                                                            |
-| `test/`        | unit tests for pagination, body edits, shelf sorting, and reader anchors                                                                                                                                                     |
+| path           | what it is                                                                                                                                                                                                                               |
+| -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/screens`  | the two root screens: `Welcome` and `Home` (3-column desktop stage, mobile shelf and sheets)                                                                                                                                             |
+| `src/ui`       | the UI kit — shelf grid, book stage, reader (`Reader.tsx`), chapter/highlight photo editors, sheets, trophies, and `StateLab`                                                                                                            |
+| `src/lib`      | on-device neural OCR & sticky-note highlight detector (`ocr/`, `photoImport/`), pagination (`paginator.ts`), vector PDF export (`pdfExport.ts`), reader sections and themes, cover palette extraction, 2D fractional shelf order, genres |
+| `src/store`    | persisted stores for books, on-demand book bodies, and per-device reader settings                                                                                                                                                        |
+| `src/trophies` | the PlayStation-style trophy engine and its banner                                                                                                                                                                                       |
+| `src/i18n`     | translations (`en`, `es`, `zh`)                                                                                                                                                                                                          |
+| `public/`      | PWA manifest (`manifest.webmanifest`), offline Service Worker (`sw.js`), ONNX OCR models (`models/`), icons, and Cloudflare Pages `_headers`                                                                                             |
+| `scripts/`     | local Firebase environment setup helper (`setup-firebase.sh`) and CLI photo pipeline evaluator (`eval-photos.ts`)                                                                                                                        |
+| `test/`        | unit tests for pagination, body edits, 2D fractional shelf order, photo OCR assembly, and reader anchors                                                                                                                                 |
 
 Book Highlighter is a standalone web-first repository inside the portfolio,
 sharing the web UI language, tokens, and account/trophy plumbing of Sound

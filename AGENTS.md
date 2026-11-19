@@ -115,10 +115,10 @@ launch) and follows the same disciplined cadence as Sound Shaper and
 
 ## Library & shelf
 
-- **Hand order + 4 sorts** (`src/lib/librarySort.ts`, `src/lib/gridOrder.ts`):
-  long-press/drag 2D fractional reordering across the shelf, plus `Recent`
-  (last opened), `Title`, `Author`, and `Publication Date` sorts (ascending or
-  descending), persisted per device in `src/store/librarySort.ts`.
+- **2D fractional hand order** (`src/lib/gridOrder.ts`):
+  long-press/drag 2D fractional reordering across the shelf, including the
+  draggable `+` add tile (`addTilePosition` on `users/{uid}`, cached per account
+  in `localStorage['bookhighlighter.addTilePos.' + uid]`).
 - **Series stack into one tile** (`src/lib/shelf.ts`). Books sharing a `series`
   name stack into a fan tile at the position of the series' first book; opening
   it shows the series ordered by `seriesNumber`.
@@ -164,7 +164,7 @@ launch) and follows the same disciplined cadence as Sound Shaper and
   text controls, and tactile `:active` press squash.
 - **Responsive stage:** On desktop (`>= 64rem`), up to three columns sit side by
   side (`LibraryGrid` → `BookStage` → `SidePanel`), with global centered modal
-  sheets (`.modals`) for Settings, Account, Trophies, Sort, Series, and
+  sheets (`.modals`) for Settings, Account, Trophies, Series, and
   New/Edit Book; on mobile (`< 64rem`), a 2-column 2:3 cover grid pairs with
   full-height swipe-to-dismiss sheets.
 - **Trophies (`src/trophies/`):** 7 PlayStation-tier trophies (`Book Highlighter`
