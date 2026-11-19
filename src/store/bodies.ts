@@ -106,12 +106,15 @@ export const useBodiesStore = create<BodiesState>()((set, get) => ({
       },
     })),
 
-  drop: bookId =>
+  drop: bookId => {
+    inflight.delete(bookId);
     set(state => {
+      if (!(bookId in state.entries)) return state;
       const next = { ...state.entries };
       delete next[bookId];
       return { entries: next };
-    }),
+    });
+  },
 
   reset: () => {
     inflight.clear();

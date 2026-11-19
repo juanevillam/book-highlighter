@@ -109,6 +109,21 @@ export const signInWithGoogle = async (): Promise<boolean> => {
 };
 
 export const signOut = async () => {
+  const [
+    { forgetMemberSince },
+    { clearCoverPalettes },
+    { useBodiesStore },
+    { flushTrophies },
+  ] = await Promise.all([
+    import('./account'),
+    import('./lib/coverPalette'),
+    import('./store/bodies'),
+    import('./trophies'),
+  ]);
+  await flushTrophies();
+  forgetMemberSince();
+  clearCoverPalettes();
+  useBodiesStore.getState().reset();
   writeSignedInHint(false);
   if (auth) await firebaseSignOut(auth);
 };

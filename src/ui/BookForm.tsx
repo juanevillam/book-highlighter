@@ -22,6 +22,7 @@ import {
 import { SidePanel } from './SidePanel';
 import { loadCoverPalette } from '../lib/coverPalette';
 import { genreLabel, GENRES } from '../lib/genres';
+import { thumbUrl } from '../lib/thumbUrl';
 import { uploadFailureKey, uploadImage, type Asset } from '../media';
 import { showToast } from './Toast';
 import { useBodiesStore } from '../store/bodies';
@@ -129,8 +130,8 @@ export function BookFormPanel({
   const coverPreview =
     cover.state === 'picked'
       ? cover.previewUrl
-      : cover.state === 'unchanged'
-        ? cover.url
+      : cover.state === 'unchanged' && cover.url
+        ? thumbUrl(cover.url, 120)
         : '';
 
   const canSave = name.trim().length > 0 && author.trim().length > 0 && !busy;

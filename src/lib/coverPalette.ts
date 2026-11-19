@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 
+import { thumbUrl } from './thumbUrl';
+
 export type HslColor = {
   /** Hue in degrees [0, 360) */
   h: number;
@@ -317,7 +319,9 @@ function thevividWeight(s: number, l: number): number {
 }
 
 const PALETTE_STORAGE_KEY = 'bh:cover-palette:v3';
+const PALETTE_SAMPLE_WIDTH = 72;
 const paletteCache = new Map<string, CoverPalette>();
+const inFlight = new Map<string, Promise<CoverPalette>>();
 let storageHydrated = false;
 
 function hydratePaletteStorage(): void {
@@ -404,6 +408,7 @@ export function forgetCoverPalette(
   if (keysToRemove.size === 0) return;
   for (const k of keysToRemove) {
     paletteCache.delete(k);
+    inFlight.delete(k);
   }
   if (typeof localStorage === 'undefined') return;
   try {
@@ -431,6 +436,17 @@ export function forgetCoverPalette(
   }
 }
 
+export function clearCoverPalettes(): void {
+  paletteCache.clear();
+  inFlight.clear();
+  if (typeof localStorage === 'undefined') return;
+  try {
+    localStorage.removeItem(PALETTE_STORAGE_KEY);
+  } catch {
+    // Ignore storage errors.
+  }
+}
+
 export async function loadCoverPalette(
   artUrl: string | null | undefined,
   seed: string,
@@ -447,12 +463,21 @@ export async function loadCoverPalette(
     return fallback;
   }
 
-  return new Promise<CoverPalette>(resolve => {
+  const pending = inFlight.get(cacheKey);
+  if (pending) return pending;
+
+  const sampleUrl =
+    cleanUrl.startsWith('blob:') || cleanUrl.startsWith('data:')
+      ? cleanUrl
+      : thumbUrl(cleanUrl, PALETTE_SAMPLE_WIDTH);
+
+  const task = new Promise<CoverPalette>(resolve => {
     const img = new Image();
     img.crossOrigin = 'anonymous';
     img.decoding = 'async';
 
     img.onload = () => {
+      inFlight.delete(cacheKey);
       try {
         const w = 36;
         const h = 54;
@@ -480,13 +505,17 @@ export async function loadCoverPalette(
     };
 
     img.onerror = () => {
+      inFlight.delete(cacheKey);
       const fb = fallbackPaletteForSeed(seed);
       paletteCache.set(cacheKey, fb);
       resolve(fb);
     };
 
-    img.src = cleanUrl;
+    img.src = sampleUrl;
   });
+
+  inFlight.set(cacheKey, task);
+  return task;
 }
 
 export function useBookCoverPalette(

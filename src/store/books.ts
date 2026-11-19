@@ -5,6 +5,8 @@ import { create } from 'zustand';
 
 import { backfillShelfPositions, subscribeToBooks, type Book } from '../books';
 import { requireDb, USERS_COLLECTION } from '../firebase';
+
+import { useBodiesStore } from './bodies';
 import { needsPositionRepair } from '../lib/gridOrder';
 import { shelfEntries } from '../lib/shelf';
 
@@ -47,6 +49,13 @@ export const useBooksSubscription = (uid: string) => {
     const unsubscribe = subscribeToBooks({
       onNext: (books, meta) => {
         setBooks(books);
+        const liveIds = new Set(books.map(b => b.id));
+        const bodyEntries = useBodiesStore.getState().entries;
+        for (const cachedId of Object.keys(bodyEntries)) {
+          if (!liveIds.has(cachedId)) {
+            useBodiesStore.getState().drop(cachedId);
+          }
+        }
         const entries = shelfEntries(books);
         if (
           !repairing.current &&
@@ -97,13 +106,16 @@ export const useAddTilePosition = (uid: string): number | null => {
           const val = snapshot.data()?.addTilePosition;
           const next =
             typeof val === 'number' && Number.isFinite(val) ? val : null;
-          setPosition(next);
-          try {
-            if (next === null) localStorage.removeItem(addTileCacheKey(uid));
-            else localStorage.setItem(addTileCacheKey(uid), String(next));
-          } catch {
-            // Ignore storage errors.
-          }
+          setPosition(prev => {
+            if (prev === next) return prev;
+            try {
+              if (next === null) localStorage.removeItem(addTileCacheKey(uid));
+              else localStorage.setItem(addTileCacheKey(uid), String(next));
+            } catch {
+              // Ignore storage errors.
+            }
+            return next;
+          });
         },
         error => console.warn('add tile position', error),
       ),

@@ -23,7 +23,9 @@ import {
   TROPHIES_SUBCOLLECTION,
   USERS_COLLECTION,
 } from './firebase';
+import { clearCoverPalettes } from './lib/coverPalette';
 import { cleanupMyMedia, destroyAsset, uploadImage } from './media';
+import { useBodiesStore } from './store/bodies';
 import { blockTrophySync } from './trophies';
 
 export const MIN_NAME_LENGTH = 2;
@@ -36,9 +38,24 @@ const requireUser = () => {
 
 const ownDoc = (uid: string) => doc(requireDb(), USERS_COLLECTION, uid);
 
+let cachedMemberSince: { uid: string; value: number | null } | null = null;
+
+export const peekMemberSince = (uid: string): number | null | undefined =>
+  cachedMemberSince?.uid === uid ? cachedMemberSince.value : undefined;
+
+export const forgetMemberSince = () => {
+  cachedMemberSince = null;
+};
+
 export const readMemberSince = async (): Promise<number | null> => {
-  const data = (await getDoc(ownDoc(requireUser().uid))).data();
-  return data?.createdAt ? (data.createdAt as Timestamp).toMillis() : null;
+  const uid = requireUser().uid;
+  if (cachedMemberSince?.uid === uid) return cachedMemberSince.value;
+  const data = (await getDoc(ownDoc(uid))).data();
+  const value = data?.createdAt
+    ? (data.createdAt as Timestamp).toMillis()
+    : null;
+  cachedMemberSince = { uid, value };
+  return value;
 };
 
 export const setOwnName = async (name: string) => {
@@ -121,6 +138,9 @@ export const deleteAccount = async () => {
   try {
     await cleanupMyMedia();
     await sweep(user.uid);
+    forgetMemberSince();
+    clearCoverPalettes();
+    useBodiesStore.getState().reset();
     await deleteUser(user);
   } catch (error) {
     blockTrophySync(false);

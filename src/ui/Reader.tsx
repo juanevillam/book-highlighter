@@ -80,6 +80,14 @@ function morph(change: () => void): void {
   change();
 }
 
+function anchorsEqual(
+  a: ReaderAnchor | null | undefined,
+  b: ReaderAnchor | null | undefined,
+): boolean {
+  if (!a || !b) return !a && !b;
+  return a.blockId === b.blockId && a.offset === b.offset;
+}
+
 function sectionIdFromAnchor(
   anchor: ReaderAnchor | null | undefined,
   sections: ReaderSection[],
@@ -4051,6 +4059,7 @@ export function Reader({
   const initialAnchorApplied = useRef(false);
   const initialScrollAnchorApplied = useRef(false);
   const currentAnchorRef = useRef<ReaderAnchor | null>(book.readerAnchor);
+  const persistedAnchorRef = useRef<ReaderAnchor | null>(book.readerAnchor);
   const dirtyAnchorRef = useRef(false);
   const finishedMarkedRef = useRef(false);
   const dragStateRef = useRef<{
@@ -4064,6 +4073,7 @@ export function Reader({
   const flushPendingAnchor = useCallback(() => {
     if (dirtyAnchorRef.current && currentAnchorRef.current) {
       dirtyAnchorRef.current = false;
+      persistedAnchorRef.current = currentAnchorRef.current;
       void markBookRead(book.id, { anchor: currentAnchorRef.current });
     }
   }, [book.id]);
@@ -4312,9 +4322,16 @@ export function Reader({
     const isLast = pageIndex >= pages.length - 1 && hasReadableContent;
     const markFinished = isLast && !finishedMarkedRef.current;
     if (markFinished) finishedMarkedRef.current = true;
+    if (
+      !markFinished &&
+      anchorsEqual(activePage.anchor, persistedAnchorRef.current)
+    ) {
+      return;
+    }
 
     const timer = window.setTimeout(() => {
       dirtyAnchorRef.current = false;
+      persistedAnchorRef.current = activePage.anchor;
       void markBookRead(book.id, {
         anchor: activePage.anchor,
         ...(markFinished ? { finished: true } : {}),
@@ -4533,10 +4550,14 @@ export function Reader({
         ? currentAnchorRef.current
         : { blockId: scrollSectionId, offset: 0 };
     currentAnchorRef.current = nextAnchor;
+    if (anchorsEqual(nextAnchor, persistedAnchorRef.current)) {
+      return;
+    }
     dirtyAnchorRef.current = true;
     useBooksStore.getState().patchBook(book.id, { readerAnchor: nextAnchor });
     const timer = window.setTimeout(() => {
       dirtyAnchorRef.current = false;
+      persistedAnchorRef.current = nextAnchor;
       void markBookRead(book.id, {
         anchor: nextAnchor,
       });

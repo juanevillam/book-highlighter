@@ -35,9 +35,16 @@ import {
 } from './trophies/types';
 
 let blocked = false;
+const pendingSaves = new Set<Promise<void>>();
 
 export const blockTrophySync = (block: boolean) => {
   blocked = block;
+  if (block) pendingSaves.clear();
+};
+
+export const flushTrophies = async (): Promise<void> => {
+  if (pendingSaves.size === 0) return;
+  await Promise.allSettled([...pendingSaves]);
 };
 
 const adapterFor = (uid: string): TrophyPersistenceAdapter => ({
@@ -54,12 +61,19 @@ const adapterFor = (uid: string): TrophyPersistenceAdapter => ({
   },
   save: async trophyId => {
     if (blocked) return;
-    await setDoc(
+    const task = setDoc(
       doc(requireDb(), USERS_COLLECTION, uid, TROPHIES_SUBCOLLECTION, trophyId),
       { achievedAt: serverTimestamp() },
       { merge: true },
-    );
-    track({ name: 'trophy_unlocked', trophyId });
+    ).then(() => {
+      track({ name: 'trophy_unlocked', trophyId });
+    });
+    pendingSaves.add(task);
+    try {
+      await task;
+    } finally {
+      pendingSaves.delete(task);
+    }
   },
 });
 

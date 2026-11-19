@@ -270,14 +270,10 @@ export const updateBook = async ({
   fields: BookFields;
 }): Promise<void> => {
   const ref = bookDoc(bookId);
-
-  if (cover !== undefined) {
-    const previous = ((await getDoc(ref)).data()?.artPublicId as string) ?? '';
-
-    if (previous && previous !== cover?.publicId) {
-      await destroyAsset(previous, 'image');
-    }
-  }
+  const previous =
+    cover !== undefined
+      ? (((await getDoc(ref)).data()?.artPublicId as string) ?? '')
+      : '';
 
   await updateDoc(ref, {
     ...fields,
@@ -286,6 +282,10 @@ export const updateBook = async ({
       ? {}
       : { artPublicId: cover?.publicId ?? '', artUrl: cover?.url ?? '' }),
   });
+
+  if (previous && previous !== cover?.publicId) {
+    await destroyAsset(previous, 'image');
+  }
 };
 
 export const saveBookBody = async (
@@ -325,13 +325,13 @@ export const deleteBook = async (bookId: string): Promise<void> => {
   const artUrl = (snapData?.artUrl as string) ?? '';
   const name = (snapData?.name as string) ?? '';
 
-  if (artPublicId) {
-    await destroyAsset(artPublicId, 'image');
-  }
-
   await deleteDoc(bodyDoc(bookId));
   await deleteDoc(ref);
   forgetCoverPalette(bookId, artUrl, name);
+
+  if (artPublicId) {
+    await destroyAsset(artPublicId, 'image');
+  }
 };
 
 export const moveBook = (bookId: string, position: number): Promise<void> =>

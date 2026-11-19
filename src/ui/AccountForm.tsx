@@ -6,6 +6,7 @@ import { createPortal } from 'react-dom';
 import {
   deleteAccount,
   MIN_NAME_LENGTH,
+  peekMemberSince,
   ReauthCancelled,
   readMemberSince,
   setOwnName,
@@ -109,7 +110,9 @@ export function AccountForm({
   onTrophies: () => void;
   onExportAll: () => void;
 }) {
-  const [memberSince, setMemberSince] = useState<number | null | undefined>();
+  const [memberSince, setMemberSince] = useState<number | null | undefined>(
+    () => peekMemberSince(user.uid),
+  );
   const [naming, setNaming] = useState(false);
   const [photoBusy, setPhotoBusy] = useState(false);
   const [choosing, setChoosing] = useState(false);

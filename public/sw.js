@@ -1,5 +1,6 @@
 const SHELL_CACHE = 'bookhighlighter-shell-v2';
 const COVERS_CACHE = 'bookhighlighter-covers-v1';
+const MODELS_CACHE = 'bookhighlighter-models-v1';
 const SHELL_URLS = [
   '/',
   '/index.html',
@@ -26,7 +27,12 @@ self.addEventListener('activate', event => {
       .then(keys =>
         Promise.all(
           keys
-            .filter(key => key !== SHELL_CACHE && key !== COVERS_CACHE)
+            .filter(
+              key =>
+                key !== SHELL_CACHE &&
+                key !== COVERS_CACHE &&
+                key !== MODELS_CACHE,
+            )
             .map(key => caches.delete(key)),
         ),
       )
@@ -81,6 +87,24 @@ self.addEventListener('fetch', event => {
               Response.error()
             );
           }),
+      );
+      return;
+    }
+
+    if (url.pathname.startsWith('/models/')) {
+      event.respondWith(
+        caches.open(MODELS_CACHE).then(async cache => {
+          const cached = await cache.match(request);
+          if (cached) return cached;
+
+          try {
+            const response = await fetch(request);
+            if (response.ok) void cache.put(request, response.clone());
+            return response;
+          } catch {
+            return Response.error();
+          }
+        }),
       );
       return;
     }
