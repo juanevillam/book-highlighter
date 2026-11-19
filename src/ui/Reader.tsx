@@ -3156,6 +3156,8 @@ function ScrollReaderBody({
   onReachedBottom: () => void;
 }) {
   const initialScrollDoneRef = useRef(false);
+  const scrollRafRef = useRef<number | null>(null);
+  const lastActiveSectionRef = useRef<string>(initialSectionId ?? '');
 
   const detectActiveSection = useCallback(
     (el: HTMLDivElement) => {
@@ -3167,13 +3169,19 @@ function ScrollReaderBody({
       if (nodes.length === 0) return;
       if (el.scrollTop <= 24) {
         const firstId = nodes[0]?.dataset.sectionId;
-        if (firstId) onActiveSectionChange(firstId);
+        if (firstId && firstId !== lastActiveSectionRef.current) {
+          lastActiveSectionRef.current = firstId;
+          onActiveSectionChange(firstId);
+        }
         return;
       }
       if (el.scrollHeight - el.scrollTop - el.clientHeight < 24) {
         const lastId = nodes[nodes.length - 1]?.dataset.sectionId;
         if (lastId) {
-          onActiveSectionChange(lastId);
+          if (lastId !== lastActiveSectionRef.current) {
+            lastActiveSectionRef.current = lastId;
+            onActiveSectionChange(lastId);
+          }
           return;
         }
       }
@@ -3186,10 +3194,21 @@ function ScrollReaderBody({
           break;
         }
       }
-      if (chosen) onActiveSectionChange(chosen);
+      if (chosen && chosen !== lastActiveSectionRef.current) {
+        lastActiveSectionRef.current = chosen;
+        onActiveSectionChange(chosen);
+      }
     },
     [onActiveSectionChange, programmaticScrollRef],
   );
+
+  useEffect(() => {
+    return () => {
+      if (scrollRafRef.current !== null) {
+        cancelAnimationFrame(scrollRafRef.current);
+      }
+    };
+  }, []);
 
   useLayoutEffect(() => {
     const el = scrollRef.current;
@@ -3296,9 +3315,14 @@ function ScrollReaderBody({
       onScroll={e => {
         const el = e.currentTarget;
         onScrollPosition(el.scrollTop);
-        detectActiveSection(el);
-        if (el.scrollHeight - el.scrollTop - el.clientHeight < 64) {
-          onReachedBottom();
+        if (scrollRafRef.current === null) {
+          scrollRafRef.current = requestAnimationFrame(() => {
+            scrollRafRef.current = null;
+            detectActiveSection(el);
+            if (el.scrollHeight - el.scrollTop - el.clientHeight < 64) {
+              onReachedBottom();
+            }
+          });
         }
       }}
     >
@@ -3846,6 +3870,8 @@ export function Reader({
   const maxTextMeasure = pageWidth === 'extended' ? 812 : 544;
 
   const stageRef = useRef<HTMLDivElement>(null);
+  const slideTrackRef = useRef<HTMLDivElement>(null);
+  const slideEdgeOverlayRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const barRef = useRef<HTMLElement>(null);
   const tocCardRef = useRef<HTMLDivElement>(null);
@@ -3869,6 +3895,9 @@ export function Reader({
   const [scrolled, setScrolled] = useState(false);
   const [barTucked, setBarTucked] = useState(false);
   const [barIdle, setBarIdle] = useState(false);
+  const scrolledRef = useRef(false);
+  const barTuckedRef = useRef(false);
+  const barIdleRef = useRef(false);
   const lastScrollTopRef = useRef(0);
   const downwardScrollRef = useRef(0);
   const lingerTimerRef = useRef<number | null>(null);
@@ -3879,8 +3908,58 @@ export function Reader({
     () => typeof window !== 'undefined' && window.matchMedia(DESK).matches,
   );
   const [leavingPanel, setLeavingPanel] = useState(false);
-  const [slideOffsetPx, setSlideOffsetPx] = useState(0);
+  const prevPanelOpenRef = useRef(panelOpen);
   const prevScaleAndTurn = useRef(`${scaleIndex}:${pageTurn}:${pageWidth}`);
+
+  const updateScrolled = useCallback((next: boolean) => {
+    if (scrolledRef.current !== next) {
+      scrolledRef.current = next;
+      setScrolled(next);
+    }
+  }, []);
+
+  const updateBarState = useCallback(
+    (nextTucked: boolean, nextIdle: boolean) => {
+      if (barTuckedRef.current !== nextTucked) {
+        barTuckedRef.current = nextTucked;
+        setBarTucked(nextTucked);
+      }
+      if (barIdleRef.current !== nextIdle) {
+        barIdleRef.current = nextIdle;
+        setBarIdle(nextIdle);
+      }
+    },
+    [],
+  );
+
+  const applySlideDragDom = useCallback(
+    (offsetPx: number, currentIndex: number) => {
+      const track = slideTrackRef.current;
+      if (track) {
+        track.classList.toggle('is-dragging', offsetPx !== 0);
+        track.style.transform =
+          offsetPx !== 0
+            ? `translate3d(calc(${-currentIndex * 100}% + ${offsetPx}px), 0, 0)`
+            : `translate3d(${-currentIndex * 100}%, 0, 0)`;
+      }
+      const edge = slideEdgeOverlayRef.current;
+      if (edge) {
+        edge.classList.toggle('is-dragging', offsetPx !== 0);
+        edge.style.opacity =
+          offsetPx !== 0
+            ? String(
+                Math.max(
+                  0,
+                  1 -
+                    Math.abs(offsetPx) /
+                      Math.max(72, viewport.stageWidth * 0.24),
+                ),
+              )
+            : '1';
+      }
+    },
+    [viewport.stageWidth],
+  );
 
   const clearLinger = useCallback(() => {
     if (lingerTimerRef.current !== null) {
@@ -3907,36 +3986,33 @@ export function Reader({
       ) {
         return;
       }
-      setBarTucked(true);
-      setBarIdle(true);
+      updateBarState(true, true);
     }, waitMs);
-  }, [clearLinger, pageTurn]);
+  }, [clearLinger, pageTurn, updateBarState]);
 
   const revealHeader = useCallback(
     (withLinger = true) => {
       downwardScrollRef.current = 0;
-      setBarTucked(false);
-      setBarIdle(false);
+      updateBarState(false, false);
       if (withLinger) {
         scheduleHeaderLinger();
       } else {
         clearLinger();
       }
     },
-    [clearLinger, scheduleHeaderLinger],
+    [clearLinger, scheduleHeaderLinger, updateBarState],
   );
 
   const handleScrollPosition = useCallback(
     (scrollTop: number) => {
       const prev = lastScrollTopRef.current;
       lastScrollTopRef.current = scrollTop;
-      setScrolled(scrollTop > 8);
+      updateScrolled(scrollTop > 8);
 
       if (scrollTop <= SCROLL_HIDE_MIN_TOP_PX) {
         downwardScrollRef.current = 0;
         clearLinger();
-        setBarTucked(false);
-        setBarIdle(false);
+        updateBarState(false, false);
         return;
       }
 
@@ -3945,26 +4021,30 @@ export function Reader({
         downwardScrollRef.current += delta;
         if (downwardScrollRef.current >= SCROLL_HIDE_DISTANCE_PX) {
           clearLinger();
-          setBarTucked(true);
+          updateBarState(true, barIdleRef.current);
         }
       } else if (delta < -14) {
         downwardScrollRef.current = 0;
-        setBarTucked(false);
-        setBarIdle(false);
+        updateBarState(false, false);
         scheduleHeaderLinger();
       }
     },
-    [clearLinger, scheduleHeaderLinger],
+    [clearLinger, scheduleHeaderLinger, updateBarState, updateScrolled],
   );
 
   useEffect(() => {
+    const wasOpen = prevPanelOpenRef.current;
+    prevPanelOpenRef.current = panelOpen;
     if (panelOpen) {
-      setLeavingPanel(true);
+      if (leavingPanel) setLeavingPanel(false);
       return;
     }
-    const id = window.setTimeout(() => setLeavingPanel(false), LEAVE_MS);
-    return () => window.clearTimeout(id);
-  }, [panelOpen]);
+    if (wasOpen) {
+      setLeavingPanel(true);
+      const id = window.setTimeout(() => setLeavingPanel(false), LEAVE_MS);
+      return () => window.clearTimeout(id);
+    }
+  }, [panelOpen, leavingPanel]);
 
   const showPanel = panelOpen || leavingPanel;
 
@@ -4028,10 +4108,27 @@ export function Reader({
         el.clientHeight || Math.round(el.getBoundingClientRect().height);
       if (w > 0 && h > 0) {
         const stageW = Math.round(w);
-        setViewport({
-          width: Math.min(stageW, maxPageStageW),
-          height: Math.round(h),
-          stageWidth: stageW,
+        const nextWidth = Math.min(stageW, maxPageStageW);
+        const nextHeight = Math.round(h);
+        setViewport(prev => {
+          if (prev.width === nextWidth && prev.height === nextHeight) {
+            const padX =
+              pageWidth === 'extended'
+                ? Math.min(24, Math.max(16, Math.round(nextWidth * 0.04)))
+                : Math.min(56, Math.max(40, Math.round(nextWidth * 0.115)));
+            const textMeasureW = Math.min(
+              Math.max(180, nextWidth - padX * 2),
+              maxTextMeasure,
+            );
+            const prevInline = prev.stageWidth - textMeasureW < 156;
+            const nextInline = stageW - textMeasureW < 156;
+            if (prevInline === nextInline) return prev;
+          }
+          return {
+            width: nextWidth,
+            height: nextHeight,
+            stageWidth: stageW,
+          };
         });
       }
     };
@@ -4040,7 +4137,7 @@ export function Reader({
     const ro = new ResizeObserver(update);
     ro.observe(el);
     return () => ro.disconnect();
-  }, [maxPageStageW]);
+  }, [maxPageStageW, maxTextMeasure, pageWidth]);
 
   const body: BookBody = bodyEntry?.body ?? EMPTY_BODY;
   const readerLab = useUiStateLab(s => (UI_STATE_LAB ? s.reader : 'live'));
@@ -4144,25 +4241,24 @@ export function Reader({
     } else {
       clearLinger();
       if (lastScrollTopRef.current <= 64) {
-        setBarTucked(false);
-        setBarIdle(false);
+        updateBarState(false, false);
       }
     }
     return () => clearLinger();
-  }, [pageTurn, pageIndex, scheduleHeaderLinger, clearLinger]);
+  }, [pageTurn, pageIndex, scheduleHeaderLinger, clearLinger, updateBarState]);
 
   useEffect(() => {
     const key = `${scaleIndex}:${pageTurn}:${pageWidth}`;
     if (prevScaleAndTurn.current === key) return;
     prevScaleAndTurn.current = key;
     if (pageTurn !== 'scroll') {
-      setScrolled(false);
+      updateScrolled(false);
       lastScrollTopRef.current = 0;
     }
     setReflowing(true);
     const id = window.setTimeout(() => setReflowing(false), 260);
     return () => window.clearTimeout(id);
-  }, [scaleIndex, pageTurn, pageWidth]);
+  }, [scaleIndex, pageTurn, pageWidth, updateScrolled]);
 
   // Restore saved `readerAnchor` on initial load AND preserve reading spot across reflows.
   useEffect(() => {
@@ -4366,7 +4462,7 @@ export function Reader({
       const atEdge =
         (dx > 0 && pageIndex === 0) ||
         (dx < 0 && pageIndex >= pages.length - 1);
-      setSlideOffsetPx(atEdge ? dx * 0.25 : dx);
+      applySlideDragDom(atEdge ? dx * 0.25 : dx, pageIndex);
     }
   };
 
@@ -4384,17 +4480,16 @@ export function Reader({
         commitTurn('prev');
       } else if (relX > 0.66) {
         commitTurn('next');
-      } else if (barTucked) {
+      } else if (barTuckedRef.current) {
         revealHeader(true);
       } else {
         clearLinger();
-        setBarTucked(true);
-        setBarIdle(true);
+        updateBarState(true, true);
       }
       return;
     }
 
-    setSlideOffsetPx(0);
+    applySlideDragDom(0, pageIndex);
     if (dx < -55 && pageIndex < pages.length - 1) {
       goToPage(pageIndex + 1);
     } else if (dx > 55 && pageIndex > 0) {
@@ -4619,7 +4714,7 @@ export function Reader({
           onPointerUp={handlePointerUp}
           onPointerCancel={() => {
             dragStateRef.current = null;
-            setSlideOffsetPx(0);
+            applySlideDragDom(0, pageIndex);
           }}
         >
           {effectiveError ? (
@@ -4682,22 +4777,12 @@ export function Reader({
           ) : (
             <div className="reader-book-frame is-slide-frame">
               <div
-                className={
-                  slideOffsetPx !== 0
-                    ? 'reader-slide-edge-overlay is-dragging'
-                    : 'reader-slide-edge-overlay'
-                }
-                style={{
-                  opacity: Math.max(
-                    0,
-                    1 -
-                      Math.abs(slideOffsetPx) /
-                        Math.max(72, viewport.stageWidth * 0.24),
-                  ),
-                }}
+                ref={slideEdgeOverlayRef}
+                className="reader-slide-edge-overlay"
                 aria-hidden="true"
               >
                 {pages.map(p => {
+                  if (Math.abs(p.index - pageIndex) > 1) return null;
                   const endEdgeLayout =
                     inlineEdgeArt && palette.ornament && p.kind === 'end'
                       ? resolveMarginArtLayout(
@@ -4775,13 +4860,10 @@ export function Reader({
               </div>
 
               <div
-                className={
-                  slideOffsetPx !== 0
-                    ? 'reader-slide-track is-dragging'
-                    : 'reader-slide-track'
-                }
+                ref={slideTrackRef}
+                className="reader-slide-track"
                 style={{
-                  transform: `translate3d(calc(${-pageIndex * 100}% + ${slideOffsetPx}px), 0, 0)`,
+                  transform: `translate3d(${-pageIndex * 100}%, 0, 0)`,
                 }}
               >
                 {pages.map(p => (
@@ -4793,21 +4875,23 @@ export function Reader({
                         : 'reader-slide-cell'
                     }
                   >
-                    <div
-                      className="reader-slide-page"
-                      style={{ width: viewport.width }}
-                    >
-                      <PageSheetContent
-                        page={p}
-                        totalPages={pages.length}
-                        palette={palette}
-                        artSeed={bookArtSeed}
-                        hasReadableContent={hasReadableContent}
-                        hasChapters={hasChapters}
-                        onEmptyAction={onOpenFirstChapterHighlight}
-                        onSelectChapter={handleSelectBookIndexChapter}
-                      />
-                    </div>
+                    {Math.abs(p.index - pageIndex) <= 1 ? (
+                      <div
+                        className="reader-slide-page"
+                        style={{ width: viewport.width }}
+                      >
+                        <PageSheetContent
+                          page={p}
+                          totalPages={pages.length}
+                          palette={palette}
+                          artSeed={bookArtSeed}
+                          hasReadableContent={hasReadableContent}
+                          hasChapters={hasChapters}
+                          onEmptyAction={onOpenFirstChapterHighlight}
+                          onSelectChapter={handleSelectBookIndexChapter}
+                        />
+                      </div>
+                    ) : null}
                   </div>
                 ))}
               </div>

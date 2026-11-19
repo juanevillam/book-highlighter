@@ -202,6 +202,7 @@ function ScanPhaseStatus({
   useEffect(() => {
     if (!isLab) return;
     const id = window.setInterval(() => {
+      if (document.hidden) return;
       setLabStep(prev => (prev + 1) % LAB_SCAN_PCTS.length);
     }, 1600);
     return () => window.clearInterval(id);
@@ -380,6 +381,7 @@ function IndexTheaterStage() {
       return;
     }
     const id = window.setInterval(() => {
+      if (document.hidden) return;
       setBeat(prev => (prev + 1) % 12);
     }, 880);
     return () => window.clearInterval(id);
@@ -743,7 +745,7 @@ function HowItWorksPanel({
       return;
     }
     const id = window.setInterval(() => {
-      if (Date.now() < pausedUntil) return;
+      if (document.hidden || Date.now() < pausedUntil) return;
       setScene(prev => (prev + 1) % sceneCount);
     }, 11500);
     return () => window.clearInterval(id);
@@ -1483,25 +1485,37 @@ export function ChaptersPanel({
     displayedChapters.length > 0 && !tocBusy && !showChaptersSkeleton;
 
   const [leavingTocHow, setLeavingTocHow] = useState(false);
+  const prevTocHowRef = useRef(tocHowOpen);
   useEffect(() => {
+    const wasOpen = prevTocHowRef.current;
+    prevTocHowRef.current = tocHowOpen;
     if (tocHowOpen) {
-      setLeavingTocHow(true);
+      if (leavingTocHow) setLeavingTocHow(false);
       return;
     }
-    const id = window.setTimeout(() => setLeavingTocHow(false), LEAVE_MS);
-    return () => window.clearTimeout(id);
-  }, [tocHowOpen]);
+    if (wasOpen) {
+      setLeavingTocHow(true);
+      const id = window.setTimeout(() => setLeavingTocHow(false), LEAVE_MS);
+      return () => window.clearTimeout(id);
+    }
+  }, [tocHowOpen, leavingTocHow]);
   const showTocHow = tocHowOpen || leavingTocHow;
 
   const [leavingHlHow, setLeavingHlHow] = useState(false);
+  const prevHlHowRef = useRef(hlHowOpen);
   useEffect(() => {
+    const wasOpen = prevHlHowRef.current;
+    prevHlHowRef.current = hlHowOpen;
     if (hlHowOpen) {
-      setLeavingHlHow(true);
+      if (leavingHlHow) setLeavingHlHow(false);
       return;
     }
-    const id = window.setTimeout(() => setLeavingHlHow(false), LEAVE_MS);
-    return () => window.clearTimeout(id);
-  }, [hlHowOpen]);
+    if (wasOpen) {
+      setLeavingHlHow(true);
+      const id = window.setTimeout(() => setLeavingHlHow(false), LEAVE_MS);
+      return () => window.clearTimeout(id);
+    }
+  }, [hlHowOpen, leavingHlHow]);
   const showHlHow = hlHowOpen || leavingHlHow;
 
   const childStackDepth =
@@ -2022,14 +2036,20 @@ function ChapterDetailPanel({
     if (!open) setHowOpen(false);
   }, [open, chapter.id]);
 
+  const prevHowRef = useRef(howOpen);
   useEffect(() => {
+    const wasOpen = prevHowRef.current;
+    prevHowRef.current = howOpen;
     if (howOpen) {
-      setLeavingHow(true);
+      if (leavingHow) setLeavingHow(false);
       return;
     }
-    const id = window.setTimeout(() => setLeavingHow(false), LEAVE_MS);
-    return () => window.clearTimeout(id);
-  }, [howOpen]);
+    if (wasOpen) {
+      setLeavingHow(true);
+      const id = window.setTimeout(() => setLeavingHow(false), LEAVE_MS);
+      return () => window.clearTimeout(id);
+    }
+  }, [howOpen, leavingHow]);
   const showHow = howOpen || leavingHow;
 
   return (
@@ -2308,14 +2328,20 @@ function HighlightEditorPanel({
     setConfirmDeleteOpen(false);
   }, [open, initial?.id, initial?.text, initial?.page]);
 
+  const prevHowRef = useRef(howOpen);
   useEffect(() => {
+    const wasOpen = prevHowRef.current;
+    prevHowRef.current = howOpen;
     if (howOpen) {
-      setLeavingHow(true);
+      if (leavingHow) setLeavingHow(false);
       return;
     }
-    const id = window.setTimeout(() => setLeavingHow(false), LEAVE_MS);
-    return () => window.clearTimeout(id);
-  }, [howOpen]);
+    if (wasOpen) {
+      setLeavingHow(true);
+      const id = window.setTimeout(() => setLeavingHow(false), LEAVE_MS);
+      return () => window.clearTimeout(id);
+    }
+  }, [howOpen, leavingHow]);
   const showHow = howOpen || leavingHow;
 
   const applyLoadedItems = (validItems: PhotoImportItem[]) => {
