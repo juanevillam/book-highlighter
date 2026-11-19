@@ -19,50 +19,9 @@ import { polishSpanishProse } from './clean';
 
 export type Mark = { photo: number; line: number };
 
-export type DraftHighlight = {
-  id: string;
-  start: Mark;
-  end: Mark;
-  /** Printed page label, e.g. "25–41". */
-  page: string;
-  text: string;
-};
-
-export type DraftChapter = {
-  id: string;
-  name: string;
-  pages: string;
-  highlights: DraftHighlight[];
-};
-
-export type DraftBook = {
-  title: string;
-  author: string;
-  coverPhoto: number | null;
-  /** Repaired printed page number per photo (null for cover/index/blank). */
-  pageNumbers: (number | null)[];
-  toc: TocEntry[];
-  marks: { start: Mark; end: Mark }[];
-  chapters: DraftChapter[];
-};
-
 const SENTENCE_END = /[.!?…:»”"]\s*$|[.!?…][»”"—.]*\s*$/;
 const HYPHEN_END = /[A-Za-zÀ-ÿ«][-‐‑\u00ad]["'”»]?\s*$/;
 const LOWER_START = /^[[«"“']?[a-zà-ÿ]/;
-
-let seq = 0;
-const makeId = () =>
-  typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
-    ? crypto.randomUUID()
-    : `draft-${Date.now()}-${(seq += 1)}`;
-
-const titleCase = (s: string) =>
-  s
-    .toLowerCase()
-    .split(/\s+/)
-    .filter(Boolean)
-    .map(w => w[0].toUpperCase() + w.slice(1))
-    .join(' ');
 
 const median = (xs: number[]) => {
   if (!xs.length) return 0;
@@ -684,15 +643,6 @@ export function textBetween(
   return joinPieces(pieces);
 }
 
-const pageLabel = (a: number | null, b: number | null) =>
-  a === null
-    ? b === null
-      ? null
-      : String(b)
-    : b === null || b === a
-      ? String(a)
-      : `${a}–${b}`;
-
 /**
  * Extract chapters (`name` + `pages` range) from 1..N photos of a book's
  * table of contents (`ÍNDICE` / `Contents`). Even if a continuation page of the
@@ -726,59 +676,4 @@ export function extractChaptersFromToc(
         : String(entry.page);
     return { name: entry.title, pages: pagesLabel };
   });
-}
-
-export function assembleBook(
-  pages: PageAnalysis[],
-  overrides?: { marks?: { start: Mark; end: Mark }[] },
-): DraftBook {
-  const nums = repairPageNumbers(pages);
-  const toc = pages
-    .filter(p => p.kind === 'index')
-    .flatMap(p => p.toc)
-    .sort((a, b) => a.page - b.page);
-  const coverPhoto = pages.findIndex(p => p.kind === 'cover');
-  const cover = coverPhoto >= 0 ? pages[coverPhoto].coverLines : [];
-
-  const marks = overrides?.marks ?? findMarks(pages, nums);
-  const chapters: DraftChapter[] = [];
-  for (const m of marks) {
-    const startNum = nums[m.start.photo];
-    const endNum = nums[m.end.photo];
-    const text = textBetween(pages, m.start, m.end);
-    if (!text) continue;
-    const entry =
-      startNum === null
-        ? undefined
-        : [...toc].reverse().find(e => e.page <= startNum);
-    const name = entry?.title ?? '';
-    let ch = chapters.find(c => c.name === name);
-    if (!ch) {
-      ch = { id: makeId(), name, pages: '', highlights: [] };
-      chapters.push(ch);
-    }
-    ch.highlights.push({
-      id: makeId(),
-      start: m.start,
-      end: m.end,
-      page: pageLabel(startNum, endNum) ?? '',
-      text,
-    });
-  }
-  for (const ch of chapters) {
-    const first = ch.highlights[0]?.page.split('–')[0] ?? '';
-    const last =
-      ch.highlights[ch.highlights.length - 1]?.page.split('–').pop() ?? '';
-    ch.pages = first && last && first !== last ? `${first}–${last}` : first;
-  }
-
-  return {
-    title: cover[0] ? titleCase(cover[0]) : '',
-    author: cover.length > 1 ? titleCase(cover.slice(1, 3).join(' ')) : '',
-    coverPhoto: coverPhoto >= 0 ? coverPhoto : null,
-    pageNumbers: nums,
-    toc,
-    marks,
-    chapters,
-  };
 }

@@ -13,33 +13,6 @@ const BOOK_PATHS = [
 
 const INK = '#F5F5F5';
 
-export const BrandMark = ({
-  size,
-  color = INK,
-}: {
-  size: number;
-  color?: string;
-}) => (
-  <svg
-    width={size}
-    height={size}
-    viewBox="0 0 48 48"
-    fill="none"
-    aria-hidden="true"
-  >
-    {BOOK_PATHS.map(d => (
-      <path
-        key={d}
-        d={d}
-        stroke={color}
-        strokeWidth={3.25}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    ))}
-  </svg>
-);
-
 const SQUIRCLE_N = 4.5;
 const SQUIRCLE_STEPS = 256;
 

@@ -460,17 +460,6 @@ button {
   cursor: default;
 }
 
-.btn-glyph {
-  display: inline-grid;
-  width: 1.125rem;
-  height: 1.125rem;
-}
-
-.btn-glyph svg {
-  width: 100%;
-  height: 100%;
-}
-
 .round,
 .glass-pill {
   border: 0;
@@ -524,21 +513,6 @@ button {
 
 .round.is-commit.is-busy {
   opacity: 1;
-}
-
-.round.quiet {
-  width: 2rem;
-  height: 2rem;
-  padding: 0.4375rem;
-  background: none;
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
-  box-shadow: none;
-  color: var(--ink-2);
-}
-
-.round.quiet.is-destructive {
-  color: var(--destructive);
 }
 
 .glass-pill {
@@ -1390,11 +1364,6 @@ button {
   transform: scale(0.95);
 }
 
-.book-read-btn .btn-glyph {
-  width: 1.5rem;
-  height: 1.5rem;
-}
-
 /* The app's glass footer: Chapters, Export, and Edit in locked columns so
    switching languages or summaries never causes horizontal CLS, with each
    compartment's icon + text centered symmetrically between its dividers. */
@@ -1684,16 +1653,6 @@ button {
 }
 
 @media (hover: hover) {
-  .round.quiet:hover {
-    background: rgb(var(--fg) / 0.08);
-  }
-}
-
-.round.quiet:active {
-  background: rgb(var(--fg) / 0.12);
-}
-
-@media (hover: hover) {
   .banner:hover,
   .link-row:hover {
     background: rgb(var(--fg) / 0.04);
@@ -1766,10 +1725,6 @@ button {
   justify-content: space-between;
   gap: 0.75rem;
   margin-right: 1rem;
-}
-
-.section-head.split.is-flush {
-  margin-inline: 0.25rem;
 }
 
 .section-head .text-action {
@@ -2052,21 +2007,6 @@ button {
   background: none;
   color: var(--destructive);
   font-size: 1.0625rem;
-}
-
-.cell.new-clip-row {
-  justify-content: flex-start;
-  width: 100%;
-  border: 0;
-  background: none;
-  color: var(--accent);
-  font-size: 1rem;
-  text-align: start;
-}
-
-.muted-empty {
-  color: var(--muted);
-  font-size: 0.9375rem;
 }
 
 .side-empty {
@@ -3367,12 +3307,6 @@ button {
   text-overflow: ellipsis;
 }
 
-.highlight-preview-actions {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.625rem;
-}
-
 .highlight-preview-card {
   display: grid;
   gap: 0.625rem;
@@ -4043,15 +3977,6 @@ button {
   transition: padding-inline 240ms var(--ios-curve);
 }
 
-.reader-slide-frame .reader-page-inner {
-  background: transparent;
-}
-
-.reader-page-inner.is-mirrored {
-  opacity: 0.24;
-  filter: blur(0.35px);
-}
-
 .reader-page-body {
   display: flex;
   flex-direction: column;
@@ -4127,78 +4052,6 @@ button {
 
 .reader-line {
   white-space: pre;
-}
-
-/* Kindle-Web page curl layers */
-.reader-curl-single,
-.reader-curl-stack,
-.reader-curl-under {
-  position: absolute;
-  inset: 0;
-}
-
-.reader-curl-front {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: 0;
-  z-index: 2;
-  overflow: hidden;
-}
-
-.reader-curl-front-inner {
-  position: relative;
-  height: 100%;
-}
-
-.reader-curl-flap {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  z-index: 3;
-  overflow: hidden;
-  border-left: 1px solid rgb(255 255 255 / 0.14);
-  background: color-mix(in srgb, var(--reader-page) 90%, var(--reader-text));
-  box-shadow:
-    -10px 0 24px rgb(0 0 0 / 0.28),
-    4px 0 14px rgb(0 0 0 / 0.22);
-  pointer-events: none;
-}
-
-.reader-curl-stack.is-settling .reader-curl-front,
-.reader-curl-stack.is-settling .reader-curl-flap,
-.reader-curl-stack.is-settling .reader-curl-cast-shadow {
-  transition:
-    width 280ms var(--ios-curve),
-    left 280ms var(--ios-curve),
-    opacity 280ms var(--ios-curve);
-}
-
-.reader-curl-cast-shadow {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  width: 4.5rem;
-  background: linear-gradient(
-    to right,
-    rgb(0 0 0 / 0.55),
-    rgb(0 0 0 / 0.18) 45%,
-    transparent
-  );
-  pointer-events: none;
-}
-
-.reader-curl-flap-cylinder {
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(
-    to right,
-    rgb(0 0 0 / 0.18) 0%,
-    rgb(255 255 255 / 0.14) 32%,
-    rgb(0 0 0 / 0.08) 78%,
-    rgb(0 0 0 / 0.28) 100%
-  );
-  pointer-events: none;
 }
 
 /* Slide turn — spans 100% of .reader-stage so pages enter/exit from the true stage edges */
@@ -5865,20 +5718,6 @@ button {
 }
 
 /* ── Chapter Row Highlight Indicator & Page Range ── */
-
-.chapter-hl-status.is-populated {
-  color: var(--ink);
-  font-weight: 500;
-}
-
-.chapter-hl-status.is-empty {
-  color: var(--ink-3);
-}
-
-.chapter-pages-meta {
-  color: var(--muted);
-  font-variant-numeric: tabular-nums;
-}
 
 .chapter-row-trail {
   display: inline-flex;

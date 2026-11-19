@@ -387,6 +387,50 @@ function savePaletteToStorage(key: string, palette: CoverPalette): void {
   }
 }
 
+export function forgetCoverPalette(
+  bookId: string,
+  artUrl?: string | null,
+  bookName?: string | null,
+): void {
+  hydratePaletteStorage();
+  const keysToRemove = new Set<string>();
+  const cleanUrl = (artUrl ?? '').trim();
+  if (cleanUrl) keysToRemove.add(cleanUrl);
+  if (bookName) keysToRemove.add(`seed:${bookId}:${bookName}`);
+  const prefix = `seed:${bookId}:`;
+  for (const k of paletteCache.keys()) {
+    if (k.startsWith(prefix)) keysToRemove.add(k);
+  }
+  if (keysToRemove.size === 0) return;
+  for (const k of keysToRemove) {
+    paletteCache.delete(k);
+  }
+  if (typeof localStorage === 'undefined') return;
+  try {
+    const raw = localStorage.getItem(PALETTE_STORAGE_KEY);
+    if (!raw) return;
+    const parsed = JSON.parse(raw) as Record<string, unknown>;
+    let changed = false;
+    for (const k of keysToRemove) {
+      if (k in parsed) {
+        delete parsed[k];
+        changed = true;
+      }
+    }
+    for (const k of Object.keys(parsed)) {
+      if (k.startsWith(prefix)) {
+        delete parsed[k];
+        changed = true;
+      }
+    }
+    if (changed) {
+      localStorage.setItem(PALETTE_STORAGE_KEY, JSON.stringify(parsed));
+    }
+  } catch {
+    // Ignore storage errors.
+  }
+}
+
 export async function loadCoverPalette(
   artUrl: string | null | undefined,
   seed: string,

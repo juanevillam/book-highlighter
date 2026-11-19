@@ -21,6 +21,7 @@ import {
   requireUid,
   USERS_COLLECTION,
 } from './firebase';
+import { forgetCoverPalette } from './lib/coverPalette';
 import { byGridOrder, positionBetween } from './lib/gridOrder';
 import { type ShelfEntry } from './lib/shelf';
 import { destroyAsset } from './media';
@@ -319,7 +320,10 @@ export const markBookRead = (
 
 export const deleteBook = async (bookId: string): Promise<void> => {
   const ref = bookDoc(bookId);
-  const artPublicId = ((await getDoc(ref)).data()?.artPublicId as string) ?? '';
+  const snapData = (await getDoc(ref)).data();
+  const artPublicId = (snapData?.artPublicId as string) ?? '';
+  const artUrl = (snapData?.artUrl as string) ?? '';
+  const name = (snapData?.name as string) ?? '';
 
   if (artPublicId) {
     await destroyAsset(artPublicId, 'image');
@@ -327,6 +331,7 @@ export const deleteBook = async (bookId: string): Promise<void> => {
 
   await deleteDoc(bodyDoc(bookId));
   await deleteDoc(ref);
+  forgetCoverPalette(bookId, artUrl, name);
 };
 
 export const moveBook = (bookId: string, position: number): Promise<void> =>

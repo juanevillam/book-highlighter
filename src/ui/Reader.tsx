@@ -4053,7 +4053,6 @@ export function Reader({
   const currentAnchorRef = useRef<ReaderAnchor | null>(book.readerAnchor);
   const dirtyAnchorRef = useRef(false);
   const finishedMarkedRef = useRef(false);
-  const settleTimerRef = useRef<number | null>(null);
   const dragStateRef = useRef<{
     pointerId: number;
     startX: number;
@@ -4276,7 +4275,7 @@ export function Reader({
     if (restoredPage && pageTurn !== 'scroll') {
       setScrollSectionId(restoredPage.sectionId);
     }
-  }, [pages, bodyEntry?.loaded, pageTurn]);
+  }, [pages, bodyEntry?.loaded, pageTurn, book.readerAnchor]);
 
   useLayoutEffect(() => {
     if (
@@ -4332,14 +4331,6 @@ export function Reader({
     pages,
   ]);
 
-  useEffect(() => {
-    return () => {
-      if (settleTimerRef.current !== null) {
-        window.clearTimeout(settleTimerRef.current);
-      }
-    };
-  }, []);
-
   const goToPage = useCallback(
     (targetIndex: number) => {
       if (pages.length === 0) return;
@@ -4361,7 +4352,7 @@ export function Reader({
 
   const commitTurn = useCallback(
     (direction: 'next' | 'prev') => {
-      if (pages.length === 0 || settleTimerRef.current !== null) return;
+      if (pages.length === 0) return;
       const targetIndex = direction === 'next' ? pageIndex + 1 : pageIndex - 1;
       if (targetIndex < 0 || targetIndex >= pages.length) return;
       goToPage(targetIndex);
@@ -4425,7 +4416,6 @@ export function Reader({
     if (
       pageTurn === 'scroll' ||
       (panelOpen && !isDesk) ||
-      settleTimerRef.current !== null ||
       (e.target as HTMLElement).closest('button, a')
     ) {
       return;

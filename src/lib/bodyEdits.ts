@@ -1,6 +1,6 @@
 import { type BookBody, type Chapter, type Highlight } from '../books';
 
-export const moveEntry = <T>(items: T[], from: number, to: number): T[] => {
+const moveEntry = <T>(items: T[], from: number, to: number): T[] => {
   if (from === to || from < 0 || from >= items.length) return items;
 
   const next = [...items];
@@ -9,9 +9,6 @@ export const moveEntry = <T>(items: T[], from: number, to: number): T[] => {
 
   return next;
 };
-
-export const finalIndexForMove = (from: number, destination: number) =>
-  from < destination ? destination - 1 : destination;
 
 const mapChapter = (
   body: BookBody,

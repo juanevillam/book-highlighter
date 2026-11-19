@@ -4,8 +4,6 @@ export const parseGenres = (text: string): string[] =>
     .map(genre => genre.trim().replace(/\.$/, ''))
     .filter(Boolean);
 
-export const formatGenres = (genres: string[]): string => genres.join(', ');
-
 export const parseYear = (text: string): number | null => {
   const trimmed = text.trim();
   if (!/^-?\d{1,4}$/.test(trimmed)) return null;

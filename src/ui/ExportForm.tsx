@@ -14,9 +14,10 @@ import {
   bookPairForSlot,
   hashArtSeed,
 } from '../lib/paginator';
-import { PDF_FORMAT_IDS, PDF_FORMATS } from '../lib/pdfExport';
 import {
   effectiveTheme,
+  PDF_FORMAT_IDS,
+  PDF_FORMATS,
   READER_THEMES,
   readerPalette,
   TEXT_SCALES,

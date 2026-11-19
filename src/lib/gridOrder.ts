@@ -5,8 +5,6 @@
 
 export const POSITION_STEP = 1;
 
-export const DRAG_ACTIVE_SCALE = 1.03;
-
 export const positionBetween = (
   prev: number | null,
   next: number | null,
@@ -21,9 +19,6 @@ export const positionBetween = (
 
   return middle > prev && middle < next ? middle : null;
 };
-
-export const initialPositions = (count: number): number[] =>
-  Array.from({ length: count }, (_, index) => index * POSITION_STEP);
 
 export const renormalized = <T extends { id: string }>(
   ordered: T[],

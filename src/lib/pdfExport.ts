@@ -9,58 +9,14 @@ import {
   readerSections,
   type ReaderSection,
 } from './readerSections';
-import { type ReaderPalette } from './readerThemes';
+import {
+  PDF_FORMATS,
+  type PdfFormatId,
+  type ReaderPalette,
+} from './readerThemes';
 import { thumbUrl } from './thumbUrl';
 
-// Standard universal book & document formats in points (72 pt/in).
-export type PdfFormatId = 'a5' | 'b5' | 'a4' | 'letter';
-
-export const PDF_FORMATS: Record<
-  PdfFormatId,
-  {
-    widthPt: number;
-    heightPt: number;
-    aspect: string;
-    previewW: string;
-    previewH: string;
-  }
-> = {
-  a5: {
-    widthPt: 420,
-    heightPt: 595,
-    aspect: '148 / 210',
-    previewW: '8.75rem',
-    previewH: '12.4rem',
-  },
-  b5: {
-    widthPt: 499,
-    heightPt: 709,
-    aspect: '176 / 250',
-    previewW: '9.5rem',
-    previewH: '13.5rem',
-  },
-  a4: {
-    widthPt: 595,
-    heightPt: 842,
-    aspect: '210 / 297',
-    previewW: '10.125rem',
-    previewH: '14.375rem',
-  },
-  letter: {
-    widthPt: 612,
-    heightPt: 792,
-    aspect: '8.5 / 11',
-    previewW: '10.875rem',
-    previewH: '14.0625rem',
-  },
-};
-
-export const PDF_FORMAT_IDS: readonly PdfFormatId[] = [
-  'a5',
-  'b5',
-  'a4',
-  'letter',
-];
+export { PDF_FORMAT_IDS, PDF_FORMATS, type PdfFormatId } from './readerThemes';
 
 const BLEED = 8;
 const MARGIN_SIDE = 48;

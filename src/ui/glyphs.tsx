@@ -17,21 +17,9 @@ export const CloseGlyph = () => (
   </svg>
 );
 
-export const ChevronDownGlyph = () => (
-  <svg viewBox="0 0 24 24" aria-hidden="true">
-    <path d="m6 9 6 6 6-6" {...strokeProps} strokeWidth={2} />
-  </svg>
-);
-
 export const ChevronRightGlyph = () => (
   <svg viewBox="0 0 8 13" aria-hidden="true">
     <path d="M1.5 1.5 6.5 6.5l-5 5" {...strokeProps} strokeWidth={1.8} />
-  </svg>
-);
-
-export const ChevronLeftGlyph = () => (
-  <svg viewBox="0 0 24 24" aria-hidden="true">
-    <path d="M15 5l-7 7 7 7" {...strokeProps} strokeWidth={2} />
   </svg>
 );
 
@@ -87,16 +75,6 @@ export const GearGlyph = () => (
   </svg>
 );
 
-export const CameraGlyph = () => (
-  <svg viewBox="0 0 24 24" aria-hidden="true">
-    <path
-      d="M3.5 8.5a2 2 0 0 1 2-2h2.2l1.4-2h5.8l1.4 2h2.2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2v-9Z"
-      {...strokeProps}
-    />
-    <circle cx="12" cy="12.8" r="3.4" {...strokeProps} />
-  </svg>
-);
-
 export const BookOpenGlyph = () => (
   <svg viewBox="0 0 24 24" aria-hidden="true">
     <path
@@ -112,16 +90,6 @@ export const ContentsGlyph = () => (
     <circle cx="4.3" cy="6.5" r="1.2" fill="currentColor" />
     <circle cx="4.3" cy="12" r="1.2" fill="currentColor" />
     <circle cx="4.3" cy="17.5" r="1.2" fill="currentColor" />
-  </svg>
-);
-
-export const TextSizeGlyph = () => (
-  <svg viewBox="0 0 24 24" aria-hidden="true">
-    <path
-      d="M3.2 18.5 7.8 6.5l4.6 12M4.8 14.5h6M14.8 18.5l3-8 3 8M15.8 16h4"
-      {...strokeProps}
-      strokeWidth={1.9}
-    />
   </svg>
 );
 
@@ -143,16 +111,6 @@ export const UploadGlyph = () => (
       d="M4.5 14.5v3.2A1.8 1.8 0 0 0 6.3 19.5h11.4a1.8 1.8 0 0 0 1.8-1.8v-3.2"
       {...strokeProps}
       strokeWidth={1.9}
-    />
-  </svg>
-);
-
-export const ReorderGlyph = () => (
-  <svg viewBox="0 0 24 24" aria-hidden="true">
-    <path
-      d="M8 19V5M4.5 8.5 8 5l3.5 3.5M16 5v14M12.5 15.5 16 19l3.5-3.5"
-      {...strokeProps}
-      strokeWidth={1.85}
     />
   </svg>
 );

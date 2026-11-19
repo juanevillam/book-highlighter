@@ -1,14 +1,15 @@
 import { create } from 'zustand';
 
-import { PDF_FORMAT_IDS, type PdfFormatId } from '../lib/pdfExport';
 import {
   DEFAULT_TEXT_SCALE_INDEX,
   PAGE_TURNS,
   PAGE_WIDTHS,
+  PDF_FORMAT_IDS,
   READER_THEMES,
   TEXT_SCALES,
   type PageTurn,
   type PageWidth,
+  type PdfFormatId,
   type ReaderTheme,
 } from '../lib/readerThemes';
 

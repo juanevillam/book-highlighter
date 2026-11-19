@@ -447,6 +447,7 @@ export function BookFormPanel({
             confirm={t('bookEdit.deleteConfirm.confirm')}
             onConfirm={() => {
               onDeleted();
+              useBodiesStore.getState().drop(book.id);
               deleteBook(book.id).then(
                 () => showToast(t('snackbar.book-deleted')),
                 () => showToast(t('snackbar.book-delete-failed')),

@@ -238,8 +238,6 @@ const PATHS: Record<Family, React.ReactNode> = {
   ),
 };
 
-export const YEAR_TINT = '#f5c451';
-
 const TINTS: Record<Family, string> = {
   story: '#64d2ff',
   future: '#5e5ce6',
@@ -273,10 +271,3 @@ export function GenreGlyph({ genre }: { genre: string }) {
     </svg>
   );
 }
-
-export const CalendarGlyph = () => (
-  <svg viewBox="0 0 24 24" aria-hidden="true">
-    <rect x="4" y="5.5" width="16" height="14.5" rx="2.5" {...stroke} />
-    <path d="M4 10h16M8.5 3.5v4M15.5 3.5v4" {...stroke} />
-  </svg>
-);
