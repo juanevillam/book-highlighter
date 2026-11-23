@@ -1,14 +1,41 @@
-import { lazy, Suspense, useEffect } from 'react';
+import { Component, lazy, Suspense, useEffect, type ReactNode } from 'react';
 
 import { trackScreen } from './analytics';
 import { useTheme } from './appearance';
-import { useLocale } from './i18n';
+import { t, useLocale } from './i18n';
 import { Welcome } from './screens/Welcome';
 import { useSession } from './session';
 
 const Home = lazy(() =>
   import('./screens/Home').then(m => ({ default: m.Home })),
 );
+
+class ErrorBoundary extends Component<
+  { children: ReactNode },
+  { hasError: boolean }
+> {
+  state = { hasError: false };
+
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+
+  render() {
+    if (!this.state.hasError) return this.props.children;
+    return (
+      <main className="error" style={{ minHeight: '100svh' }}>
+        <p>{t('errors.message')}</p>
+        <button
+          type="button"
+          className="pill"
+          onClick={() => window.location.reload()}
+        >
+          {t('errors.retry')}
+        </button>
+      </main>
+    );
+  }
+}
 
 export function App() {
   useLocale();
@@ -22,11 +49,15 @@ export function App() {
 
   if (session.state === 'loading') return null;
 
-  return session.state === 'signed-in' ? (
-    <Suspense fallback={null}>
-      <Home key={session.user.uid} user={session.user} />
-    </Suspense>
-  ) : (
-    <Welcome />
+  return (
+    <ErrorBoundary>
+      {session.state === 'signed-in' ? (
+        <Suspense fallback={null}>
+          <Home key={session.user.uid} user={session.user} />
+        </Suspense>
+      ) : (
+        <Welcome />
+      )}
+    </ErrorBoundary>
   );
 }
